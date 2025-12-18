@@ -78,6 +78,11 @@ export const translations = {
     timeLeft: 'Time Left',
     rollComplete: 'Dice rolled! Click the country you think it is!',
     clickCountryToGuess: 'Click on the map to make your guess',
+    nextPlayerTurn: "{player}'s turn now!",
+    timeUp: "Time's up! Moving to next player...",
+    points: 'points',
+    turnSkipped: 'Turn skipped',
+    hintUsed: 'Hint used: -1 point',
     
     // Map Controls
     recenter: 'Recenter Map',
@@ -229,6 +234,11 @@ export const translations = {
     timeLeft: 'Temps Restant',
     rollComplete: 'Dé lancé ! Cliquez sur le pays que vous pensez être !',
     clickCountryToGuess: 'Cliquez sur la carte pour deviner',
+    nextPlayerTurn: "C'est au tour de {player} !",
+    timeUp: "Temps écoulé ! Passage au joueur suivant...",
+    points: 'points',
+    turnSkipped: 'Tour passé',
+    hintUsed: 'Indice utilisé : -1 point',
     
     // Map Controls
     recenter: 'Recentrer la Carte',
@@ -380,6 +390,11 @@ export const translations = {
     timeLeft: 'الوقت المتبقي',
     rollComplete: 'تم رمي النرد! انقر على الدولة التي تعتقد أنها!',
     clickCountryToGuess: 'انقر على الخريطة للتخمين',
+    nextPlayerTurn: 'دور {player} الآن!',
+    timeUp: 'انتهى الوقت! الانتقال للاعب التالي...',
+    points: 'نقاط',
+    turnSkipped: 'تم تخطي الدور',
+    hintUsed: 'تم استخدام التلميح: -1 نقطة',
     
     // Map Controls
     recenter: 'إعادة توسيط الخريطة',
