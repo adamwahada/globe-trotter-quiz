@@ -100,7 +100,7 @@ const WaitingRoom = () => {
         <div className="mb-8">
           <TimerProgress 
             totalSeconds={300} 
-            onComplete={handleLeave}
+            onComplete={handleStartGame}
             label={t('timeRemaining')}
           />
         </div>
