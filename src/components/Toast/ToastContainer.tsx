@@ -34,21 +34,29 @@ export const ToastContainer: React.FC = () => {
   const { toasts, removeToast } = useToastContext();
 
   return (
-    <div className="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm">
+    <div className="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm pointer-events-none">
       {toasts.map((toast, index) => (
         <div
           key={toast.id}
+          onClick={() => removeToast(toast.id)}
           className={`
             toast-enter flex items-center gap-3 p-4 rounded-lg border shadow-lg
             text-foreground ${getToastStyles(toast.type)}
+            pointer-events-auto cursor-pointer hover:opacity-90 transition-opacity
           `}
           style={{ animationDelay: `${index * 50}ms` }}
+          role="alert"
+          aria-live="polite"
         >
           {getToastIcon(toast.type)}
           <span className="flex-1 text-sm font-medium">{toast.message}</span>
           <button
-            onClick={() => removeToast(toast.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              removeToast(toast.id);
+            }}
             className="text-foreground/70 hover:text-foreground transition-colors"
+            aria-label="Close notification"
           >
             <X className="h-4 w-4" />
           </button>

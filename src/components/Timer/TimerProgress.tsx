@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { Clock } from 'lucide-react';
 
 interface TimerProgressProps {
@@ -16,35 +16,45 @@ export const TimerProgress: React.FC<TimerProgressProps> = ({
   label,
   startTime,
 }) => {
-  const calculateRemainingSeconds = () => {
+  const onCompleteRef = useRef(onComplete);
+  const hasCompletedRef = useRef(false);
+  
+  // Update ref when onComplete changes
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
+
+  const calculateRemainingSeconds = useCallback(() => {
     if (startTime) {
       const elapsed = Math.floor((Date.now() - startTime) / 1000);
       return Math.max(0, totalSeconds - elapsed);
     }
     return totalSeconds;
-  };
+  }, [startTime, totalSeconds]);
 
   const [remainingSeconds, setRemainingSeconds] = useState(calculateRemainingSeconds);
 
   useEffect(() => {
     if (!isActive) return;
+    hasCompletedRef.current = false;
 
     const interval = setInterval(() => {
       const newRemaining = calculateRemainingSeconds();
       setRemainingSeconds(newRemaining);
       
-      if (newRemaining <= 0) {
+      if (newRemaining <= 0 && !hasCompletedRef.current) {
+        hasCompletedRef.current = true;
         clearInterval(interval);
-        onComplete?.();
+        onCompleteRef.current?.();
       }
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isActive, onComplete, startTime, totalSeconds]);
+  }, [isActive, startTime, totalSeconds, calculateRemainingSeconds]);
 
   useEffect(() => {
     setRemainingSeconds(calculateRemainingSeconds());
-  }, [totalSeconds, startTime]);
+  }, [totalSeconds, startTime, calculateRemainingSeconds]);
 
   const percentage = (remainingSeconds / totalSeconds) * 100;
   const minutes = Math.floor(remainingSeconds / 60);

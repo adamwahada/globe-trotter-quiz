@@ -49,7 +49,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
 
   const getCountryFill = (countryName: string) => {
     if (guessedCountries.includes(countryName)) {
-      return 'hsl(142 76% 30%)'; // country-guessed
+      return 'hsl(142 76% 25%)'; // Dark green for guessed countries
     }
     if (currentCountry === countryName) {
       return 'hsl(357 92% 47%)'; // country-current
@@ -58,7 +58,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
   };
 
   return (
-    <div className="relative w-full h-full bg-background rounded-xl overflow-hidden border border-border">
+    <div className="relative w-full h-full min-h-[400px] bg-background rounded-xl overflow-hidden border border-border">
       {/* Map Controls */}
       <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
         <GameTooltip content={t('zoomIn')} position="left">

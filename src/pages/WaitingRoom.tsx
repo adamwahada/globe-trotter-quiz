@@ -26,6 +26,13 @@ const WaitingRoom = () => {
     }
   }, [session, navigate]);
 
+  // Navigate to game when status changes to playing
+  useEffect(() => {
+    if (session?.status === 'playing') {
+      navigate('/game');
+    }
+  }, [session?.status, navigate]);
+
   const copyCode = () => {
     if (session) {
       navigator.clipboard.writeText(session.code);
@@ -34,21 +41,21 @@ const WaitingRoom = () => {
     }
   };
 
-  const handleVoteReady = () => {
-    setReady(!currentPlayer?.isReady);
+  const handleVoteReady = async () => {
+    await setReady(!currentPlayer?.isReady);
     if (!currentPlayer?.isReady) {
       addToast('success', 'You are ready!');
     }
   };
 
-  const handleStartGame = () => {
-    startGame();
-    navigate('/game');
+  const handleStartGame = async () => {
+    await startGame();
     addToast('game', t('gameStarting'));
+    // Navigation will happen via the useEffect above when status changes
   };
 
-  const handleLeave = () => {
-    leaveSession();
+  const handleLeave = async () => {
+    await leaveSession();
     navigate('/');
   };
 
