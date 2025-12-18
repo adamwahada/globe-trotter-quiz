@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
 import { translations, Language, TranslationKey } from '@/i18n/translations';
 
 interface LanguageContextType {
@@ -10,8 +10,23 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
+const LANGUAGE_STORAGE_KEY = 'worldquiz_language';
+
 export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [language, setLanguage] = useState<Language>('en');
+  const [language, setLanguageState] = useState<Language>(() => {
+    // Load from localStorage on init
+    const saved = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    if (saved && ['en', 'fr', 'ar'].includes(saved)) {
+      return saved as Language;
+    }
+    return 'en';
+  });
+
+  // Persist language to localStorage
+  const setLanguage = useCallback((lang: Language) => {
+    localStorage.setItem(LANGUAGE_STORAGE_KEY, lang);
+    setLanguageState(lang);
+  }, []);
 
   const t = useCallback((key: TranslationKey, params?: Record<string, string | number>): string => {
     let text = translations[language][key] || translations.en[key] || key;
