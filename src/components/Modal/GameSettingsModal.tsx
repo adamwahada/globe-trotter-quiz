@@ -14,7 +14,7 @@ interface GameSettingsModalProps {
 
 export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, onClose }) => {
   const { t } = useLanguage();
-  const { createSession, joinSession } = useGame();
+  const { createSession, joinSession, isLoading, error } = useGame();
   const { addToast } = useToastContext();
   const navigate = useNavigate();
 
@@ -27,17 +27,26 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
 
   if (!isOpen) return null;
 
-  const handleCreate = () => {
-    const code = createSession(players, duration);
-    setGeneratedCode(code);
-    addToast('success', t('sessionCreated', { code }));
+  const handleCreate = async () => {
+    try {
+      const code = await createSession(players, duration);
+      setGeneratedCode(code);
+      addToast('success', t('sessionCreated', { code }));
+    } catch (err) {
+      addToast('error', 'Failed to create session');
+    }
   };
 
-  const handleJoin = () => {
-    if (joinSession(sessionCode)) {
-      navigate('/waiting-room');
-      onClose();
-    } else {
+  const handleJoin = async () => {
+    try {
+      const success = await joinSession(sessionCode);
+      if (success) {
+        navigate('/waiting-room');
+        onClose();
+      } else {
+        addToast('error', error || t('invalidCode'));
+      }
+    } catch (err) {
       addToast('error', t('invalidCode'));
     }
   };
@@ -155,8 +164,13 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
                 <Button variant="outline" onClick={() => setMode('choose')} className="flex-1">
                   {t('cancel')}
                 </Button>
-                <Button variant="netflix" onClick={handleCreate} className="flex-1">
-                  {t('confirm')}
+                <Button 
+                  variant="netflix" 
+                  onClick={handleCreate} 
+                  className="flex-1"
+                  disabled={isLoading}
+                >
+                  {isLoading ? t('loading') : t('confirm')}
                 </Button>
               </div>
             </div>
@@ -224,9 +238,9 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
                   variant="netflix" 
                   onClick={handleJoin} 
                   className="flex-1"
-                  disabled={sessionCode.length !== 6}
+                  disabled={sessionCode.length !== 6 || isLoading}
                 >
-                  {t('confirm')}
+                  {isLoading ? t('loading') : t('confirm')}
                 </Button>
               </div>
             </div>

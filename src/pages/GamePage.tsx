@@ -24,7 +24,8 @@ const GamePage = () => {
     session, 
     currentPlayer, 
     leaveSession, 
-    endGame 
+    endGame,
+    updateGameState,
   } = useGame();
   const { addToast } = useToastContext();
   const navigate = useNavigate();
@@ -32,19 +33,29 @@ const GamePage = () => {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [guessModalOpen, setGuessModalOpen] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
-  const [currentCountry, setCurrentCountry] = useState<string | null>(null);
-  const [guessedCountries, setGuessedCountries] = useState<string[]>([]);
+  const [currentCountry, setCurrentCountry] = useState<string | null>(session?.currentCountry || null);
+  const [guessedCountries, setGuessedCountries] = useState<string[]>(session?.guessedCountries || []);
   const [isRolling, setIsRolling] = useState(false);
   const [showResults, setShowResults] = useState(false);
   
-  // Turn management
-  const [currentTurnIndex, setCurrentTurnIndex] = useState(0);
+  // Turn management - synced with session
+  const [currentTurnIndex, setCurrentTurnIndex] = useState(session?.currentTurn || 0);
   const [turnStartTime, setTurnStartTime] = useState<number | null>(null);
   const [players, setPlayers] = useState(() => 
-    session?.players.map(p => ({ ...p, score: 0, countriesGuessed: [] as string[] })) || []
+    session?.players.map(p => ({ ...p })) || []
   );
   
   const turnTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Sync local state with Firebase session
+  useEffect(() => {
+    if (session) {
+      setCurrentTurnIndex(session.currentTurn);
+      setCurrentCountry(session.currentCountry);
+      setGuessedCountries(session.guessedCountries || []);
+      setPlayers(session.players.map(p => ({ ...p })));
+    }
+  }, [session]);
 
   // Check if it's current player's turn
   const isMyTurn = session ? players[currentTurnIndex]?.id === currentPlayer?.id : false;
@@ -59,7 +70,6 @@ const GamePage = () => {
   // Auto roll dice at turn start (when it's player's turn and no country selected)
   useEffect(() => {
     if (isMyTurn && !currentCountry && !isRolling && session?.status === 'playing') {
-      // Small delay before auto-rolling
       const timer = setTimeout(() => {
         handleRollDice();
       }, 500);
@@ -86,54 +96,69 @@ const GamePage = () => {
 
   const handleRollDice = useCallback(() => {
     setIsRolling(true);
-    setTimeout(() => {
+    setTimeout(async () => {
       const country = getRandomCountry();
       setCurrentCountry(country);
       setIsRolling(false);
       setTurnStartTime(Date.now());
+      
+      // Sync to Firebase
+      await updateGameState({ currentCountry: country });
+      
       addToast('game', t('rollComplete'));
     }, 600);
-  }, [addToast, t]);
+  }, [addToast, t, updateGameState]);
 
   const handleCountryClick = (countryName: string) => {
     if (!isMyTurn || !currentCountry) return;
     setSelectedCountry(countryName);
     setGuessModalOpen(true);
     
-    // Clear the turn timer when modal opens (modal has its own timer)
     if (turnTimerRef.current) {
       clearTimeout(turnTimerRef.current);
     }
   };
 
-  const moveToNextTurn = useCallback(() => {
+  const moveToNextTurn = useCallback(async () => {
+    const nextTurn = (currentTurnIndex + 1) % players.length;
+    
     setCurrentCountry(null);
     setSelectedCountry(null);
     setTurnStartTime(null);
+    setCurrentTurnIndex(nextTurn);
     
-    // Move to next player
-    setCurrentTurnIndex(prev => (prev + 1) % players.length);
+    // Sync to Firebase
+    await updateGameState({ 
+      currentTurn: nextTurn, 
+      currentCountry: null,
+      players: players,
+      guessedCountries: guessedCountries,
+    });
     
-    addToast('game', t('nextPlayerTurn', { player: players[(currentTurnIndex + 1) % players.length]?.username || 'Next player' }));
-  }, [players, currentTurnIndex, addToast, t]);
+    addToast('game', t('nextPlayerTurn', { player: players[nextTurn]?.username || 'Next player' }));
+  }, [players, currentTurnIndex, addToast, t, updateGameState, guessedCountries]);
 
   const handleTurnTimeout = useCallback(() => {
     addToast('error', t('timeUp'));
     moveToNextTurn();
   }, [addToast, t, moveToNextTurn]);
 
-  const handleSubmitGuess = (guess: string) => {
+  const handleSubmitGuess = async (guess: string) => {
     if (!currentCountry) return;
     
     const result = isCorrectGuess(guess, currentCountry);
     
     if (result.correct) {
-      setGuessedCountries(prev => [...prev, currentCountry]);
-      setPlayers(prev => prev.map((p, idx) => 
+      const newGuessedCountries = [...guessedCountries, currentCountry];
+      setGuessedCountries(newGuessedCountries);
+      
+      const updatedPlayers = players.map((p, idx) => 
         idx === currentTurnIndex 
           ? { ...p, score: p.score + result.points, countriesGuessed: [...p.countriesGuessed, currentCountry] }
           : p
-      ));
+      );
+      setPlayers(updatedPlayers);
+      
       addToast('success', `+${result.points} ${t('points')}`);
     } else {
       addToast('error', `${t('wrongGuess', { player: '' })} - ${currentCountry}`);
@@ -151,31 +176,33 @@ const GamePage = () => {
 
   const handleUseHint = () => {
     if (currentCountry) {
-      // Deduct point
-      setPlayers(prev => prev.map((p, idx) => 
+      const updatedPlayers = players.map((p, idx) => 
         idx === currentTurnIndex 
           ? { ...p, score: Math.max(0, p.score - 1) }
           : p
-      ));
+      );
+      setPlayers(updatedPlayers);
       addToast('info', t('hintUsed'));
       return currentCountry[0];
     }
     return '';
   };
 
-  const handleLeave = () => {
-    leaveSession();
+  const handleLeave = async () => {
+    await leaveSession();
     navigate('/');
   };
 
-  const handleEndGame = () => {
+  const handleEndGame = async () => {
+    await endGame();
     setShowResults(true);
   };
 
-  const handlePlayAgain = () => {
+  const handlePlayAgain = async () => {
     setShowResults(false);
     setGuessedCountries([]);
     setCurrentCountry(null);
+    await leaveSession();
     navigate('/');
   };
 
@@ -192,6 +219,7 @@ const GamePage = () => {
           <div className="hidden md:block w-48">
             <TimerProgress 
               totalSeconds={session.duration * 60} 
+              startTime={session.startTime || undefined}
               onComplete={handleEndGame}
               label={t('timeLeft')}
             />
@@ -229,15 +257,16 @@ const GamePage = () => {
       {/* Mobile Timer */}
       <div className="md:hidden p-3 border-b border-border">
         <TimerProgress 
-          totalSeconds={session.duration * 60} 
+          totalSeconds={session.duration * 60}
+          startTime={session.startTime || undefined}
           onComplete={handleEndGame}
         />
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex">
-        {/* Map Area */}
-        <div className="flex-1 relative p-2 md:p-4">
+      <div className="flex-1 flex overflow-hidden">
+        {/* Map Area - Fixed container with scroll isolation */}
+        <div className="flex-1 relative p-2 md:p-4 overflow-hidden">
           {/* Turn indicator - more prominent */}
           <div className={`absolute top-4 left-4 z-10 backdrop-blur-sm border rounded-xl px-5 py-3 ${
             isMyTurn 
@@ -268,13 +297,15 @@ const GamePage = () => {
             )}
           </div>
 
-          {/* Map */}
-          <WorldMap
-            guessedCountries={guessedCountries}
-            currentCountry={currentCountry || undefined}
-            onCountryClick={handleCountryClick}
-            disabled={!isMyTurn || !currentCountry}
-          />
+          {/* Map Container - scrollable/fixed box */}
+          <div className="w-full h-full overflow-auto rounded-xl">
+            <WorldMap
+              guessedCountries={guessedCountries}
+              currentCountry={currentCountry || undefined}
+              onCountryClick={handleCountryClick}
+              disabled={!isMyTurn || !currentCountry}
+            />
+          </div>
         </div>
 
         {/* Leaderboard Sidebar */}
