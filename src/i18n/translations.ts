@@ -76,6 +76,8 @@ export const translations = {
     revealLetter: 'Reveal Letter',
     currentScore: 'Current Score',
     timeLeft: 'Time Left',
+    rollComplete: 'Dice rolled! Click the country you think it is!',
+    clickCountryToGuess: 'Click on the map to make your guess',
     
     // Map Controls
     recenter: 'Recenter Map',
@@ -225,6 +227,8 @@ export const translations = {
     revealLetter: 'Révéler une lettre',
     currentScore: 'Score Actuel',
     timeLeft: 'Temps Restant',
+    rollComplete: 'Dé lancé ! Cliquez sur le pays que vous pensez être !',
+    clickCountryToGuess: 'Cliquez sur la carte pour deviner',
     
     // Map Controls
     recenter: 'Recentrer la Carte',
@@ -374,6 +378,8 @@ export const translations = {
     revealLetter: 'كشف حرف',
     currentScore: 'النتيجة الحالية',
     timeLeft: 'الوقت المتبقي',
+    rollComplete: 'تم رمي النرد! انقر على الدولة التي تعتقد أنها!',
+    clickCountryToGuess: 'انقر على الخريطة للتخمين',
     
     // Map Controls
     recenter: 'إعادة توسيط الخريطة',

@@ -86,8 +86,8 @@ export const WorldMap: React.FC<WorldMapProps> = ({
         </GameTooltip>
       </div>
 
-      {/* Country Tooltip */}
-      {hoveredCountry && (
+      {/* Country Tooltip - Only show for already guessed countries */}
+      {hoveredCountry && guessedCountries.includes(hoveredCountry) && (
         <div className="absolute top-4 left-4 z-10 px-3 py-2 bg-popover border border-border rounded-lg shadow-lg">
           <span className="text-sm font-medium text-foreground">{hoveredCountry}</span>
         </div>

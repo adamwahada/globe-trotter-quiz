@@ -21,6 +21,7 @@ export interface GameSession {
   currentTurn: number;
   currentCountry: string | null;
   startTime: number | null;
+  waitingRoomStartTime: number; // shared timer start
 }
 
 interface GameContextType {
@@ -73,12 +74,13 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       currentTurn: 0,
       currentCountry: null,
       startTime: null,
+      waitingRoomStartTime: Date.now(),
     });
     
     return code;
   };
 
-  const joinSession = (code: string) => {
+  const joinSession = (code: string, sessionMaxPlayers: number = 2, sessionDuration: number = 30, sessionWaitingStartTime: number = Date.now()) => {
     // Placeholder: validate code
     if (code.length !== 6) return false;
     
@@ -101,12 +103,13 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         { id: 'host', username: 'Host', avatar: '🌍', color: '#E50914', score: 0, countriesGuessed: [], isReady: true },
         player,
       ],
-      maxPlayers: 4,
-      duration: 30,
+      maxPlayers: sessionMaxPlayers, // Use the session's actual maxPlayers
+      duration: sessionDuration,
       status: 'waiting',
       currentTurn: 0,
       currentCountry: null,
       startTime: null,
+      waitingRoomStartTime: sessionWaitingStartTime, // Use shared timer
     });
     
     return true;

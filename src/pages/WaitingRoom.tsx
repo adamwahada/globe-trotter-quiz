@@ -96,10 +96,11 @@ const WaitingRoom = () => {
           <p className="text-muted-foreground">{t('shareCode')}</p>
         </div>
 
-        {/* Timer */}
+        {/* Timer - shared across all players based on session start time */}
         <div className="mb-8">
           <TimerProgress 
-            totalSeconds={300} 
+            totalSeconds={300}
+            startTime={session.waitingRoomStartTime}
             onComplete={handleStartGame}
             label={t('timeRemaining')}
           />

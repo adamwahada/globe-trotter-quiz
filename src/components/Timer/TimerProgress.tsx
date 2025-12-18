@@ -6,6 +6,7 @@ interface TimerProgressProps {
   onComplete?: () => void;
   isActive?: boolean;
   label?: string;
+  startTime?: number; // Unix timestamp when timer started (for shared timers)
 }
 
 export const TimerProgress: React.FC<TimerProgressProps> = ({
@@ -13,29 +14,37 @@ export const TimerProgress: React.FC<TimerProgressProps> = ({
   onComplete,
   isActive = true,
   label,
+  startTime,
 }) => {
-  const [remainingSeconds, setRemainingSeconds] = useState(totalSeconds);
+  const calculateRemainingSeconds = () => {
+    if (startTime) {
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      return Math.max(0, totalSeconds - elapsed);
+    }
+    return totalSeconds;
+  };
+
+  const [remainingSeconds, setRemainingSeconds] = useState(calculateRemainingSeconds);
 
   useEffect(() => {
     if (!isActive) return;
 
     const interval = setInterval(() => {
-      setRemainingSeconds((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          onComplete?.();
-          return 0;
-        }
-        return prev - 1;
-      });
+      const newRemaining = calculateRemainingSeconds();
+      setRemainingSeconds(newRemaining);
+      
+      if (newRemaining <= 0) {
+        clearInterval(interval);
+        onComplete?.();
+      }
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isActive, onComplete]);
+  }, [isActive, onComplete, startTime, totalSeconds]);
 
   useEffect(() => {
-    setRemainingSeconds(totalSeconds);
-  }, [totalSeconds]);
+    setRemainingSeconds(calculateRemainingSeconds());
+  }, [totalSeconds, startTime]);
 
   const percentage = (remainingSeconds / totalSeconds) * 100;
   const minutes = Math.floor(remainingSeconds / 60);
