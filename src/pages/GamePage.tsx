@@ -51,7 +51,7 @@ const GamePage = () => {
       const country = getRandomCountry();
       setCurrentCountry(country);
       setIsRolling(false);
-      addToast('game', `Roll result: Find ${country}!`);
+      addToast('game', t('rollComplete'));
     }, 600);
   };
 
@@ -173,14 +173,18 @@ const GamePage = () => {
       <div className="flex-1 flex">
         {/* Map Area */}
         <div className="flex-1 relative p-2 md:p-4">
-          {/* Turn indicator */}
-          <div className="absolute top-4 left-4 z-10 bg-card/90 backdrop-blur-sm border border-border rounded-lg px-4 py-2">
-            <p className={`font-medium ${isMyTurn ? 'text-primary' : 'text-muted-foreground'}`}>
-              {isMyTurn ? t('yourTurn') : t('waitingTurn', { player: 'Opponent' })}
+          {/* Turn indicator - more prominent */}
+          <div className={`absolute top-4 left-4 z-10 backdrop-blur-sm border rounded-xl px-5 py-3 ${
+            isMyTurn 
+              ? 'bg-primary/20 border-primary shadow-lg shadow-primary/20' 
+              : 'bg-card/90 border-border'
+          }`}>
+            <p className={`font-display text-lg ${isMyTurn ? 'text-primary' : 'text-muted-foreground'}`}>
+              {isMyTurn ? `🎯 ${t('yourTurn')}` : `⏳ ${t('waitingTurn', { player: session.players[(session.currentTurn) % session.players.length]?.username || 'Opponent' })}`}
             </p>
-            {currentCountry && (
+            {currentCountry && isMyTurn && (
               <p className="text-sm text-foreground mt-1">
-                Find: <span className="font-bold text-primary">{currentCountry}</span>
+                {t('clickCountryToGuess')}
               </p>
             )}
           </div>
