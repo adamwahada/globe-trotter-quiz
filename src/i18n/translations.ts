@@ -30,17 +30,27 @@ export const translations = {
     
     // Rules
     rulesTitle: 'Game Rules',
-    rule1: 'Roll the dice to randomly select a country',
-    rule2: 'Click on the map where you think the country is located',
-    rule3: 'Earn points based on accuracy',
-    rule4: 'Use hints if you need help (costs 1 point)',
+    rulesSubtitle: 'Master the game in 4 simple steps',
+    ruleStep1Title: 'Roll the Dice',
+    ruleStep1Desc: 'Start your turn by rolling the dice to get a random country from around the world.',
+    ruleStep2Title: 'Place Your Guess',
+    ruleStep2Desc: 'Click on the world map to find and select the country you think matches.',
+    ruleStep3Title: 'Earn Points',
+    ruleStep3Desc: 'Get 3 points for correct answers, 2 for nearby countries. Wrong guesses earn nothing!',
+    ruleStep4Title: 'Use Hints Wisely',
+    ruleStep4Desc: 'Stuck? Use a hint for help, but it costs 1 point. Strategy matters!',
     
     // Scoring
     scoringTitle: 'Scoring System',
-    pointsCorrect: '3 Points - Correct Answer',
-    pointsClose: '2 Points - Close Answer (minor typo)',
-    pointsHint: '-1 Point - Using a hint',
-    pointsSkip: '0 Points - Skip',
+    scoringSubtitle: 'Every point counts towards victory',
+    pointsCorrect: 'Correct Answer',
+    pointsCorrectDesc: 'You nailed it! Full points awarded.',
+    pointsClose: 'Close Answer',
+    pointsCloseDesc: 'Almost there! Minor typo or small mistake.',
+    pointsHint: 'Used Hint',
+    pointsHintDesc: 'Each hint you use costs 1 point.',
+    pointsSkip: 'Skip / Wrong Answer',
+    pointsSkipDesc: 'No points. Try next one!',
     
     // Game Settings
     createSession: 'Create Session',
@@ -147,6 +157,21 @@ export const translations = {
     tooltipSubmit: 'Submit your answer',
     tooltipQuit: 'Leave the current game',
     
+    // Features Section
+    featureMultiplayer: 'Multiplayer',
+    featureMultiplayerDesc: 'Challenge 2-4 friends in real-time geography battles',
+    featureInteractiveMap: 'Interactive Map',
+    featureInteractiveMapDesc: 'Click, zoom, and explore the world map to find countries',
+    featureLeaderboard: 'Leaderboard',
+    featureLeaderboardDesc: 'Track your progress and compete for the top spot',
+    
+    // CTA Section
+    ctaTitle: 'Ready to Test Your Knowledge?',
+    ctaSubtitle: 'Join thousands of players from around the world in the ultimate geography challenge.',
+    
+    // Footer
+    footerText: '© 2024 World Quiz. Test your geography knowledge.',
+    
     // Misc
     loading: 'Loading...',
     or: 'or',
@@ -188,17 +213,27 @@ export const translations = {
     
     // Rules
     rulesTitle: 'Règles du Jeu',
-    rule1: 'Lancez le dé pour sélectionner un pays au hasard',
-    rule2: 'Cliquez sur la carte où vous pensez que le pays se trouve',
-    rule3: 'Gagnez des points selon votre précision',
-    rule4: "Utilisez des indices si besoin (coûte 1 point)",
+    rulesSubtitle: 'Maîtrisez le jeu en 4 étapes simples',
+    ruleStep1Title: 'Lancez le Dé',
+    ruleStep1Desc: 'Commencez votre tour en lançant le dé pour obtenir un pays aléatoire du monde entier.',
+    ruleStep2Title: 'Placez Votre Devinette',
+    ruleStep2Desc: 'Cliquez sur la carte du monde pour trouver et sélectionner le pays correspondant.',
+    ruleStep3Title: 'Gagnez des Points',
+    ruleStep3Desc: 'Obtenez 3 points pour les bonnes réponses, 2 pour les pays proches. Les mauvaises réponses ne rapportent rien !',
+    ruleStep4Title: 'Utilisez les Indices avec Sagesse',
+    ruleStep4Desc: "Bloqué ? Utilisez un indice pour de l'aide, mais ça coûte 1 point. La stratégie compte !",
     
     // Scoring
     scoringTitle: 'Système de Points',
-    pointsCorrect: '3 Points - Réponse correcte',
-    pointsClose: '2 Points - Réponse proche (petite faute)',
-    pointsHint: "-1 Point - Utilisation d'un indice",
-    pointsSkip: '0 Points - Passer',
+    scoringSubtitle: 'Chaque point compte pour la victoire',
+    pointsCorrect: 'Réponse Correcte',
+    pointsCorrectDesc: 'Bravo ! Points complets attribués.',
+    pointsClose: 'Réponse Proche',
+    pointsCloseDesc: 'Presque ! Petite faute ou erreur mineure.',
+    pointsHint: 'Indice Utilisé',
+    pointsHintDesc: 'Chaque indice utilisé coûte 1 point.',
+    pointsSkip: 'Passer / Mauvaise Réponse',
+    pointsSkipDesc: 'Pas de points. Essayez le suivant !',
     
     // Game Settings
     createSession: 'Créer une Session',
@@ -305,6 +340,21 @@ export const translations = {
     tooltipSubmit: 'Valider votre réponse',
     tooltipQuit: 'Quitter la partie en cours',
     
+    // Features Section
+    featureMultiplayer: 'Multijoueur',
+    featureMultiplayerDesc: 'Défiez 2-4 amis en batailles de géographie en temps réel',
+    featureInteractiveMap: 'Carte Interactive',
+    featureInteractiveMapDesc: 'Cliquez, zoomez et explorez la carte du monde pour trouver les pays',
+    featureLeaderboard: 'Classement',
+    featureLeaderboardDesc: 'Suivez votre progression et visez la première place',
+    
+    // CTA Section
+    ctaTitle: 'Prêt à Tester Vos Connaissances ?',
+    ctaSubtitle: 'Rejoignez des milliers de joueurs du monde entier dans le défi ultime de géographie.',
+    
+    // Footer
+    footerText: '© 2024 Quiz Mondial. Testez vos connaissances en géographie.',
+    
     // Misc
     loading: 'Chargement...',
     or: 'ou',
@@ -346,17 +396,27 @@ export const translations = {
     
     // Rules
     rulesTitle: 'قواعد اللعبة',
-    rule1: 'ارمِ النرد لاختيار دولة عشوائية',
-    rule2: 'انقر على الخريطة حيث تعتقد أن الدولة موجودة',
-    rule3: 'اكسب نقاطاً بناءً على الدقة',
-    rule4: 'استخدم التلميحات إذا احتجت المساعدة (تكلف نقطة واحدة)',
+    rulesSubtitle: 'أتقن اللعبة في 4 خطوات بسيطة',
+    ruleStep1Title: 'ارمِ النرد',
+    ruleStep1Desc: 'ابدأ دورك برمي النرد للحصول على دولة عشوائية من حول العالم.',
+    ruleStep2Title: 'ضع تخمينك',
+    ruleStep2Desc: 'انقر على خريطة العالم للعثور على الدولة التي تعتقد أنها صحيحة واختيارها.',
+    ruleStep3Title: 'اكسب النقاط',
+    ruleStep3Desc: 'احصل على 3 نقاط للإجابات الصحيحة، 2 للدول القريبة. التخمينات الخاطئة لا تكسب شيئاً!',
+    ruleStep4Title: 'استخدم التلميحات بحكمة',
+    ruleStep4Desc: 'عالق؟ استخدم تلميحاً للمساعدة، لكنه يكلف نقطة واحدة. الاستراتيجية مهمة!',
     
     // Scoring
     scoringTitle: 'نظام النقاط',
-    pointsCorrect: '3 نقاط - إجابة صحيحة',
-    pointsClose: '2 نقاط - إجابة قريبة (خطأ بسيط)',
-    pointsHint: '-1 نقطة - استخدام تلميح',
-    pointsSkip: '0 نقاط - تخطي',
+    scoringSubtitle: 'كل نقطة تحسب نحو الفوز',
+    pointsCorrect: 'إجابة صحيحة',
+    pointsCorrectDesc: 'أحسنت! نقاط كاملة.',
+    pointsClose: 'إجابة قريبة',
+    pointsCloseDesc: 'قريب جداً! خطأ بسيط أو صغير.',
+    pointsHint: 'استخدام تلميح',
+    pointsHintDesc: 'كل تلميح تستخدمه يكلف نقطة واحدة.',
+    pointsSkip: 'تخطي / إجابة خاطئة',
+    pointsSkipDesc: 'لا نقاط. جرب التالي!',
     
     // Game Settings
     createSession: 'إنشاء جلسة',
@@ -462,6 +522,21 @@ export const translations = {
     tooltipSkip: 'تخطي هذا الدور (0 نقاط)',
     tooltipSubmit: 'إرسال إجابتك',
     tooltipQuit: 'مغادرة اللعبة الحالية',
+    
+    // Features Section
+    featureMultiplayer: 'متعدد اللاعبين',
+    featureMultiplayerDesc: 'تحدى 2-4 أصدقاء في معارك جغرافية مباشرة',
+    featureInteractiveMap: 'خريطة تفاعلية',
+    featureInteractiveMapDesc: 'انقر وكبّر واستكشف خريطة العالم للعثور على الدول',
+    featureLeaderboard: 'لوحة المتصدرين',
+    featureLeaderboardDesc: 'تتبع تقدمك وتنافس على المركز الأول',
+    
+    // CTA Section
+    ctaTitle: 'مستعد لاختبار معرفتك؟',
+    ctaSubtitle: 'انضم إلى آلاف اللاعبين من حول العالم في تحدي الجغرافيا النهائي.',
+    
+    // Footer
+    footerText: '© 2024 مسابقة العالم. اختبر معرفتك الجغرافية.',
     
     // Misc
     loading: 'جاري التحميل...',

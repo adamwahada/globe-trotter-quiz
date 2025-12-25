@@ -27,17 +27,17 @@ const Index = () => {
   };
 
   const ruleCards = [
-    { step: 1, title: 'Roll the Dice', description: 'Start your turn by rolling the dice to get a random country from around the world.', icon: Dice5 },
-    { step: 2, title: 'Place Your Guess', description: 'Click on the world map to find and select the country you think matches.', icon: MapPin },
-    { step: 3, title: 'Earn Points', description: 'Get 3 points for correct answers, 2 for nearby countries. Wrong guesses earn nothing!', icon: Trophy },
-    { step: 4, title: 'Use Hints Wisely', description: 'Stuck? Use a hint for help, but it costs 1 point. Strategy matters!', icon: Lightbulb },
+    { step: 1, title: t('ruleStep1Title'), description: t('ruleStep1Desc'), icon: Dice5 },
+    { step: 2, title: t('ruleStep2Title'), description: t('ruleStep2Desc'), icon: MapPin },
+    { step: 3, title: t('ruleStep3Title'), description: t('ruleStep3Desc'), icon: Trophy },
+    { step: 4, title: t('ruleStep4Title'), description: t('ruleStep4Desc'), icon: Lightbulb },
   ];
 
   const scoring = [
-    { points: '3', label: t('pointsCorrect'), color: 'text-success' },
-    { points: '2', label: t('pointsClose'), color: 'text-info' },
-    { points: '-1', label: t('pointsHint'), color: 'text-warning' },
-    { points: '0', label: t('pointsSkip'), color: 'text-muted-foreground' },
+    { points: '3', label: t('pointsCorrect'), description: t('pointsCorrectDesc'), color: 'text-success' },
+    { points: '2', label: t('pointsClose'), description: t('pointsCloseDesc'), color: 'text-info' },
+    { points: '0', label: t('pointsSkip'), description: t('pointsSkipDesc'), color: 'text-muted-foreground' },
+    { points: '-1', label: t('pointsHint'), description: t('pointsHintDesc'), color: 'text-warning' },
   ];
 
   const scrollCarousel = (direction: 'left' | 'right') => {
@@ -110,7 +110,7 @@ const Index = () => {
           <h2 className="text-4xl md:text-5xl font-display text-foreground text-center mb-4 px-4">
             {t('rulesTitle')}
           </h2>
-          <p className="text-center text-muted-foreground mb-10 px-4">Master the game in 4 simple steps</p>
+          <p className="text-center text-muted-foreground mb-10 px-4">{t('rulesSubtitle')}</p>
           
           {/* Carousel Navigation */}
           <div className="relative">
@@ -154,7 +154,7 @@ const Index = () => {
           <h2 className="text-4xl md:text-5xl font-display text-foreground text-center mb-4">
             {t('scoringTitle')}
           </h2>
-          <p className="text-center text-muted-foreground mb-12">Every point counts towards victory</p>
+          <p className="text-center text-muted-foreground mb-12">{t('scoringSubtitle')}</p>
           
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {scoring.map((item, index) => (
@@ -167,15 +167,15 @@ const Index = () => {
                 <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/10 via-transparent to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 
                 {/* Points with neon glow */}
-                <p className={`relative text-6xl font-display mb-3 ${item.color} drop-shadow-[0_0_15px_currentColor]`}>
+                <p className={`relative text-5xl font-display mb-2 ${item.color} drop-shadow-[0_0_15px_currentColor]`}>
                   {item.points}
                 </p>
                 
-                {/* Divider */}
-                <div className="w-12 h-1 mx-auto mb-3 rounded-full bg-gradient-to-r from-transparent via-primary/60 to-transparent" />
-                
                 {/* Label */}
-                <p className="relative text-sm text-muted-foreground font-medium">{item.label}</p>
+                <p className="relative text-base font-semibold text-foreground mb-2">{item.label}</p>
+                
+                {/* Description */}
+                <p className="relative text-sm text-muted-foreground">{item.description}</p>
                 
                 {/* Bottom accent */}
                 <div className="absolute bottom-0 left-4 right-4 h-[2px] rounded-full bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
@@ -193,24 +193,24 @@ const Index = () => {
               <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto">
                 <Users className="h-8 w-8 text-primary" />
               </div>
-              <h3 className="text-2xl font-display text-foreground">Multiplayer</h3>
-              <p className="text-muted-foreground">Challenge 2-4 friends in real-time geography battles</p>
+              <h3 className="text-2xl font-display text-foreground">{t('featureMultiplayer')}</h3>
+              <p className="text-muted-foreground">{t('featureMultiplayerDesc')}</p>
             </div>
             
             <div className="space-y-4">
               <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto">
                 <Target className="h-8 w-8 text-primary" />
               </div>
-              <h3 className="text-2xl font-display text-foreground">Interactive Map</h3>
-              <p className="text-muted-foreground">Click, zoom, and explore the world map to find countries</p>
+              <h3 className="text-2xl font-display text-foreground">{t('featureInteractiveMap')}</h3>
+              <p className="text-muted-foreground">{t('featureInteractiveMapDesc')}</p>
             </div>
             
             <div className="space-y-4">
               <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto">
                 <Trophy className="h-8 w-8 text-primary" />
               </div>
-              <h3 className="text-2xl font-display text-foreground">Leaderboard</h3>
-              <p className="text-muted-foreground">Track your progress and compete for the top spot</p>
+              <h3 className="text-2xl font-display text-foreground">{t('featureLeaderboard')}</h3>
+              <p className="text-muted-foreground">{t('featureLeaderboardDesc')}</p>
             </div>
           </div>
         </div>
@@ -220,10 +220,10 @@ const Index = () => {
       <section className="relative z-10 py-20 px-4 text-center">
         <div className="max-w-2xl mx-auto">
           <h2 className="text-4xl md:text-5xl font-display text-foreground mb-6">
-            Ready to Test Your Knowledge?
+            {t('ctaTitle')}
           </h2>
           <p className="text-muted-foreground mb-8">
-            Join thousands of players from around the world in the ultimate geography challenge.
+            {t('ctaSubtitle')}
           </p>
           <Button 
             variant="hero" 
@@ -241,7 +241,7 @@ const Index = () => {
       <footer className="relative z-10 py-8 px-4 border-t border-border bg-background/80 backdrop-blur-sm">
         <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-sm text-muted-foreground">
-            © 2024 World Quiz. Test your geography knowledge.
+            {t('footerText')}
           </p>
         </div>
       </footer>
