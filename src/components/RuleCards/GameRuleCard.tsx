@@ -14,8 +14,6 @@ export const GameRuleCard: React.FC<GameRuleCardProps> = ({
   description,
   icon: Icon,
 }) => {
-  const stepEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣'];
-  
   return (
     <div className="group relative flex-shrink-0 w-72 sm:w-80">
       {/* Card with glassmorphism and neon glow */}
@@ -25,7 +23,7 @@ export const GameRuleCard: React.FC<GameRuleCardProps> = ({
         
         {/* Step number */}
         <div className="relative flex items-center gap-3 mb-4">
-          <span className="text-3xl">{stepEmojis[step - 1] || step}</span>
+          <span className="text-4xl font-display text-primary drop-shadow-[0_0_10px_hsl(var(--primary))]">{step}</span>
           <div className="h-[2px] flex-1 bg-gradient-to-r from-primary/60 to-transparent" />
         </div>
         
