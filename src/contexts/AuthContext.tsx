@@ -1,4 +1,13 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { 
+  auth, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  firebaseSignOut,
+  onAuthStateChanged,
+  updateProfile as firebaseUpdateProfile,
+  FirebaseUser
+} from '@/lib/firebase';
 
 export interface User {
   id: string;
@@ -25,61 +34,116 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Placeholder avatars
+// Placeholder avatars and colors
 const avatars = ['🌍', '🗺️', '🧭', '✈️', '🚀', '🌎', '🌏', '🏔️'];
 const colors = ['#E50914', '#1DB954', '#4169E1', '#FF6B35', '#9B59B6', '#00CED1'];
 
+// Convert Firebase user to our User type
+const mapFirebaseUser = (firebaseUser: FirebaseUser): User => {
+  // Try to get stored user data from localStorage
+  const storedData = localStorage.getItem(`user_${firebaseUser.uid}`);
+  const parsedData = storedData ? JSON.parse(storedData) : {};
+  
+  return {
+    id: firebaseUser.uid,
+    email: firebaseUser.email || '',
+    username: firebaseUser.displayName || parsedData.username || firebaseUser.email?.split('@')[0] || 'Player',
+    avatar: parsedData.avatar || avatars[Math.floor(Math.random() * avatars.length)],
+    color: parsedData.color || colors[Math.floor(Math.random() * colors.length)],
+    stats: parsedData.stats || {
+      totalGames: 0,
+      wins: 0,
+      avgScore: 0,
+    },
+  };
+};
+
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Listen for auth state changes
+  useEffect(() => {
+    if (!auth) {
+      console.error('Firebase auth not initialized');
+      setIsLoading(false);
+      return;
+    }
+
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        const mappedUser = mapFirebaseUser(firebaseUser);
+        setUser(mappedUser);
+        // Store user data
+        localStorage.setItem(`user_${firebaseUser.uid}`, JSON.stringify({
+          username: mappedUser.username,
+          avatar: mappedUser.avatar,
+          color: mappedUser.color,
+          stats: mappedUser.stats,
+        }));
+      } else {
+        setUser(null);
+      }
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const signIn = async (email: string, password: string) => {
+    if (!auth) throw new Error('Firebase not initialized');
     setIsLoading(true);
-    // Placeholder: simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    setUser({
-      id: '1',
-      email,
-      username: email.split('@')[0],
-      avatar: avatars[Math.floor(Math.random() * avatars.length)],
-      color: colors[Math.floor(Math.random() * colors.length)],
-      stats: {
-        totalGames: 12,
-        wins: 5,
-        avgScore: 24.5,
-      },
-    });
-    setIsLoading(false);
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const signUp = async (email: string, password: string, username: string) => {
+    if (!auth) throw new Error('Firebase not initialized');
     setIsLoading(true);
-    // Placeholder: simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    setUser({
-      id: Date.now().toString(),
-      email,
-      username,
-      avatar: avatars[0],
-      color: colors[0],
-      stats: {
-        totalGames: 0,
-        wins: 0,
-        avgScore: 0,
-      },
-    });
-    setIsLoading(false);
+    try {
+      const { user: firebaseUser } = await createUserWithEmailAndPassword(auth, email, password);
+      
+      // Update display name
+      await firebaseUpdateProfile(firebaseUser, { displayName: username });
+      
+      // Store initial user data
+      const avatar = avatars[Math.floor(Math.random() * avatars.length)];
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      localStorage.setItem(`user_${firebaseUser.uid}`, JSON.stringify({
+        username,
+        avatar,
+        color,
+        stats: { totalGames: 0, wins: 0, avgScore: 0 },
+      }));
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const signOut = () => {
-    setUser(null);
+  const signOut = async () => {
+    if (!auth) return;
+    try {
+      await firebaseSignOut(auth);
+      setUser(null);
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
   };
 
   const updateProfile = (updates: Partial<User>) => {
     if (user) {
-      setUser({ ...user, ...updates });
+      const updatedUser = { ...user, ...updates };
+      setUser(updatedUser);
+      // Persist to localStorage
+      localStorage.setItem(`user_${user.id}`, JSON.stringify({
+        username: updatedUser.username,
+        avatar: updatedUser.avatar,
+        color: updatedUser.color,
+        stats: updatedUser.stats,
+      }));
     }
   };
 
