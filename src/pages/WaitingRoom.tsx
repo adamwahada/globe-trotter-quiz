@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Logo } from '@/components/Logo/Logo';
+import { Navbar } from '@/components/Navbar/Navbar';
 import { Button } from '@/components/ui/button';
 import { TimerProgress } from '@/components/Timer/TimerProgress';
 import { AvatarSelector } from '@/components/Avatar/AvatarSelector';
@@ -67,16 +67,16 @@ const WaitingRoom = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <nav className="flex items-center justify-between p-4 md:p-6 border-b border-border">
-        <Logo size="md" />
-        
-        <GameTooltip content={t('tooltipQuit')} position="bottom">
-          <Button variant="outline" onClick={handleLeave} className="gap-2">
-            <LogOut className="h-4 w-4" />
-            {t('quitGame')}
-          </Button>
-        </GameTooltip>
-      </nav>
+      <Navbar 
+        rightContent={
+          <GameTooltip content={t('tooltipQuit')} position="bottom">
+            <Button variant="outline" onClick={handleLeave} className="gap-2">
+              <LogOut className="h-4 w-4" />
+              {t('quitGame')}
+            </Button>
+          </GameTooltip>
+        }
+      />
 
       <div className="max-w-4xl mx-auto p-4 md:p-8">
         {/* Session Info */}
