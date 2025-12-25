@@ -34,7 +34,7 @@ export const Logo: React.FC<LogoProps> = ({ size = 'md' }) => {
       <img 
         src={worldQuizLogo} 
         alt="World Quiz" 
-        className={`${sizeClasses[size]} w-auto object-contain`}
+        className={`${sizeClasses[size]} w-auto object-contain drop-shadow-[0_0_15px_rgba(220,38,38,0.5)] hover:drop-shadow-[0_0_25px_rgba(220,38,38,0.7)] transition-all duration-300`}
       />
     </Link>
   );
