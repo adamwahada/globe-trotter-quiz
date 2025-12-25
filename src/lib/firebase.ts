@@ -1,5 +1,15 @@
 import { initializeApp, FirebaseApp } from 'firebase/app';
 import { getDatabase, ref, set, onValue, update, remove, get, push, Database, DatabaseReference } from 'firebase/database';
+import { 
+  getAuth, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  signOut as firebaseSignOut,
+  onAuthStateChanged,
+  updateProfile,
+  Auth,
+  User as FirebaseUser
+} from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey: "AIzaSyAbGN1Bx9i9685A5sMgZSaVBfgPthO6JR4",
@@ -14,15 +24,32 @@ const firebaseConfig = {
 
 let app: FirebaseApp | null = null;
 let database: Database | null = null;
+let auth: Auth | null = null;
 
 try {
   app = initializeApp(firebaseConfig);
   database = getDatabase(app);
+  auth = getAuth(app);
   console.log('Firebase initialized successfully');
 } catch (error) {
   console.error('Failed to initialize Firebase:', error);
 }
 
-export { database, ref, set, onValue, update, remove, get, push };
-export type { DatabaseReference };
-export const isFirebaseReady = () => database !== null;
+export { 
+  database, 
+  auth,
+  ref, 
+  set, 
+  onValue, 
+  update, 
+  remove, 
+  get, 
+  push,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  firebaseSignOut,
+  onAuthStateChanged,
+  updateProfile
+};
+export type { DatabaseReference, FirebaseUser };
+export const isFirebaseReady = () => database !== null && auth !== null;
