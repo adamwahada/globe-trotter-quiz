@@ -155,6 +155,8 @@ export const translations = {
     confirmQuit: 'Are you sure you want to quit?',
     yes: 'Yes',
     no: 'No',
+    soundOn: 'Sound On',
+    soundOff: 'Sound Off',
   },
   
   fr: {
@@ -311,6 +313,8 @@ export const translations = {
     confirmQuit: 'Êtes-vous sûr de vouloir quitter ?',
     yes: 'Oui',
     no: 'Non',
+    soundOn: 'Son Activé',
+    soundOff: 'Son Désactivé',
   },
   
   ar: {
@@ -467,6 +471,8 @@ export const translations = {
     confirmQuit: 'هل أنت متأكد من المغادرة؟',
     yes: 'نعم',
     no: 'لا',
+    soundOn: 'الصوت مفعّل',
+    soundOff: 'الصوت مغلق',
   },
 };
 
