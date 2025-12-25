@@ -191,23 +191,36 @@ const Index = () => {
       </section>
 
       {/* Scoring Section */}
-      <section className="relative z-10 py-20 px-4 bg-secondary/30">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-4xl md:text-5xl font-display text-foreground text-center mb-12">
+      <section className="relative z-10 py-20 px-4">
+        <div className="max-w-5xl mx-auto">
+          <h2 className="text-4xl md:text-5xl font-display text-foreground text-center mb-4">
             {t('scoringTitle')}
           </h2>
+          <p className="text-center text-muted-foreground mb-12">Every point counts towards victory</p>
           
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {scoring.map((item, index) => (
               <div 
                 key={index}
-                className="card-netflix p-6 text-center animate-fade-in"
+                className="group relative bg-gradient-to-br from-card/90 via-card/70 to-card/50 backdrop-blur-xl rounded-2xl p-6 border border-primary/30 text-center transition-all duration-300 hover:scale-105 hover:border-primary/60 hover:shadow-lg hover:shadow-primary/20"
                 style={{ animationDelay: `${index * 100}ms` }}
               >
-                <p className={`text-5xl font-display mb-2 ${item.color}`}>
+                {/* Glow effect on hover */}
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/10 via-transparent to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                
+                {/* Points with neon glow */}
+                <p className={`relative text-6xl font-display mb-3 ${item.color} drop-shadow-[0_0_15px_currentColor]`}>
                   {item.points}
                 </p>
-                <p className="text-sm text-muted-foreground">{item.label}</p>
+                
+                {/* Divider */}
+                <div className="w-12 h-1 mx-auto mb-3 rounded-full bg-gradient-to-r from-transparent via-primary/60 to-transparent" />
+                
+                {/* Label */}
+                <p className="relative text-sm text-muted-foreground font-medium">{item.label}</p>
+                
+                {/* Bottom accent */}
+                <div className="absolute bottom-0 left-4 right-4 h-[2px] rounded-full bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
               </div>
             ))}
           </div>
