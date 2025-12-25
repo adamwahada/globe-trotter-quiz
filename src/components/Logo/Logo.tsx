@@ -11,9 +11,9 @@ export const Logo: React.FC<LogoProps> = ({ size = 'md' }) => {
   const location = useLocation();
   
   const sizeClasses = {
-    sm: 'h-10',
-    md: 'h-14',
-    lg: 'h-20',
+    sm: 'h-12',
+    md: 'h-16',
+    lg: 'h-24',
   };
 
   const handleClick = (e: React.MouseEvent) => {
