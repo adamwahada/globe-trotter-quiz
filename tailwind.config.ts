@@ -115,6 +115,10 @@ export default {
           "0%": { backgroundPosition: "-200% 0" },
           "100%": { backgroundPosition: "200% 0" },
         },
+        "logo-glow": {
+          "0%, 100%": { filter: "drop-shadow(0 0 15px rgba(220, 38, 38, 0.5))" },
+          "50%": { filter: "drop-shadow(0 0 25px rgba(220, 38, 38, 0.8))" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -122,6 +126,7 @@ export default {
         "spin-slow": "spin-slow 3s linear infinite",
         "bounce-subtle": "bounce-subtle 2s ease-in-out infinite",
         shimmer: "shimmer 2s linear infinite",
+        "logo-glow": "logo-glow 2s ease-in-out infinite",
       },
       backgroundImage: {
         "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
