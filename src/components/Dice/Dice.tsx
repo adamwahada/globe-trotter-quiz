@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Dices } from 'lucide-react';
 import { GameTooltip } from '@/components/Tooltip/GameTooltip';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useSound } from '@/contexts/SoundContext';
 
 interface DiceProps {
   onRoll: () => void;
@@ -11,12 +12,14 @@ interface DiceProps {
 
 export const Dice: React.FC<DiceProps> = ({ onRoll, disabled = false, isRolling = false }) => {
   const { t } = useLanguage();
+  const { playDiceSound } = useSound();
   const [rolling, setRolling] = useState(false);
 
   const handleRoll = () => {
     if (disabled || rolling) return;
     
     setRolling(true);
+    playDiceSound();
     setTimeout(() => {
       setRolling(false);
       onRoll();
