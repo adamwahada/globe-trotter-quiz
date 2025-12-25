@@ -9,7 +9,7 @@ export const SoundToggle: React.FC = () => {
   const { t } = useLanguage();
 
   return (
-    <GameTooltip content={soundEnabled ? 'Sound On' : 'Sound Off'} position="bottom">
+    <GameTooltip content={soundEnabled ? t('soundOn') : t('soundOff')} position="bottom">
       <button
         onClick={toggleSound}
         className="p-2 rounded-lg bg-secondary/50 border border-border hover:border-primary transition-all duration-200"
