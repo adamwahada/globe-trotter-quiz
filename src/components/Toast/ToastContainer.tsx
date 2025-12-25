@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useToastContext, ToastType } from '@/contexts/ToastContext';
+import { useSound } from '@/contexts/SoundContext';
 import { X, CheckCircle, AlertCircle, Info, Trophy } from 'lucide-react';
 
 const getToastStyles = (type: ToastType) => {
@@ -32,6 +33,19 @@ const getToastIcon = (type: ToastType) => {
 
 export const ToastContainer: React.FC = () => {
   const { toasts, removeToast } = useToastContext();
+  const { playToastSound } = useSound();
+  const previousToastCount = useRef(toasts.length);
+
+  // Play sound when new toast appears
+  useEffect(() => {
+    if (toasts.length > previousToastCount.current) {
+      const newestToast = toasts[toasts.length - 1];
+      if (newestToast) {
+        playToastSound(newestToast.type);
+      }
+    }
+    previousToastCount.current = toasts.length;
+  }, [toasts, playToastSound]);
 
   return (
     <div className="fixed top-4 right-4 z-[9999] flex flex-col gap-2 max-w-sm pointer-events-none">

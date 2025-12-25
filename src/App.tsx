@@ -7,6 +7,7 @@ import { LanguageProvider } from "@/contexts/LanguageContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ToastProvider } from "@/contexts/ToastContext";
 import { GameProvider } from "@/contexts/GameContext";
+import { SoundProvider } from "@/contexts/SoundContext";
 import { ToastContainer } from "@/components/Toast/ToastContainer";
 import Index from "./pages/Index";
 import WaitingRoom from "./pages/WaitingRoom";
@@ -19,23 +20,25 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <LanguageProvider>
       <AuthProvider>
-        <ToastProvider>
-          <GameProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <ToastContainer />
-              <BrowserRouter>
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/waiting-room" element={<WaitingRoom />} />
-                  <Route path="/game" element={<GamePage />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </BrowserRouter>
-            </TooltipProvider>
-          </GameProvider>
-        </ToastProvider>
+        <SoundProvider>
+          <ToastProvider>
+            <GameProvider>
+              <TooltipProvider>
+                <Toaster />
+                <Sonner />
+                <ToastContainer />
+                <BrowserRouter>
+                  <Routes>
+                    <Route path="/" element={<Index />} />
+                    <Route path="/waiting-room" element={<WaitingRoom />} />
+                    <Route path="/game" element={<GamePage />} />
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </BrowserRouter>
+              </TooltipProvider>
+            </GameProvider>
+          </ToastProvider>
+        </SoundProvider>
       </AuthProvider>
     </LanguageProvider>
   </QueryClientProvider>

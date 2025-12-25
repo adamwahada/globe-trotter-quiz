@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Logo } from '@/components/Logo/Logo';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher/LanguageSwitcher';
+import { SoundToggle } from '@/components/Sound/SoundToggle';
 import { AuthModal } from '@/components/Auth/AuthModal';
 import { UserMenu } from '@/components/Auth/UserMenu';
 import { Button } from '@/components/ui/button';
@@ -42,6 +43,7 @@ export const Navbar: React.FC<NavbarProps> = ({ variant = 'default', rightConten
           <Logo size="md" />
           
           <div className="flex items-center gap-4">
+            <SoundToggle />
             <LanguageSwitcher />
             
             {rightContent ? (
