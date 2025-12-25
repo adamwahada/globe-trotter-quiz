@@ -1,42 +1,45 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { Globe } from 'lucide-react';
-import { useLanguage } from '@/contexts/LanguageContext';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import worldQuizLogo from '@/assets/world-quiz-logo.png';
 
 interface LogoProps {
   size?: 'sm' | 'md' | 'lg';
-  showText?: boolean;
 }
 
-export const Logo: React.FC<LogoProps> = ({ size = 'md', showText = true }) => {
-  const { t } = useLanguage();
+export const Logo: React.FC<LogoProps> = ({ size = 'md' }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
   
   const sizeClasses = {
-    sm: 'h-6 w-6',
-    md: 'h-8 w-8',
-    lg: 'h-12 w-12',
+    sm: 'h-8',
+    md: 'h-10',
+    lg: 'h-14',
   };
 
-  const textClasses = {
-    sm: 'text-xl',
-    md: 'text-2xl',
-    lg: 'text-4xl',
+  const handleClick = (e: React.MouseEvent) => {
+    if (location.pathname === '/') {
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      navigate('/');
+    }
   };
 
   return (
     <Link 
       to="/" 
-      className="flex items-center gap-2 group transition-transform duration-300 hover:scale-105"
+      onClick={handleClick}
+      className="flex items-center group transition-all duration-300 hover:scale-105"
     >
       <div className="relative">
-        <Globe className={`${sizeClasses[size]} text-primary transition-transform duration-500 group-hover:rotate-180`} />
-        <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        <img 
+          src={worldQuizLogo} 
+          alt="World Quiz" 
+          className={`${sizeClasses[size]} w-auto object-contain drop-shadow-[0_0_15px_hsl(var(--primary)/0.6)] transition-all duration-300 group-hover:drop-shadow-[0_0_25px_hsl(var(--primary)/0.8)]`}
+        />
+        {/* Glow pulse effect */}
+        <div className="absolute inset-0 bg-primary/20 rounded-full blur-2xl opacity-0 group-hover:opacity-60 transition-opacity duration-500 animate-pulse" />
       </div>
-      {showText && (
-        <span className={`font-display ${textClasses[size]} text-foreground tracking-wider`}>
-          {t('logo')}
-        </span>
-      )}
     </Link>
   );
 };

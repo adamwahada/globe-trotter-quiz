@@ -1,8 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Logo } from '@/components/Logo/Logo';
-import { LanguageSwitcher } from '@/components/LanguageSwitcher/LanguageSwitcher';
-import { AuthModal } from '@/components/Auth/AuthModal';
-import { UserMenu } from '@/components/Auth/UserMenu';
+import { Navbar } from '@/components/Navbar/Navbar';
 import { GameSettingsModal } from '@/components/Modal/GameSettingsModal';
 import { Button } from '@/components/ui/button';
 import { GameRuleCard } from '@/components/RuleCards/GameRuleCard';
@@ -19,15 +16,11 @@ const Index = () => {
   const { addToast } = useToastContext();
   const carouselRef = useRef<HTMLDivElement>(null);
   
-  const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const [gameModalOpen, setGameModalOpen] = useState(false);
 
   const handleStartGame = () => {
     if (!isAuthenticated) {
       addToast('info', t('authRequired'));
-      setAuthMode('signin');
-      setAuthModalOpen(true);
     } else {
       setGameModalOpen(true);
     }
@@ -61,50 +54,15 @@ const Index = () => {
     <div className="min-h-screen bg-background relative overflow-x-hidden">
       {/* Background World Map Image */}
       <div 
-        className="absolute inset-0 bg-cover bg-center"
+        className="fixed inset-0 bg-cover bg-center"
         style={{
           backgroundImage: `url(${worldMapBg})`,
         }}
       />
-      <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/90 to-background" />
+      <div className="fixed inset-0 bg-gradient-to-b from-background/80 via-background/90 to-background" />
 
       {/* Navigation */}
-      <nav className="relative z-10 flex items-center justify-between p-4 md:p-6">
-        <Logo size="md" />
-        
-        <div className="flex items-center gap-4">
-          <LanguageSwitcher />
-          
-          {isAuthenticated ? (
-            <UserMenu />
-          ) : (
-            <div className="flex gap-2">
-              <GameTooltip content={t('signIn')} position="bottom">
-                <Button 
-                  variant="ghost" 
-                  onClick={() => {
-                    setAuthMode('signin');
-                    setAuthModalOpen(true);
-                  }}
-                >
-                  {t('signIn')}
-                </Button>
-              </GameTooltip>
-              <GameTooltip content={t('signUp')} position="bottom">
-                <Button 
-                  variant="netflix"
-                  onClick={() => {
-                    setAuthMode('signup');
-                    setAuthModalOpen(true);
-                  }}
-                >
-                  {t('signUp')}
-                </Button>
-              </GameTooltip>
-            </div>
-          )}
-        </div>
-      </nav>
+      <Navbar />
 
       {/* Hero Section */}
       <section className="relative z-10 flex flex-col items-center justify-center min-h-[70vh] px-4 text-center">
@@ -280,21 +238,13 @@ const Index = () => {
       </section>
 
       {/* Footer */}
-      <footer className="relative z-10 py-8 px-4 border-t border-border">
+      <footer className="relative z-10 py-8 px-4 border-t border-border bg-background/80 backdrop-blur-sm">
         <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <Logo size="sm" />
           <p className="text-sm text-muted-foreground">
             © 2024 World Quiz. Test your geography knowledge.
           </p>
         </div>
       </footer>
-
-      {/* Modals */}
-      <AuthModal 
-        isOpen={authModalOpen} 
-        onClose={() => setAuthModalOpen(false)}
-        initialMode={authMode}
-      />
       
       <GameSettingsModal 
         isOpen={gameModalOpen} 

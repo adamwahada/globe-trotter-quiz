@@ -9,6 +9,7 @@ import { GuessModal } from '@/components/Guess/GuessModal';
 import { GameResults } from '@/components/Results/GameResults';
 import { TimerProgress } from '@/components/Timer/TimerProgress';
 import { GameTooltip } from '@/components/Tooltip/GameTooltip';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher/LanguageSwitcher';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useGame } from '@/contexts/GameContext';
 import { useToastContext } from '@/contexts/ToastContext';
@@ -37,6 +38,7 @@ const GamePage = () => {
   const [guessedCountries, setGuessedCountries] = useState<string[]>(session?.guessedCountries || []);
   const [isRolling, setIsRolling] = useState(false);
   const [showResults, setShowResults] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   
   // Turn management - synced with session
   const [currentTurnIndex, setCurrentTurnIndex] = useState(session?.currentTurn || 0);
@@ -46,6 +48,15 @@ const GamePage = () => {
   );
   
   const turnTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Handle scroll for navbar blur effect
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // Sync local state with Firebase session
   useEffect(() => {
@@ -210,49 +221,60 @@ const GamePage = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
-      <nav className="flex items-center justify-between p-3 md:p-4 border-b border-border bg-card/50 backdrop-blur-sm">
-        <Logo size="sm" />
-        
-        <div className="flex items-center gap-4">
-          {/* Game Timer */}
-          <div className="hidden md:block w-48">
-            <TimerProgress 
-              totalSeconds={session.duration * 60} 
-              startTime={session.startTime || undefined}
-              onComplete={handleEndGame}
-              label={t('timeLeft')}
-            />
+      {/* Header - Fixed navbar with blur */}
+      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        scrolled 
+          ? 'bg-background/80 backdrop-blur-xl border-b border-primary/20 shadow-lg shadow-primary/5' 
+          : 'bg-card/50 backdrop-blur-sm border-b border-border'
+      }`}>
+        <div className="flex items-center justify-between p-3 md:p-4 max-w-7xl mx-auto">
+          <Logo size="sm" />
+          
+          <div className="flex items-center gap-4">
+            <LanguageSwitcher />
+            
+            {/* Game Timer */}
+            <div className="hidden md:block w-48">
+              <TimerProgress 
+                totalSeconds={session.duration * 60} 
+                startTime={session.startTime || undefined}
+                onComplete={handleEndGame}
+                label={t('timeLeft')}
+              />
+            </div>
+            
+            {/* Score */}
+            <div className="flex items-center gap-2 bg-secondary px-4 py-2 rounded-lg">
+              <Trophy className="h-4 w-4 text-primary" />
+              <span className="font-display text-xl text-foreground">
+                {players.find(p => p.id === currentPlayer?.id)?.score || 0}
+              </span>
+            </div>
+            
+            {/* Leaderboard Toggle */}
+            <GameTooltip content={t('tooltipLeaderboard')} position="bottom">
+              <Button 
+                variant="icon" 
+                size="icon"
+                onClick={() => setShowLeaderboard(!showLeaderboard)}
+              >
+                <Trophy className="h-5 w-5" />
+              </Button>
+            </GameTooltip>
+            
+            {/* Leave */}
+            <GameTooltip content={t('tooltipQuit')} position="bottom">
+              <Button variant="outline" size="sm" onClick={handleLeave} className="gap-2">
+                <LogOut className="h-4 w-4" />
+                <span className="hidden md:inline">{t('quitGame')}</span>
+              </Button>
+            </GameTooltip>
           </div>
-          
-          {/* Score */}
-          <div className="flex items-center gap-2 bg-secondary px-4 py-2 rounded-lg">
-            <Trophy className="h-4 w-4 text-primary" />
-            <span className="font-display text-xl text-foreground">
-              {players.find(p => p.id === currentPlayer?.id)?.score || 0}
-            </span>
-          </div>
-          
-          {/* Leaderboard Toggle */}
-          <GameTooltip content={t('tooltipLeaderboard')} position="bottom">
-            <Button 
-              variant="icon" 
-              size="icon"
-              onClick={() => setShowLeaderboard(!showLeaderboard)}
-            >
-              <Trophy className="h-5 w-5" />
-            </Button>
-          </GameTooltip>
-          
-          {/* Leave */}
-          <GameTooltip content={t('tooltipQuit')} position="bottom">
-            <Button variant="outline" size="sm" onClick={handleLeave} className="gap-2">
-              <LogOut className="h-4 w-4" />
-              <span className="hidden md:inline">{t('quitGame')}</span>
-            </Button>
-          </GameTooltip>
         </div>
       </nav>
+
+      {/* Spacer for fixed navbar */}
+      <div className="h-14 md:h-16" />
 
       {/* Mobile Timer */}
       <div className="md:hidden p-3 border-b border-border">
