@@ -11,9 +11,9 @@ export const Logo: React.FC<LogoProps> = ({ size = 'md' }) => {
   const location = useLocation();
   
   const sizeClasses = {
-    sm: 'h-12',
-    md: 'h-16',
-    lg: 'h-24',
+    sm: 'h-14',
+    md: 'h-20',
+    lg: 'h-28',
   };
 
   const handleClick = (e: React.MouseEvent) => {
@@ -34,7 +34,7 @@ export const Logo: React.FC<LogoProps> = ({ size = 'md' }) => {
       <img 
         src={worldQuizLogo} 
         alt="World Quiz" 
-        className={`${sizeClasses[size]} w-auto object-contain drop-shadow-[0_0_15px_rgba(220,38,38,0.5)] hover:drop-shadow-[0_0_25px_rgba(220,38,38,0.7)] transition-all duration-300`}
+        className={`${sizeClasses[size]} w-auto object-contain animate-logo-glow hover:drop-shadow-[0_0_30px_rgba(220,38,38,0.8)] transition-all duration-300`}
       />
     </Link>
   );
