@@ -28,7 +28,6 @@ interface WorldMapProps {
   currentCountry?: string;
   onCountryClick: (countryName: string) => void;
   disabled?: boolean;
-  showCountryNames?: boolean;
 }
 
 export const WorldMap: React.FC<WorldMapProps> = ({
@@ -36,12 +35,22 @@ export const WorldMap: React.FC<WorldMapProps> = ({
   currentCountry,
   onCountryClick,
   disabled = false,
-  showCountryNames = false,
 }) => {
   const { t } = useLanguage();
   const [position, setPosition] = useState({ coordinates: [0, 20] as [number, number], zoom: 1 });
-  const [hoveredCountry, setHoveredCountry] = useState<string | null>(null);
+  const [tooltip, setTooltip] = useState<{ country: string; x: number; y: number } | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
+
+  const updateTooltip = useCallback((country: string, e: React.MouseEvent<SVGPathElement>) => {
+    const rect = mapContainerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    setTooltip({
+      country,
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+    });
+  }, []);
 
   // Auto-zoom to current country's continent when it changes
   useEffect(() => {
@@ -113,20 +122,13 @@ export const WorldMap: React.FC<WorldMapProps> = ({
     return 'hsl(0 0% 20%)';
   };
 
-  // Determine what to show in tooltip - NEVER reveal unguessed country names during active turn
+  // Tooltip should NEVER reveal unplayed country names
   const getTooltipContent = (countryName: string) => {
-    const isGuessed = guessedCountries.includes(countryName);
+    const isPlayed = guessedCountries.includes(countryName);
     const isCurrent = currentCountry === countryName;
-    
-    // Already guessed countries always show their name
-    if (isGuessed) {
-      return `✓ ${countryName}`;
-    }
-    // Current country only shows name after turn is complete (showCountryNames=true)
-    if (isCurrent) {
-      return showCountryNames ? `🎯 ${countryName}` : '🎯 Click to guess!';
-    }
-    // Other countries never show names during gameplay
+
+    if (isPlayed) return `✓ ${countryName}`;
+    if (isCurrent) return '🎯 Selected country';
     return '???';
   };
 
@@ -138,33 +140,32 @@ export const WorldMap: React.FC<WorldMapProps> = ({
         className="relative flex-1 h-[450px] md:h-[550px] lg:h-[600px] bg-card rounded-xl overflow-hidden border-2 border-border shadow-lg"
         style={{ touchAction: 'none' }} // Prevent page scroll when interacting with map
       >
-        {/* Country Tooltip */}
-        {hoveredCountry && (
-          <div className={`absolute top-4 left-4 z-20 px-4 py-2 rounded-lg shadow-lg border ${
-            guessedCountries.includes(hoveredCountry) 
-              ? 'bg-success/20 border-success text-success-foreground' 
-              : currentCountry === hoveredCountry
-                ? 'bg-warning/20 border-warning text-warning-foreground'
-                : 'bg-popover border-border text-foreground'
-          }`}>
-            <span className="text-sm font-semibold">
-              {getTooltipContent(hoveredCountry)}
-            </span>
-            {guessedCountries.includes(hoveredCountry) && (
-              <span className="text-xs block text-muted-foreground">Already guessed</span>
+        {/* Country Tooltip - follows cursor inside map box */}
+        {tooltip && (
+          <div
+            className={`pointer-events-none absolute z-20 px-3 py-2 rounded-lg shadow-lg border backdrop-blur-sm ${
+              guessedCountries.includes(tooltip.country)
+                ? 'bg-success/20 border-success text-success-foreground'
+                : currentCountry === tooltip.country
+                  ? 'bg-warning/20 border-warning text-warning-foreground'
+                  : 'bg-popover/90 border-border text-foreground'
+            }`}
+            style={{ left: tooltip.x + 12, top: tooltip.y + 12 }}
+          >
+            <span className="text-sm font-semibold">{getTooltipContent(tooltip.country)}</span>
+            {guessedCountries.includes(tooltip.country) && (
+              <span className="text-xs block text-muted-foreground">Played</span>
             )}
-            {currentCountry === hoveredCountry && !guessedCountries.includes(hoveredCountry) && !disabled && (
+            {currentCountry === tooltip.country && !guessedCountries.includes(tooltip.country) && !disabled && (
               <span className="text-xs block">Click to open guess modal</span>
             )}
           </div>
         )}
 
-        {/* Current Country Indicator - Only show when there's a current country */}
+        {/* Current Country Indicator - NEVER show the country name */}
         {currentCountry && (
           <div className="absolute bottom-4 left-4 z-20 px-4 py-2 bg-warning/20 border border-warning rounded-lg animate-pulse">
-            <span className="text-sm font-semibold text-warning">
-              🎯 {showCountryNames ? `Answer: ${currentCountry}` : 'Find the highlighted country!'}
-            </span>
+            <span className="text-sm font-semibold text-warning">🎯 Country selected</span>
           </div>
         )}
 
@@ -202,8 +203,9 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                       key={geo.rsmKey}
                       geography={geo}
                       onClick={() => isClickable && onCountryClick(countryName)}
-                      onMouseEnter={() => setHoveredCountry(countryName)}
-                      onMouseLeave={() => setHoveredCountry(null)}
+                      onMouseEnter={(e) => updateTooltip(countryName, e)}
+                      onMouseMove={(e) => updateTooltip(countryName, e)}
+                      onMouseLeave={() => setTooltip(null)}
                       style={{
                         default: {
                           fill: getCountryFill(countryName),
