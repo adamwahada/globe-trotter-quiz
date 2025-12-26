@@ -261,7 +261,7 @@ const GamePage = () => {
     await moveToNextTurn();
   }, [isMyTurn, addToast, t, moveToNextTurn]);
 
-  const handleUseHint = useCallback(async () => {
+  const handleUseHint = useCallback(() => {
     if (!currentCountry || !currentPlayer) return '';
     
     const updatedPlayers = players.map((p, idx) => 
@@ -270,7 +270,8 @@ const GamePage = () => {
         : p
     );
     
-    await updateGameState({ players: updatedPlayers });
+    // Fire and forget - optimistic update
+    updateGameState({ players: updatedPlayers });
     
     addToast('info', t('hintUsed') + ' (-1 point)');
     return currentCountry[0];
