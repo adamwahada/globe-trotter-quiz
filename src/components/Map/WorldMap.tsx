@@ -113,18 +113,21 @@ export const WorldMap: React.FC<WorldMapProps> = ({
     return 'hsl(0 0% 20%)';
   };
 
-  // Determine what to show in tooltip
+  // Determine what to show in tooltip - NEVER reveal unguessed country names during active turn
   const getTooltipContent = (countryName: string) => {
     const isGuessed = guessedCountries.includes(countryName);
     const isCurrent = currentCountry === countryName;
     
+    // Already guessed countries always show their name
     if (isGuessed) {
       return `✓ ${countryName}`;
     }
+    // Current country only shows name after turn is complete (showCountryNames=true)
     if (isCurrent) {
-      return showCountryNames ? countryName : '🎯 Click to guess!';
+      return showCountryNames ? `🎯 ${countryName}` : '🎯 Click to guess!';
     }
-    return showCountryNames ? countryName : '???';
+    // Other countries never show names during gameplay
+    return '???';
   };
 
   return (
@@ -160,7 +163,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
         {currentCountry && (
           <div className="absolute bottom-4 left-4 z-20 px-4 py-2 bg-warning/20 border border-warning rounded-lg animate-pulse">
             <span className="text-sm font-semibold text-warning">
-              🎯 {showCountryNames ? `Find: ${currentCountry}` : 'Find the highlighted country!'}
+              🎯 {showCountryNames ? `Answer: ${currentCountry}` : 'Find the highlighted country!'}
             </span>
           </div>
         )}
