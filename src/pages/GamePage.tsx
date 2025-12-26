@@ -57,8 +57,10 @@ const GamePage = () => {
   const isMyTurn = session ? players[currentTurnIndex]?.id === currentPlayer?.id : false;
   const currentTurnPlayer = players[currentTurnIndex];
 
-  // Determine if country name should be shown (only after turn is complete)
-  const shouldShowCountryName = currentTurnState?.submittedAnswer !== null || showCountryReveal;
+  // Country name is NEVER shown until after submission (for all players)
+  // This ensures the active player must guess without seeing the name
+  const turnCompleted = currentTurnState?.submittedAnswer !== null;
+  const shouldShowCountryName = turnCompleted || showCountryReveal;
 
   // Handle scroll for navbar blur effect
   useEffect(() => {
@@ -446,18 +448,18 @@ const GamePage = () => {
               <>
                 <div className="bg-warning/20 border border-warning rounded-lg px-3 py-2 mb-3">
                   <p className="text-xs text-muted-foreground">
-                    {isMyTurn ? 'Find the highlighted country!' : 'Watching...'}
+                    {turnCompleted ? 'Answer revealed' : isMyTurn ? 'Find the highlighted country!' : 'Watching...'}
                   </p>
                   <p className="font-semibold text-warning">
-                    {shouldShowCountryName ? currentCountry : '???'}
+                    {turnCompleted ? currentCountry : '???'}
                   </p>
                 </div>
                 
-                {isMyTurn && (
+                {isMyTurn && !turnCompleted && (
                   <p className="text-sm text-foreground">{t('clickCountryToGuess')}</p>
                 )}
                 
-                {!isMyTurn && (
+                {!isMyTurn && !turnCompleted && (
                   <p className="text-sm text-muted-foreground">Spectating - wait for your turn</p>
                 )}
               </>
@@ -534,7 +536,7 @@ const GamePage = () => {
             currentCountry={currentCountry || undefined}
             onCountryClick={handleCountryClick}
             disabled={!isMyTurn || !currentCountry}
-            showCountryNames={!isMyTurn || shouldShowCountryName}
+            showCountryNames={shouldShowCountryName}
           />
         </div>
 
