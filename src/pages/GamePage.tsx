@@ -424,6 +424,7 @@ const GamePage = () => {
                   startTime={session.turnStartTime}
                   onComplete={isMyTurn ? handleTurnTimeout : undefined}
                   label={t('timeLeft')}
+                  enableWarningSound={isMyTurn}
                 />
               </div>
             )}
