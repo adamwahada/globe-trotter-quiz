@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { Clock } from 'lucide-react';
+import { useSound } from '@/contexts/SoundContext';
 
 interface TimerProgressProps {
   totalSeconds: number;
@@ -7,6 +8,7 @@ interface TimerProgressProps {
   isActive?: boolean;
   label?: string;
   startTime?: number; // Unix timestamp when timer started (for shared timers)
+  enableWarningSound?: boolean;
 }
 
 export const TimerProgress: React.FC<TimerProgressProps> = ({
@@ -15,14 +17,23 @@ export const TimerProgress: React.FC<TimerProgressProps> = ({
   isActive = true,
   label,
   startTime,
+  enableWarningSound = false,
 }) => {
+  const { playTimerWarning } = useSound();
   const onCompleteRef = useRef(onComplete);
   const hasCompletedRef = useRef(false);
+  const lastWarnedSecondRef = useRef<number | null>(null);
   
   // Update ref when onComplete changes
   useEffect(() => {
     onCompleteRef.current = onComplete;
   }, [onComplete]);
+
+  // Reset warning ref when timer restarts
+  useEffect(() => {
+    lastWarnedSecondRef.current = null;
+    hasCompletedRef.current = false;
+  }, [startTime]);
 
   const calculateRemainingSeconds = useCallback(() => {
     if (startTime) {
@@ -42,6 +53,14 @@ export const TimerProgress: React.FC<TimerProgressProps> = ({
       const newRemaining = calculateRemainingSeconds();
       setRemainingSeconds(newRemaining);
       
+      // Play warning sounds in the last 5 seconds
+      if (enableWarningSound && newRemaining <= 5 && newRemaining >= 0) {
+        if (lastWarnedSecondRef.current !== newRemaining) {
+          lastWarnedSecondRef.current = newRemaining;
+          playTimerWarning(newRemaining);
+        }
+      }
+      
       if (newRemaining <= 0 && !hasCompletedRef.current) {
         hasCompletedRef.current = true;
         clearInterval(interval);
@@ -50,7 +69,7 @@ export const TimerProgress: React.FC<TimerProgressProps> = ({
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isActive, startTime, totalSeconds, calculateRemainingSeconds]);
+  }, [isActive, startTime, totalSeconds, calculateRemainingSeconds, enableWarningSound, playTimerWarning]);
 
   useEffect(() => {
     setRemainingSeconds(calculateRemainingSeconds());
@@ -59,6 +78,7 @@ export const TimerProgress: React.FC<TimerProgressProps> = ({
   const percentage = (remainingSeconds / totalSeconds) * 100;
   const minutes = Math.floor(remainingSeconds / 60);
   const seconds = remainingSeconds % 60;
+  const isWarning = remainingSeconds <= 5 && remainingSeconds > 0;
 
   const getProgressColor = () => {
     if (percentage > 50) return 'bg-success';
@@ -71,10 +91,10 @@ export const TimerProgress: React.FC<TimerProgressProps> = ({
       {label && (
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground flex items-center gap-2">
-            <Clock className="h-4 w-4" />
+            <Clock className={`h-4 w-4 ${isWarning ? 'animate-pulse text-destructive' : ''}`} />
             {label}
           </span>
-          <span className="font-display text-lg text-foreground">
+          <span className={`font-display text-lg ${isWarning ? 'text-destructive animate-pulse' : 'text-foreground'}`}>
             {minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}
           </span>
         </div>
@@ -82,7 +102,7 @@ export const TimerProgress: React.FC<TimerProgressProps> = ({
       
       <div className="h-2 bg-secondary rounded-full overflow-hidden">
         <div
-          className={`h-full transition-all duration-1000 ease-linear ${getProgressColor()}`}
+          className={`h-full transition-all duration-1000 ease-linear ${getProgressColor()} ${isWarning ? 'animate-pulse' : ''}`}
           style={{ width: `${percentage}%` }}
         />
       </div>

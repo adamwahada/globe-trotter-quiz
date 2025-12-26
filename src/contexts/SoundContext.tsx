@@ -5,6 +5,7 @@ interface SoundContextType {
   toggleSound: () => void;
   playToastSound: (type?: 'success' | 'error' | 'info' | 'game') => void;
   playDiceSound: () => void;
+  playTimerWarning: (secondsLeft: number) => void;
 }
 
 const SoundContext = createContext<SoundContextType | undefined>(undefined);
@@ -113,8 +114,34 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     playDiceRollSound();
   }, [soundEnabled]);
 
+  // Timer warning sound - escalating urgency
+  const playTimerWarning = useCallback((secondsLeft: number) => {
+    if (!soundEnabled) return;
+    
+    // Different sounds based on urgency
+    if (secondsLeft === 5) {
+      // First warning - gentle beep
+      playBeep(600, 0.15, 'sine', 0.2);
+    } else if (secondsLeft === 4) {
+      playBeep(700, 0.15, 'sine', 0.25);
+    } else if (secondsLeft === 3) {
+      playBeep(800, 0.15, 'sine', 0.3);
+    } else if (secondsLeft === 2) {
+      playBeep(900, 0.15, 'triangle', 0.35);
+    } else if (secondsLeft === 1) {
+      // Final warning - urgent double beep
+      playBeep(1000, 0.1, 'triangle', 0.4);
+      setTimeout(() => playBeep(1200, 0.15, 'triangle', 0.4), 120);
+    } else if (secondsLeft === 0) {
+      // Time's up - descending tone
+      playBeep(800, 0.15, 'square', 0.3);
+      setTimeout(() => playBeep(500, 0.2, 'square', 0.25), 150);
+      setTimeout(() => playBeep(300, 0.3, 'square', 0.2), 300);
+    }
+  }, [soundEnabled]);
+
   return (
-    <SoundContext.Provider value={{ soundEnabled, toggleSound, playToastSound, playDiceSound }}>
+    <SoundContext.Provider value={{ soundEnabled, toggleSound, playToastSound, playDiceSound, playTimerWarning }}>
       {children}
     </SoundContext.Provider>
   );
