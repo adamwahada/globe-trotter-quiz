@@ -223,6 +223,7 @@ export const useFirebaseSession = () => {
         return false;
       }
 
+      // Allow joining waiting sessions only
       if (existingSession.status !== 'waiting') {
         setError('Session has already started');
         return false;
@@ -247,12 +248,10 @@ export const useFirebaseSession = () => {
         // Set current player first
         setCurrentPlayer(player);
         
-        // Create a minimal session object with the code to trigger subscription
-        // The subscription will fetch the full session data
-        setSession({
-          ...existingSession,
-          code, // Ensure code is set for subscription
-        });
+        // Set the FULL session data to ensure immediate sync
+        // This ensures new players see current map, timer, and game state
+        const refreshedSession = await getSessionByCode(code);
+        setSession(refreshedSession || existingSession);
         
         setHasActiveSession(true);
         

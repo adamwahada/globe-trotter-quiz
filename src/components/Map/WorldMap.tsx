@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   ComposableMap,
   Geographies,
@@ -28,6 +28,7 @@ interface WorldMapProps {
   currentCountry?: string;
   onCountryClick: (countryName: string) => void;
   disabled?: boolean;
+  showCountryNames?: boolean;
 }
 
 export const WorldMap: React.FC<WorldMapProps> = ({
@@ -35,11 +36,22 @@ export const WorldMap: React.FC<WorldMapProps> = ({
   currentCountry,
   onCountryClick,
   disabled = false,
+  showCountryNames = false,
 }) => {
   const { t } = useLanguage();
   const [position, setPosition] = useState({ coordinates: [0, 20] as [number, number], zoom: 1 });
   const [hoveredCountry, setHoveredCountry] = useState<string | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
+
+  // Auto-zoom to current country's continent when it changes
+  useEffect(() => {
+    if (currentCountry) {
+      const continent = getContinent(currentCountry);
+      if (continent && continentZoomPresets[continent]) {
+        setPosition(continentZoomPresets[continent]);
+      }
+    }
+  }, [currentCountry]);
 
   const handleZoomIn = useCallback(() => {
     if (position.zoom >= 4) return;
@@ -83,7 +95,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
     if (guessedCountries.includes(countryName)) {
       return 'hsl(142 76% 36%)'; // success color - bright green
     }
-    // Current active country - pulsing red/orange
+    // Current active country - pulsing gold/orange
     if (currentCountry === countryName) {
       return 'hsl(38 92% 50%)'; // warning/gold color for active selection
     }
@@ -101,12 +113,26 @@ export const WorldMap: React.FC<WorldMapProps> = ({
     return 'hsl(0 0% 20%)';
   };
 
+  // Determine what to show in tooltip
+  const getTooltipContent = (countryName: string) => {
+    const isGuessed = guessedCountries.includes(countryName);
+    const isCurrent = currentCountry === countryName;
+    
+    if (isGuessed) {
+      return `✓ ${countryName}`;
+    }
+    if (isCurrent) {
+      return showCountryNames ? countryName : '🎯 Click to guess!';
+    }
+    return showCountryNames ? countryName : '???';
+  };
+
   return (
     <div className="flex gap-4 h-full">
       {/* Map Container - Fixed box with scroll isolation */}
       <div 
         ref={mapContainerRef}
-        className="relative flex-1 h-[500px] md:h-[600px] bg-card rounded-xl overflow-hidden border-2 border-border shadow-lg"
+        className="relative flex-1 h-[450px] md:h-[550px] lg:h-[600px] bg-card rounded-xl overflow-hidden border-2 border-border shadow-lg"
         style={{ touchAction: 'none' }} // Prevent page scroll when interacting with map
       >
         {/* Country Tooltip */}
@@ -119,21 +145,30 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                 : 'bg-popover border-border text-foreground'
           }`}>
             <span className="text-sm font-semibold">
-              {guessedCountries.includes(hoveredCountry) ? `✓ ${hoveredCountry}` : hoveredCountry}
+              {getTooltipContent(hoveredCountry)}
             </span>
             {guessedCountries.includes(hoveredCountry) && (
               <span className="text-xs block text-muted-foreground">Already guessed</span>
             )}
-            {currentCountry === hoveredCountry && !guessedCountries.includes(hoveredCountry) && (
-              <span className="text-xs block">🎯 Click to guess!</span>
+            {currentCountry === hoveredCountry && !guessedCountries.includes(hoveredCountry) && !disabled && (
+              <span className="text-xs block">Click to open guess modal</span>
             )}
           </div>
         )}
 
-        {/* Current Country Indicator */}
+        {/* Current Country Indicator - Only show when there's a current country */}
         {currentCountry && (
           <div className="absolute bottom-4 left-4 z-20 px-4 py-2 bg-warning/20 border border-warning rounded-lg animate-pulse">
-            <span className="text-sm font-semibold text-warning">🎯 Find: {currentCountry}</span>
+            <span className="text-sm font-semibold text-warning">
+              🎯 {showCountryNames ? `Find: ${currentCountry}` : 'Find the highlighted country!'}
+            </span>
+          </div>
+        )}
+
+        {/* Spectator indicator */}
+        {disabled && currentCountry && (
+          <div className="absolute top-4 right-4 z-20 px-3 py-1 bg-muted/80 border border-border rounded-lg">
+            <span className="text-xs text-muted-foreground">👁️ Spectating</span>
           </div>
         )}
 

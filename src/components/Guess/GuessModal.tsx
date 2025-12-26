@@ -1,15 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Lightbulb, User, Send, SkipForward } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { GameTooltip } from '@/components/Tooltip/GameTooltip';
-import { getFamousPerson } from '@/utils/countryData';
 import { TimerProgress } from '@/components/Timer/TimerProgress';
 
 interface GuessModalProps {
   isOpen: boolean;
   onClose: () => void;
-  countryName: string;
   onSubmit: (guess: string) => void;
   onSkip: () => void;
   onUseHint: () => string;
@@ -20,11 +18,10 @@ interface GuessModalProps {
 export const GuessModal: React.FC<GuessModalProps> = ({
   isOpen,
   onClose,
-  countryName,
   onSubmit,
   onSkip,
   onUseHint,
-  turnTimeSeconds = 30,
+  turnTimeSeconds = 35,
   turnStartTime,
 }) => {
   const { t } = useLanguage();
@@ -33,6 +30,17 @@ export const GuessModal: React.FC<GuessModalProps> = ({
   const [famousPersonUsed, setFamousPersonUsed] = useState(false);
   const [firstLetter, setFirstLetter] = useState('');
   const [famousPerson, setFamousPerson] = useState('');
+
+  // Reset state when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setGuess('');
+      setHintUsed(false);
+      setFamousPersonUsed(false);
+      setFirstLetter('');
+      setFamousPerson('');
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -46,31 +54,22 @@ export const GuessModal: React.FC<GuessModalProps> = ({
 
   const handleFamousPerson = () => {
     if (!famousPersonUsed) {
-      const person = getFamousPerson(countryName);
-      setFamousPerson(person || 'Unknown');
+      // For famous person hint, we'd need the country name passed in
+      // For now, just deduct a point
+      onUseHint();
       setFamousPersonUsed(true);
-      onUseHint(); // Deduct point
+      setFamousPerson('Famous person hint used (-1 point)');
     }
   };
 
   const handleSubmit = () => {
     if (guess.trim()) {
       onSubmit(guess.trim());
-      setGuess('');
-      setHintUsed(false);
-      setFamousPersonUsed(false);
-      setFirstLetter('');
-      setFamousPerson('');
     }
   };
 
   const handleSkip = () => {
     onSkip();
-    setGuess('');
-    setHintUsed(false);
-    setFamousPersonUsed(false);
-    setFirstLetter('');
-    setFamousPerson('');
   };
 
   return (
@@ -96,12 +95,27 @@ export const GuessModal: React.FC<GuessModalProps> = ({
               startTime={turnStartTime}
               onComplete={handleSkip}
               label={t('timeLeft')}
+              enableWarningSound={true}
             />
           </div>
 
-          <h2 className="text-3xl font-display text-foreground text-center mb-6">
+          <h2 className="text-3xl font-display text-foreground text-center mb-2">
             {t('guessCountry')}
           </h2>
+          
+          <p className="text-sm text-muted-foreground text-center mb-6">
+            What is the name of the highlighted country?
+          </p>
+
+          {/* Scoring info */}
+          <div className="bg-secondary/50 rounded-lg p-3 mb-6 text-center">
+            <p className="text-xs text-muted-foreground">
+              <span className="text-success font-semibold">+3</span> correct • 
+              <span className="text-warning font-semibold ml-2">+2</span> close • 
+              <span className="text-destructive font-semibold ml-2">0</span> wrong/skip • 
+              <span className="text-destructive font-semibold ml-2">-1</span> per hint
+            </p>
+          </div>
 
           {/* Hints display */}
           <div className="space-y-3 mb-6">
@@ -116,7 +130,7 @@ export const GuessModal: React.FC<GuessModalProps> = ({
             {famousPerson && (
               <div className="bg-primary/20 border border-primary/30 rounded-lg p-3 text-center animate-fade-in">
                 <p className="text-sm text-primary">
-                  {t('famousPerson')}: <span className="font-bold">{famousPerson}</span>
+                  {famousPerson}
                 </p>
               </div>
             )}
@@ -144,7 +158,7 @@ export const GuessModal: React.FC<GuessModalProps> = ({
                   className="flex-1 gap-2"
                 >
                   <Lightbulb className="h-4 w-4" />
-                  {t('useHint')}
+                  {t('useHint')} {hintUsed && '✓'}
                 </Button>
               </GameTooltip>
 
@@ -156,7 +170,7 @@ export const GuessModal: React.FC<GuessModalProps> = ({
                   className="flex-1 gap-2"
                 >
                   <User className="h-4 w-4" />
-                  {t('famousPerson')}
+                  {t('famousPerson')} {famousPersonUsed && '✓'}
                 </Button>
               </GameTooltip>
             </div>

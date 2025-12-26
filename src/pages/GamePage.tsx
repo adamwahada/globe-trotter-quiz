@@ -34,7 +34,7 @@ const GamePage = () => {
     startGame,
   } = useGame();
   const { addToast } = useToastContext();
-  const { playToastSound } = useSound();
+  const { playToastSound, playDiceSound } = useSound();
   const navigate = useNavigate();
 
   const [showLeaderboard, setShowLeaderboard] = useState(false);
@@ -44,6 +44,7 @@ const GamePage = () => {
   const [scrolled, setScrolled] = useState(false);
   const [floatingScore, setFloatingScore] = useState<{ points: number; show: boolean }>({ points: 0, show: false });
   const [isRolling, setIsRolling] = useState(false);
+  const [showCountryReveal, setShowCountryReveal] = useState(false);
   
   // Derived state from session
   const players = session?.players || [];
@@ -55,6 +56,9 @@ const GamePage = () => {
   // Check if it's current player's turn
   const isMyTurn = session ? players[currentTurnIndex]?.id === currentPlayer?.id : false;
   const currentTurnPlayer = players[currentTurnIndex];
+
+  // Determine if country name should be shown (only after turn is complete)
+  const shouldShowCountryName = currentTurnState?.submittedAnswer !== null || showCountryReveal;
 
   // Handle scroll for navbar blur effect
   useEffect(() => {
@@ -94,8 +98,9 @@ const GamePage = () => {
   // Show toast notifications for turn changes
   useEffect(() => {
     if (session?.status === 'playing' && currentTurnPlayer) {
+      setShowCountryReveal(false); // Reset reveal state on new turn
       if (isMyTurn) {
-        addToast('game', `🎯 ${t('yourTurn')}! Roll the dice 🎲`);
+        addToast('game', `🎯 ${t('yourTurn')}! ${t('rollDice')} 🎲`);
         playToastSound('game');
       } else {
         addToast('info', t('waitingTurn', { player: currentTurnPlayer.username }));
@@ -109,16 +114,6 @@ const GamePage = () => {
       setGuessModalOpen(true);
     }
   }, [currentTurnState?.modalOpen, isMyTurn]);
-
-  // Auto-roll dice when it's player's turn and no country selected
-  useEffect(() => {
-    if (isMyTurn && !currentCountry && !isRolling && session?.status === 'playing' && !currentTurnState?.diceRolled) {
-      const timer = setTimeout(() => {
-        handleRollDice();
-      }, 800);
-      return () => clearTimeout(timer);
-    }
-  }, [isMyTurn, currentCountry, isRolling, session?.status, currentTurnState?.diceRolled]);
 
   // Turn timer timeout
   useEffect(() => {
@@ -136,9 +131,10 @@ const GamePage = () => {
   }, [isMyTurn, session?.turnStartTime, currentCountry]);
 
   const handleRollDice = useCallback(async () => {
-    if (!isMyTurn || isRolling) return;
+    if (!isMyTurn || isRolling || currentCountry) return;
     
     setIsRolling(true);
+    playDiceSound(); // Play dice roll sound
     
     setTimeout(async () => {
       const country = getRandomUnplayedCountry(guessedCountries);
@@ -163,11 +159,12 @@ const GamePage = () => {
       await updateGameState({ turnStartTime: Date.now() });
       
       setIsRolling(false);
-      addToast('game', t('rollComplete'));
-    }, 600);
-  }, [isMyTurn, isRolling, guessedCountries, currentPlayer, updateTurnState, updateGameState, addToast, t, endGame]);
+      addToast('game', '🎯 Find the highlighted country on the map!');
+    }, 800);
+  }, [isMyTurn, isRolling, currentCountry, guessedCountries, currentPlayer, updateTurnState, updateGameState, addToast, endGame, playDiceSound]);
 
   const handleCountryClick = useCallback(async (countryName: string) => {
+    // Only active player can click
     if (!isMyTurn || !currentCountry) return;
     
     // Only allow clicking the selected country
@@ -200,16 +197,35 @@ const GamePage = () => {
   const handleTurnTimeout = useCallback(async () => {
     if (!isMyTurn) return;
     
-    addToast('error', t('timeUp'));
+    // Reveal country name on timeout
+    setShowCountryReveal(true);
+    
+    // Update turn state with timeout result
+    if (currentTurnState && currentCountry) {
+      await updateTurnState({
+        ...currentTurnState,
+        submittedAnswer: '[TIME UP]',
+        pointsEarned: 0,
+        isCorrect: false,
+        modalOpen: false,
+      });
+    }
+    
+    addToast('error', `${t('timeUp')} - The answer was: ${currentCountry}`);
     playToastSound('error');
     setGuessModalOpen(false);
-    await moveToNextTurn();
-  }, [isMyTurn, addToast, t, moveToNextTurn, playToastSound]);
+    
+    // Wait to show result, then move to next turn
+    setTimeout(() => moveToNextTurn(), 2000);
+  }, [isMyTurn, currentTurnState, currentCountry, addToast, t, moveToNextTurn, playToastSound, updateTurnState]);
 
   const handleSubmitGuess = useCallback(async (guess: string) => {
     if (!currentCountry || !currentPlayer || !isMyTurn) return;
     
     const result = isCorrectGuess(guess, currentCountry);
+    
+    // Reveal country name after submission
+    setShowCountryReveal(true);
     
     // Update turn state with result (visible to all players)
     if (currentTurnState) {
@@ -231,7 +247,7 @@ const GamePage = () => {
       
       const updatedPlayers = players.map((p, idx) => 
         idx === currentTurnIndex 
-          ? { ...p, score: p.score + result.points, countriesGuessed: [...p.countriesGuessed, currentCountry] }
+          ? { ...p, score: p.score + result.points, countriesGuessed: [...(p.countriesGuessed || []), currentCountry] }
           : p
       );
       
@@ -240,26 +256,42 @@ const GamePage = () => {
         guessedCountries: newGuessedCountries,
       });
       
-      addToast('success', `+${result.points} ${t('points')}`);
+      addToast('success', `+${result.points} ${t('points')} - Correct: ${currentCountry}!`);
       playToastSound('success');
     } else {
-      addToast('error', `${t('wrongGuess', { player: '' })} - ${currentCountry}`);
+      addToast('error', `${t('wrongGuess', { player: '' })} - The answer was: ${currentCountry}`);
       playToastSound('error');
     }
     
     setGuessModalOpen(false);
     
     // Wait a moment to show result, then move to next turn
-    setTimeout(() => moveToNextTurn(), 1500);
+    setTimeout(() => moveToNextTurn(), 2000);
   }, [currentCountry, currentPlayer, isMyTurn, currentTurnState, updateTurnState, guessedCountries, players, currentTurnIndex, updateGameState, addToast, t, moveToNextTurn, playToastSound]);
 
   const handleSkip = useCallback(async () => {
     if (!isMyTurn) return;
     
-    addToast('info', t('turnSkipped'));
+    // Reveal country name on skip
+    setShowCountryReveal(true);
+    
+    // Update turn state with skip result
+    if (currentTurnState && currentCountry) {
+      await updateTurnState({
+        ...currentTurnState,
+        submittedAnswer: '[SKIPPED]',
+        pointsEarned: 0,
+        isCorrect: false,
+        modalOpen: false,
+      });
+    }
+    
+    addToast('info', `${t('turnSkipped')} - The answer was: ${currentCountry}`);
     setGuessModalOpen(false);
-    await moveToNextTurn();
-  }, [isMyTurn, addToast, t, moveToNextTurn]);
+    
+    // Wait to show result, then move to next turn
+    setTimeout(() => moveToNextTurn(), 2000);
+  }, [isMyTurn, currentTurnState, currentCountry, addToast, t, moveToNextTurn, updateTurnState]);
 
   const handleUseHint = useCallback(() => {
     if (!currentCountry || !currentPlayer) return '';
@@ -371,7 +403,7 @@ const GamePage = () => {
       </nav>
 
       {/* Spacer for fixed navbar */}
-      <div className="h-14 md:h-16" />
+      <div className="h-16 md:h-18" />
 
       {/* Mobile Timer */}
       <div className="md:hidden p-3 border-b border-border">
@@ -383,7 +415,7 @@ const GamePage = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden p-4 gap-4">
+      <div className="flex-1 flex flex-col lg:flex-row p-4 gap-4 max-w-7xl mx-auto w-full">
         {/* Left side - Game info and controls */}
         <div className="lg:w-80 flex flex-col gap-4 shrink-0">
           {/* Turn Indicator Card */}
@@ -395,28 +427,43 @@ const GamePage = () => {
             <div className="flex items-center gap-3 mb-3">
               <div className={`w-3 h-3 rounded-full ${isMyTurn ? 'bg-primary animate-ping' : 'bg-muted'}`} />
               <h3 className="font-display text-xl">
-                {isMyTurn ? `🎯 ${t('yourTurn')}` : `⏳ ${currentTurnPlayer?.username}'s Turn`}
+                {isMyTurn 
+                  ? `🎯 ${t('yourTurn')}!` 
+                  : `⏳ ${t('waitingTurn', { player: currentTurnPlayer?.username || '' })}`
+                }
               </h3>
             </div>
             
-            {isMyTurn && !currentCountry && (
+            {isMyTurn && !currentCountry && !isRolling && (
               <p className="text-sm text-muted-foreground mb-2">{t('rollDice')} 🎲</p>
+            )}
+            
+            {isRolling && (
+              <p className="text-sm text-warning animate-pulse">🎲 Rolling dice...</p>
             )}
             
             {currentCountry && (
               <>
                 <div className="bg-warning/20 border border-warning rounded-lg px-3 py-2 mb-3">
-                  <p className="text-xs text-muted-foreground">Current Country</p>
-                  <p className="font-semibold text-warning">{currentCountry}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {isMyTurn ? 'Find the highlighted country!' : 'Watching...'}
+                  </p>
+                  <p className="font-semibold text-warning">
+                    {shouldShowCountryName ? currentCountry : '???'}
+                  </p>
                 </div>
                 
                 {isMyTurn && (
                   <p className="text-sm text-foreground">{t('clickCountryToGuess')}</p>
                 )}
+                
+                {!isMyTurn && (
+                  <p className="text-sm text-muted-foreground">Spectating - wait for your turn</p>
+                )}
               </>
             )}
             
-            {/* Turn Timer */}
+            {/* Turn Timer - Visible to all */}
             {currentCountry && session.turnStartTime && (
               <div className="mt-3 pt-3 border-t border-border">
                 <TimerProgress 
@@ -431,26 +478,38 @@ const GamePage = () => {
           </div>
 
           {/* Spectator View - Answer Display */}
-          {!isMyTurn && currentTurnState?.submittedAnswer && (
+          {currentTurnState?.submittedAnswer && (
             <div className={`rounded-xl p-4 border-2 ${
               currentTurnState.isCorrect 
                 ? 'bg-success/10 border-success' 
                 : 'bg-destructive/10 border-destructive'
             }`}>
-              <p className="text-xs text-muted-foreground mb-1">Submitted Answer</p>
-              <p className="font-display text-xl">{currentTurnState.submittedAnswer}</p>
+              <p className="text-xs text-muted-foreground mb-1">
+                {currentTurnPlayer?.username}'s Answer
+              </p>
+              <p className="font-display text-xl">
+                {currentTurnState.submittedAnswer === '[TIME UP]' 
+                  ? '⏱️ Time Up!' 
+                  : currentTurnState.submittedAnswer === '[SKIPPED]'
+                    ? '⏭️ Skipped'
+                    : currentTurnState.submittedAnswer
+                }
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Correct answer: <span className="font-semibold text-foreground">{currentCountry}</span>
+              </p>
               <div className={`mt-2 flex items-center gap-2 ${
                 currentTurnState.isCorrect ? 'text-success' : 'text-destructive'
               }`}>
                 {currentTurnState.isCorrect ? '✓' : '✗'}
                 <span className="font-semibold">
-                  {currentTurnState.isCorrect ? `+${currentTurnState.pointsEarned} points` : 'Wrong answer'}
+                  {currentTurnState.isCorrect ? `+${currentTurnState.pointsEarned} points` : '0 points'}
                 </span>
               </div>
             </div>
           )}
 
-          {/* Dice */}
+          {/* Dice - Only for active player */}
           <div className="flex justify-center py-4">
             <Dice 
               onRoll={handleRollDice} 
@@ -469,12 +528,13 @@ const GamePage = () => {
         </div>
 
         {/* Map Area - Fixed container */}
-        <div className="flex-1 min-h-[400px] lg:min-h-0">
+        <div className="flex-1 min-h-[400px] lg:min-h-[600px]">
           <WorldMap
             guessedCountries={guessedCountries}
             currentCountry={currentCountry || undefined}
             onCountryClick={handleCountryClick}
             disabled={!isMyTurn || !currentCountry}
+            showCountryNames={!isMyTurn || shouldShowCountryName}
           />
         </div>
 
@@ -489,11 +549,10 @@ const GamePage = () => {
         )}
       </div>
 
-      {/* Guess Modal */}
+      {/* Guess Modal - Only for active player */}
       <GuessModal
         isOpen={guessModalOpen && isMyTurn}
         onClose={() => setGuessModalOpen(false)}
-        countryName={currentCountry || ''}
         onSubmit={handleSubmitGuess}
         onSkip={handleSkip}
         onUseHint={handleUseHint}
