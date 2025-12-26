@@ -44,7 +44,6 @@ const GamePage = () => {
   const [scrolled, setScrolled] = useState(false);
   const [floatingScore, setFloatingScore] = useState<{ points: number; show: boolean }>({ points: 0, show: false });
   const [isRolling, setIsRolling] = useState(false);
-  const [showCountryReveal, setShowCountryReveal] = useState(false);
   
   // Derived state from session
   const players = session?.players || [];
@@ -57,10 +56,8 @@ const GamePage = () => {
   const isMyTurn = session ? players[currentTurnIndex]?.id === currentPlayer?.id : false;
   const currentTurnPlayer = players[currentTurnIndex];
 
-  // Country name is NEVER shown until after submission (for all players)
-  // This ensures the active player must guess without seeing the name
+  // A turn is complete once an answer/skip/timeout has been recorded
   const turnCompleted = currentTurnState?.submittedAnswer !== null;
-  const shouldShowCountryName = turnCompleted || showCountryReveal;
 
   // Handle scroll for navbar blur effect
   useEffect(() => {
@@ -100,7 +97,6 @@ const GamePage = () => {
   // Show toast notifications for turn changes
   useEffect(() => {
     if (session?.status === 'playing' && currentTurnPlayer) {
-      setShowCountryReveal(false); // Reset reveal state on new turn
       if (isMyTurn) {
         addToast('game', `🎯 ${t('yourTurn')}! ${t('rollDice')} 🎲`);
         playToastSound('game');
@@ -198,10 +194,12 @@ const GamePage = () => {
 
   const handleTurnTimeout = useCallback(async () => {
     if (!isMyTurn) return;
-    
-    // Reveal country name on timeout
-    setShowCountryReveal(true);
-    
+
+    // Mark country as played so it can't be rolled again
+    if (currentCountry && !guessedCountries.includes(currentCountry)) {
+      await updateGameState({ guessedCountries: [...guessedCountries, currentCountry] });
+    }
+
     // Update turn state with timeout result
     if (currentTurnState && currentCountry) {
       await updateTurnState({
@@ -212,23 +210,25 @@ const GamePage = () => {
         modalOpen: false,
       });
     }
-    
-    addToast('error', `${t('timeUp')} - The answer was: ${currentCountry}`);
+
+    addToast('error', t('timeUp'));
     playToastSound('error');
     setGuessModalOpen(false);
-    
+
     // Wait to show result, then move to next turn
     setTimeout(() => moveToNextTurn(), 2000);
-  }, [isMyTurn, currentTurnState, currentCountry, addToast, t, moveToNextTurn, playToastSound, updateTurnState]);
+  }, [isMyTurn, currentTurnState, currentCountry, guessedCountries, updateGameState, addToast, t, moveToNextTurn, playToastSound, updateTurnState]);
 
   const handleSubmitGuess = useCallback(async (guess: string) => {
     if (!currentCountry || !currentPlayer || !isMyTurn) return;
-    
+
     const result = isCorrectGuess(guess, currentCountry);
-    
-    // Reveal country name after submission
-    setShowCountryReveal(true);
-    
+
+    // Mark country as played (locked) regardless of outcome
+    const nextGuessedCountries = guessedCountries.includes(currentCountry)
+      ? guessedCountries
+      : [...guessedCountries, currentCountry];
+
     // Update turn state with result (visible to all players)
     if (currentTurnState) {
       await updateTurnState({
@@ -239,44 +239,50 @@ const GamePage = () => {
         modalOpen: false,
       });
     }
-    
+
     // Show floating score
     setFloatingScore({ points: result.points, show: true });
     setTimeout(() => setFloatingScore({ points: 0, show: false }), 2000);
-    
+
+    // Update players + played countries
+    const updatedPlayers = players.map((p, idx) =>
+      idx === currentTurnIndex
+        ? {
+            ...p,
+            score: p.score + result.points,
+            countriesGuessed:
+              result.correct ? [...(p.countriesGuessed || []), currentCountry] : p.countriesGuessed,
+          }
+        : p
+    );
+
+    await updateGameState({
+      players: updatedPlayers,
+      guessedCountries: nextGuessedCountries,
+    });
+
     if (result.correct) {
-      const newGuessedCountries = [...guessedCountries, currentCountry];
-      
-      const updatedPlayers = players.map((p, idx) => 
-        idx === currentTurnIndex 
-          ? { ...p, score: p.score + result.points, countriesGuessed: [...(p.countriesGuessed || []), currentCountry] }
-          : p
-      );
-      
-      await updateGameState({ 
-        players: updatedPlayers,
-        guessedCountries: newGuessedCountries,
-      });
-      
-      addToast('success', `+${result.points} ${t('points')} - Correct: ${currentCountry}!`);
+      addToast('success', `+${result.points} ${t('points')} - Correct!`);
       playToastSound('success');
     } else {
-      addToast('error', `${t('wrongGuess', { player: '' })} - The answer was: ${currentCountry}`);
+      addToast('error', t('wrongGuess', { player: '' }));
       playToastSound('error');
     }
-    
+
     setGuessModalOpen(false);
-    
+
     // Wait a moment to show result, then move to next turn
     setTimeout(() => moveToNextTurn(), 2000);
   }, [currentCountry, currentPlayer, isMyTurn, currentTurnState, updateTurnState, guessedCountries, players, currentTurnIndex, updateGameState, addToast, t, moveToNextTurn, playToastSound]);
 
   const handleSkip = useCallback(async () => {
     if (!isMyTurn) return;
-    
-    // Reveal country name on skip
-    setShowCountryReveal(true);
-    
+
+    // Mark country as played so it can't be rolled again
+    if (currentCountry && !guessedCountries.includes(currentCountry)) {
+      await updateGameState({ guessedCountries: [...guessedCountries, currentCountry] });
+    }
+
     // Update turn state with skip result
     if (currentTurnState && currentCountry) {
       await updateTurnState({
@@ -287,13 +293,13 @@ const GamePage = () => {
         modalOpen: false,
       });
     }
-    
-    addToast('info', `${t('turnSkipped')} - The answer was: ${currentCountry}`);
+
+    addToast('info', t('turnSkipped'));
     setGuessModalOpen(false);
-    
+
     // Wait to show result, then move to next turn
     setTimeout(() => moveToNextTurn(), 2000);
-  }, [isMyTurn, currentTurnState, currentCountry, addToast, t, moveToNextTurn, updateTurnState]);
+  }, [isMyTurn, currentTurnState, currentCountry, guessedCountries, updateGameState, addToast, t, moveToNextTurn, updateTurnState]);
 
   const handleUseHint = useCallback(() => {
     if (!currentCountry || !currentPlayer) return '';
@@ -405,7 +411,7 @@ const GamePage = () => {
       </nav>
 
       {/* Spacer for fixed navbar */}
-      <div className="h-16 md:h-18" />
+      <div className="h-20 md:h-24" />
 
       {/* Mobile Timer */}
       <div className="md:hidden p-3 border-b border-border">
@@ -444,26 +450,39 @@ const GamePage = () => {
               <p className="text-sm text-warning animate-pulse">🎲 Rolling dice...</p>
             )}
             
-            {currentCountry && (
-              <>
-                <div className="bg-warning/20 border border-warning rounded-lg px-3 py-2 mb-3">
-                  <p className="text-xs text-muted-foreground">
-                    {turnCompleted ? 'Answer revealed' : isMyTurn ? 'Find the highlighted country!' : 'Watching...'}
-                  </p>
-                  <p className="font-semibold text-warning">
-                    {turnCompleted ? currentCountry : '???'}
-                  </p>
-                </div>
-                
-                {isMyTurn && !turnCompleted && (
-                  <p className="text-sm text-foreground">{t('clickCountryToGuess')}</p>
-                )}
-                
-                {!isMyTurn && !turnCompleted && (
-                  <p className="text-sm text-muted-foreground">Spectating - wait for your turn</p>
-                )}
-              </>
-            )}
+             {currentCountry && (
+               <>
+                 <div className="bg-warning/20 border border-warning rounded-lg px-3 py-2 mb-3">
+                   <p className="text-xs text-muted-foreground">
+                     {turnCompleted ? 'Turn finished' : isMyTurn ? 'Find the highlighted country!' : 'Watching...'}
+                   </p>
+                   <p className="font-semibold text-warning">???</p>
+                 </div>
+
+                 {turnCompleted && currentTurnState?.submittedAnswer && (
+                   <div className="text-sm text-muted-foreground space-y-1">
+                     <p>
+                       Submitted:{' '}
+                       <span className="font-semibold text-foreground">{currentTurnState.submittedAnswer}</span>
+                     </p>
+                     {typeof currentTurnState.pointsEarned === 'number' && (
+                       <p>
+                         Points:{' '}
+                         <span className="font-semibold text-foreground">+{currentTurnState.pointsEarned}</span>
+                       </p>
+                     )}
+                   </div>
+                 )}
+
+                 {isMyTurn && !turnCompleted && (
+                   <p className="text-sm text-foreground">{t('clickCountryToGuess')}</p>
+                 )}
+
+                 {!isMyTurn && !turnCompleted && (
+                   <p className="text-sm text-muted-foreground">Spectating - wait for your turn</p>
+                 )}
+               </>
+             )}
             
             {/* Turn Timer - Visible to all */}
             {currentCountry && session.turnStartTime && (
@@ -497,17 +516,19 @@ const GamePage = () => {
                     : currentTurnState.submittedAnswer
                 }
               </p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Correct answer: <span className="font-semibold text-foreground">{currentCountry}</span>
-              </p>
               <div className={`mt-2 flex items-center gap-2 ${
                 currentTurnState.isCorrect ? 'text-success' : 'text-destructive'
               }`}>
                 {currentTurnState.isCorrect ? '✓' : '✗'}
                 <span className="font-semibold">
-                  {currentTurnState.isCorrect ? `+${currentTurnState.pointsEarned} points` : '0 points'}
+                  {typeof currentTurnState.pointsEarned === 'number'
+                    ? `+${currentTurnState.pointsEarned} points`
+                    : '0 points'}
                 </span>
               </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Hover the played country on the map to see its name.
+              </p>
             </div>
           )}
 
@@ -536,7 +557,6 @@ const GamePage = () => {
             currentCountry={currentCountry || undefined}
             onCountryClick={handleCountryClick}
             disabled={!isMyTurn || !currentCountry}
-            showCountryNames={shouldShowCountryName}
           />
         </div>
 
