@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { 
-  auth, 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
+import {
+  auth,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
   firebaseSignOut,
   onAuthStateChanged,
   updateProfile as firebaseUpdateProfile,
@@ -35,15 +35,15 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Placeholder avatars and colors
-const avatars = ['🌍', '🗺️', '🧭', '✈️', '🚀', '🌎', '🌏', '🏔️'];
-const colors = ['#E50914', '#1DB954', '#4169E1', '#FF6B35', '#9B59B6', '#00CED1'];
+const avatars = ['🦁', '🐯', '🐘', '🦒', '🦊', '🐨', '🐼', '🦓', '🦄', '🐲', '🐙', '🐢', '🐧', '🦉'];
+const colors = ['#E50914', '#1DB954', '#4169E1', '#FF6B35', '#9B59B6', '#00CED1', '#F1C40F', '#E67E22'];
 
 // Convert Firebase user to our User type
 const mapFirebaseUser = (firebaseUser: FirebaseUser): User => {
   // Try to get stored user data from localStorage
   const storedData = localStorage.getItem(`user_${firebaseUser.uid}`);
   const parsedData = storedData ? JSON.parse(storedData) : {};
-  
+
   return {
     id: firebaseUser.uid,
     email: firebaseUser.email || '',
@@ -105,10 +105,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsLoading(true);
     try {
       const { user: firebaseUser } = await createUserWithEmailAndPassword(auth, email, password);
-      
+
       // Update display name
       await firebaseUpdateProfile(firebaseUser, { displayName: username });
-      
+
       // Store initial user data
       const avatar = avatars[Math.floor(Math.random() * avatars.length)];
       const color = colors[Math.floor(Math.random() * colors.length)];

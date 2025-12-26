@@ -9,7 +9,7 @@ import { GameTooltip } from '@/components/Tooltip/GameTooltip';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ZoomIn, ZoomOut, Maximize, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { getContinent } from '@/utils/countryData';
+import { getContinent, normalizeCountryName } from '@/utils/countryData';
 
 const geoUrl = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
 
@@ -95,8 +95,8 @@ export const WorldMap: React.FC<WorldMapProps> = ({
     const continents = Object.keys(continentZoomPresets);
     const currentIdx = continents.findIndex(c => {
       const preset = continentZoomPresets[c];
-      return preset.coordinates[0] === position.coordinates[0] && 
-             preset.coordinates[1] === position.coordinates[1];
+      return preset.coordinates[0] === position.coordinates[0] &&
+        preset.coordinates[1] === position.coordinates[1];
     });
     const nextIdx = (currentIdx + 1) % continents.length;
     setPosition(continentZoomPresets[continents[nextIdx]]);
@@ -106,24 +106,27 @@ export const WorldMap: React.FC<WorldMapProps> = ({
     setPosition(pos);
   }, []);
 
+  const normalizedCurrent = currentCountry ? normalizeCountryName(currentCountry) : null;
+  const normalizedGuessed = guessedCountries.map(normalizeCountryName);
+
   const getCountryFill = (countryName: string) => {
     // Guessed countries - permanent green
-    if (guessedCountries.includes(countryName)) {
+    if (normalizedGuessed.includes(countryName)) {
       return 'hsl(142 76% 36%)'; // success color - bright green
     }
-    // Current active country - pulsing gold/orange
-    if (currentCountry === countryName) {
-      return 'hsl(38 92% 50%)'; // warning/gold color for active selection
+    // Current active country - flashing bright yellow until guessed
+    if (normalizedCurrent === countryName) {
+      return 'hsl(60 100% 50%)'; // Vibrant Yellow
     }
     // Default country color
     return 'hsl(0 0% 30%)';
   };
 
   const getCountryStroke = (countryName: string) => {
-    if (currentCountry === countryName) {
-      return 'hsl(38 92% 60%)';
+    if (normalizedCurrent === countryName) {
+      return 'hsl(60 100% 60%)';
     }
-    if (guessedCountries.includes(countryName)) {
+    if (normalizedGuessed.includes(countryName)) {
       return 'hsl(142 76% 45%)';
     }
     return 'hsl(0 0% 20%)';
@@ -131,18 +134,18 @@ export const WorldMap: React.FC<WorldMapProps> = ({
 
   // Tooltip should NEVER reveal unplayed country names
   const getTooltipContent = (countryName: string) => {
-    const isPlayed = guessedCountries.includes(countryName);
-    const isCurrent = currentCountry === countryName;
+    const isPlayed = normalizedGuessed.includes(countryName);
+    const isCurrent = normalizedCurrent === countryName;
 
     if (isPlayed) return `✓ ${countryName}`;
-    if (isCurrent) return '🎯 Selected country';
+    if (isCurrent) return disabled ? '🎯 Selected Country' : '🎯 Click to guess this country!';
     return '???';
   };
 
   return (
     <div className="flex gap-4 h-full">
       {/* Map Container - Fixed box with scroll isolation */}
-      <div 
+      <div
         ref={mapContainerRef}
         className="relative flex-1 h-[450px] md:h-[550px] lg:h-[600px] bg-card rounded-xl overflow-hidden border-2 border-border shadow-lg"
         style={{ touchAction: 'none' }}
@@ -152,31 +155,25 @@ export const WorldMap: React.FC<WorldMapProps> = ({
         {/* Country Tooltip - follows cursor inside map box */}
         {tooltip && (
           <div
-            className={`pointer-events-none absolute z-20 px-3 py-2 rounded-lg shadow-lg border backdrop-blur-sm ${
-              guessedCountries.includes(tooltip.country)
-                ? 'bg-success/20 border-success text-success-foreground'
-                : currentCountry === tooltip.country
-                  ? 'bg-warning/20 border-warning text-warning-foreground'
-                  : 'bg-popover/90 border-border text-foreground'
-            }`}
+            className={`pointer-events-none absolute z-20 px-3 py-2 rounded-lg shadow-lg border backdrop-blur-sm ${normalizedGuessed.includes(tooltip.country)
+              ? 'bg-success/20 border-success text-success-foreground'
+              : normalizedCurrent === tooltip.country
+                ? 'bg-warning/20 border-warning text-warning-foreground'
+                : 'bg-popover/90 border-border text-foreground'
+              }`}
             style={{ left: tooltip.x + 12, top: tooltip.y + 12 }}
           >
             <span className="text-sm font-semibold">{getTooltipContent(tooltip.country)}</span>
-            {guessedCountries.includes(tooltip.country) && (
+            {normalizedGuessed.includes(tooltip.country) && (
               <span className="text-xs block text-muted-foreground">Played</span>
             )}
-            {currentCountry === tooltip.country && !guessedCountries.includes(tooltip.country) && !disabled && (
+            {normalizedCurrent === tooltip.country && !normalizedGuessed.includes(tooltip.country) && !disabled && (
               <span className="text-xs block">Click to open guess modal</span>
             )}
           </div>
         )}
 
-        {/* Current Country Indicator - NEVER show the country name */}
-        {currentCountry && (
-          <div className="absolute bottom-4 left-4 z-20 px-4 py-2 bg-warning/20 border border-warning rounded-lg animate-pulse">
-            <span className="text-sm font-semibold text-warning">🎯 Country selected</span>
-          </div>
-        )}
+        {/* Current Country Indicator - DELETED - NEVER show the country name or selection */}
 
         {/* Spectator indicator */}
         {disabled && currentCountry && (
@@ -203,8 +200,8 @@ export const WorldMap: React.FC<WorldMapProps> = ({
               {({ geographies }) =>
                 geographies.map((geo) => {
                   const countryName = geo.properties.name;
-                  const isGuessed = guessedCountries.includes(countryName);
-                  const isCurrent = currentCountry === countryName;
+                  const isGuessed = normalizedGuessed.includes(countryName);
+                  const isCurrent = normalizedCurrent === countryName;
                   const isClickable = !disabled && isCurrent && !isGuessed;
 
                   return (
@@ -221,21 +218,26 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                           strokeWidth: isCurrent ? 1.5 : 0.5,
                           outline: 'none',
                           transition: 'all 0.3s ease',
+                          animation: isCurrent ? 'pulse-country 1.5s ease-in-out infinite' : 'none',
                         },
                         hover: {
-                          fill: isClickable 
-                            ? 'hsl(38 92% 60%)' 
-                            : isGuessed 
-                              ? 'hsl(142 76% 40%)' 
-                              : 'hsl(0 0% 40%)',
-                          stroke: isClickable ? 'hsl(0 0% 100%)' : getCountryStroke(countryName),
-                          strokeWidth: isClickable ? 2 : 0.5,
+                          fill: isCurrent
+                            ? 'hsl(60 100% 60%)'
+                            : isClickable
+                              ? 'hsl(38 92% 60%)'
+                              : isGuessed
+                                ? 'hsl(142 76% 40%)'
+                                : 'hsl(0 0% 40%)',
+                          stroke: isCurrent || isClickable ? 'hsl(0 0% 100%)' : getCountryStroke(countryName),
+                          strokeWidth: isCurrent || isClickable ? 2 : 0.5,
                           outline: 'none',
                           cursor: isClickable ? 'pointer' : 'default',
+                          animation: isCurrent ? 'pulse-country 1.5s ease-in-out infinite' : 'none',
                         },
                         pressed: {
-                          fill: 'hsl(38 92% 45%)',
+                          fill: isCurrent ? 'hsl(60 100% 40%)' : 'hsl(38 92% 45%)',
                           outline: 'none',
+                          animation: isCurrent ? 'pulse-country 1.5s ease-in-out infinite' : 'none',
                         },
                       }}
                     />
@@ -250,44 +252,44 @@ export const WorldMap: React.FC<WorldMapProps> = ({
       {/* Map Controls - Right side outside the map */}
       <div className="flex flex-col gap-3 justify-center">
         <GameTooltip content={t('zoomIn')} position="left">
-          <Button 
-            variant="secondary" 
-            size="icon" 
+          <Button
+            variant="secondary"
+            size="icon"
             onClick={handleZoomIn}
             className="h-12 w-12 rounded-xl border-2 border-border hover:border-primary transition-all"
           >
             <ZoomIn className="h-5 w-5" />
           </Button>
         </GameTooltip>
-        
+
         <GameTooltip content={t('zoomOut')} position="left">
-          <Button 
-            variant="secondary" 
-            size="icon" 
+          <Button
+            variant="secondary"
+            size="icon"
             onClick={handleZoomOut}
             className="h-12 w-12 rounded-xl border-2 border-border hover:border-primary transition-all"
           >
             <ZoomOut className="h-5 w-5" />
           </Button>
         </GameTooltip>
-        
+
         <div className="h-px bg-border my-2" />
-        
+
         <GameTooltip content={t('tooltipRecenter')} position="left">
-          <Button 
-            variant="secondary" 
-            size="icon" 
+          <Button
+            variant="secondary"
+            size="icon"
             onClick={handleRecenter}
             className="h-12 w-12 rounded-xl border-2 border-border hover:border-primary transition-all"
           >
             <Maximize className="h-5 w-5" />
           </Button>
         </GameTooltip>
-        
+
         <GameTooltip content="Zoom to Continent" position="left">
-          <Button 
-            variant="secondary" 
-            size="icon" 
+          <Button
+            variant="secondary"
+            size="icon"
             onClick={handleZoomToContinent}
             className="h-12 w-12 rounded-xl border-2 border-border hover:border-primary transition-all"
           >

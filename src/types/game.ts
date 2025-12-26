@@ -6,6 +6,7 @@ export interface Player {
   avatar: string;
   color: string;
   score: number;
+  turnsPlayed: number;
   countriesGuessed: string[];
   isReady: boolean;
   isConnected: boolean;
@@ -38,6 +39,7 @@ export interface GameSession {
   waitingRoomStartTime: number;
   countdownStartTime: number | null;
   turnStartTime: number | null;
+  isExtraTime?: boolean;
 }
 
 export interface SessionRecoveryData {

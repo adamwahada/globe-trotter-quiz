@@ -1,8 +1,8 @@
 import React from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-const avatars = ['🌍', '🗺️', '🧭', '✈️', '🚀', '🌎', '🌏', '🏔️', '🏝️', '🌋', '🏜️', '🌊'];
-const colors = ['#E50914', '#1DB954', '#4169E1', '#FF6B35', '#9B59B6', '#00CED1', '#FFD700', '#FF1493'];
+const avatars = ['🦁', '🐯', '🐘', '🦒', '🦊', '🐨', '🐼', '🦓', '🦄', '🐲', '🐙', '🐢', '🐧', '🦉', '🦋', '🐝', '🦖', '🦈'];
+const colors = ['#E50914', '#1DB954', '#4169E1', '#FF6B35', '#9B59B6', '#00CED1', '#FFD700', '#FF1493', '#A0522D', '#2F4F4F'];
 
 interface AvatarSelectorProps {
   selectedAvatar: string;
@@ -34,8 +34,8 @@ export const AvatarSelector: React.FC<AvatarSelectorProps> = ({
               className={`
                 w-12 h-12 rounded-lg flex items-center justify-center text-2xl
                 transition-all duration-200
-                ${selectedAvatar === avatar 
-                  ? 'bg-primary/20 ring-2 ring-primary scale-110' 
+                ${selectedAvatar === avatar
+                  ? 'bg-primary/20 ring-2 ring-primary scale-110'
                   : 'bg-secondary hover:bg-secondary/80'}
               `}
             >
@@ -57,8 +57,8 @@ export const AvatarSelector: React.FC<AvatarSelectorProps> = ({
               onClick={() => onColorChange(color)}
               className={`
                 w-10 h-10 rounded-full transition-all duration-200
-                ${selectedColor === color 
-                  ? 'ring-2 ring-foreground ring-offset-2 ring-offset-background scale-110' 
+                ${selectedColor === color
+                  ? 'ring-2 ring-foreground ring-offset-2 ring-offset-background scale-110'
                   : 'hover:scale-105'}
               `}
               style={{ backgroundColor: color }}
@@ -69,7 +69,7 @@ export const AvatarSelector: React.FC<AvatarSelectorProps> = ({
 
       {/* Preview */}
       <div className="flex items-center gap-4 p-4 bg-secondary rounded-lg">
-        <div 
+        <div
           className="w-16 h-16 rounded-full flex items-center justify-center text-3xl"
           style={{ backgroundColor: selectedColor }}
         >

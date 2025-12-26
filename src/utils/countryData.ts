@@ -214,7 +214,7 @@ export const countryContinent: Record<string, string> = {
   'Senegal': 'Africa', 'Seychelles': 'Africa', 'Sierra Leone': 'Africa', 'Somalia': 'Africa',
   'South Africa': 'Africa', 'South Sudan': 'Africa', 'Sudan': 'Africa', 'Tanzania': 'Africa',
   'Togo': 'Africa', 'Tunisia': 'Africa', 'Uganda': 'Africa', 'Zambia': 'Africa', 'Zimbabwe': 'Africa',
-  
+
   // Asia
   'Afghanistan': 'Asia', 'Armenia': 'Asia', 'Azerbaijan': 'Asia', 'Bahrain': 'Asia',
   'Bangladesh': 'Asia', 'Bhutan': 'Asia', 'Brunei': 'Asia', 'Cambodia': 'Asia',
@@ -228,7 +228,7 @@ export const countryContinent: Record<string, string> = {
   'Syria': 'Asia', 'Taiwan': 'Asia', 'Tajikistan': 'Asia', 'Thailand': 'Asia',
   'Turkmenistan': 'Asia', 'United Arab Emirates': 'Asia', 'Uzbekistan': 'Asia',
   'Vietnam': 'Asia', 'Yemen': 'Asia',
-  
+
   // Europe
   'Albania': 'Europe', 'Andorra': 'Europe', 'Austria': 'Europe', 'Belarus': 'Europe',
   'Belgium': 'Europe', 'Bosnia and Herzegovina': 'Europe', 'Bulgaria': 'Europe', 'Croatia': 'Europe',
@@ -242,7 +242,7 @@ export const countryContinent: Record<string, string> = {
   'Russia': 'Europe', 'San Marino': 'Europe', 'Serbia': 'Europe', 'Slovakia': 'Europe',
   'Slovenia': 'Europe', 'Spain': 'Europe', 'Sweden': 'Europe', 'Switzerland': 'Europe',
   'Turkey': 'Europe', 'Ukraine': 'Europe', 'United Kingdom': 'Europe', 'Vatican City': 'Europe',
-  
+
   // North America
   'Antigua and Barbuda': 'North America', 'Bahamas': 'North America', 'Barbados': 'North America',
   'Belize': 'North America', 'Canada': 'North America', 'Costa Rica': 'North America',
@@ -253,13 +253,13 @@ export const countryContinent: Record<string, string> = {
   'Saint Kitts and Nevis': 'North America', 'Saint Lucia': 'North America',
   'Saint Vincent and the Grenadines': 'North America', 'Trinidad and Tobago': 'North America',
   'United States': 'North America', 'United States of America': 'North America',
-  
+
   // South America
   'Argentina': 'South America', 'Bolivia': 'South America', 'Brazil': 'South America',
   'Chile': 'South America', 'Colombia': 'South America', 'Ecuador': 'South America',
   'Guyana': 'South America', 'Paraguay': 'South America', 'Peru': 'South America',
   'Suriname': 'South America', 'Uruguay': 'South America', 'Venezuela': 'South America',
-  
+
   // Oceania
   'Australia': 'Oceania', 'Fiji': 'Oceania', 'Kiribati': 'Oceania', 'Marshall Islands': 'Oceania',
   'Micronesia': 'Oceania', 'Nauru': 'Oceania', 'New Zealand': 'Oceania', 'Palau': 'Oceania',
@@ -275,6 +275,43 @@ export const getFamousPerson = (country: string): string | null => {
 // Get continent for a country
 export const getContinent = (country: string): string | null => {
   return countryContinent[country] || null;
+};
+
+// SVG Name Overrides (Dataset Name -> SVG Name)
+const countryNameOverrides: Record<string, string> = {
+  'United States': 'United States of America',
+  'DR Congo': 'Dem. Rep. Congo',
+  'Congo': 'Congo',
+  'Tanzania': 'United Republic of Tanzania',
+  'Central African Republic': 'Central African Rep.',
+  'South Sudan': 'S. Sudan',
+  'Western Sahara': 'W. Sahara',
+  'North Korea': 'North Korea',
+  'South Korea': 'South Korea',
+  'Bosnia and Herzegovina': 'Bosnia and Herz.',
+  'Czech Republic': 'Czechia',
+  'Dominican Republic': 'Dominican Rep.',
+  'Equatorial Guinea': 'Eq. Guinea',
+  'Falkland Islands': 'Falkland Is.',
+  'Ivory Coast': 'Côte d\'Ivoire',
+  'Laos': 'Lao PDR',
+  'Myanmar': 'Myanmar',
+  'Solomon Islands': 'Solomon Is.',
+  'Russia': 'Russia',
+  'Viet Nam': 'Vietnam',
+  'Brunei Darussalam': 'Brunei',
+  'The Bahamas': 'Bahamas',
+  'Swaziland': 'Eswatini',
+  'Gambia': 'Gambia',
+  'Guinea Bissau': 'Guinea-Bissau',
+  'Iran': 'Iran',
+  'Syrian Arab Republic': 'Syria',
+  'Macedonia': 'North Macedonia',
+};
+
+// Normalize names for comparison
+export const normalizeCountryName = (name: string): string => {
+  return countryNameOverrides[name] || name;
 };
 
 // Get all countries

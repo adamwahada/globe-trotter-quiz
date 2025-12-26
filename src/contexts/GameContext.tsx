@@ -12,9 +12,10 @@ interface GameContextType {
   error: string | null;
   hasActiveSession: boolean;
   createSession: (maxPlayers: number, duration: number) => Promise<string>;
-  joinSession: (code: string) => Promise<boolean>;
+  joinSession: (code: string, username?: string) => Promise<boolean>;
   leaveSession: () => Promise<void>;
   setReady: (ready: boolean) => Promise<void>;
+  updatePlayerMetadata: (metadata: Partial<Player>) => Promise<void>;
   startCountdown: () => Promise<void>;
   startGame: () => Promise<void>;
   updateGameState: (updates: {
@@ -23,6 +24,7 @@ interface GameContextType {
     players?: Player[];
     guessedCountries?: string[];
     turnStartTime?: number | null;
+    isExtraTime?: boolean;
   }) => Promise<void>;
   updateTurnState: (turnState: TurnState | null) => Promise<void>;
   endGame: () => Promise<void>;
@@ -43,6 +45,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     joinSession,
     leaveSession,
     setReady,
+    updatePlayerMetadata,
     startCountdown,
     startGame,
     updateCurrentGameState,
@@ -63,6 +66,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       joinSession,
       leaveSession,
       setReady,
+      updatePlayerMetadata,
       startCountdown,
       startGame,
       updateGameState: updateCurrentGameState,

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Users, Clock, Hash, Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useGame } from '@/contexts/GameContext';
 import { useToastContext } from '@/contexts/ToastContext';
 import { useNavigate } from 'react-router-dom';
@@ -14,6 +15,7 @@ interface GameSettingsModalProps {
 
 export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, onClose }) => {
   const { t } = useLanguage();
+  const { user, isAuthenticated } = useAuth();
   const { createSession, joinSession, isLoading, error } = useGame();
   const { addToast } = useToastContext();
   const navigate = useNavigate();
@@ -23,6 +25,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
   const [duration, setDuration] = useState(30);
   const [sessionCode, setSessionCode] = useState('');
   const [generatedCode, setGeneratedCode] = useState('');
+  const [guestName, setGuestName] = useState(localStorage.getItem('guest_username') || '');
   const [copied, setCopied] = useState(false);
 
   if (!isOpen) return null;
@@ -39,7 +42,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
 
   const handleJoin = async () => {
     try {
-      const success = await joinSession(sessionCode);
+      const success = await joinSession(sessionCode, isAuthenticated ? undefined : guestName);
       if (success) {
         navigate('/waiting-room');
         onClose();
@@ -64,11 +67,11 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div 
+      <div
         className="absolute inset-0 bg-background/80 backdrop-blur-sm"
         onClick={onClose}
       />
-      
+
       <div className="relative w-full max-w-md mx-4 bg-card border border-border rounded-2xl shadow-2xl animate-scale-in overflow-hidden">
         <div className="p-6">
           <button
@@ -83,7 +86,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
               <h2 className="text-3xl font-display text-foreground text-center">
                 {t('startGame')}
               </h2>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <Button
                   variant="game"
@@ -93,7 +96,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
                   <Users className="h-8 w-8" />
                   <span className="text-lg">{t('createSession')}</span>
                 </Button>
-                
+
                 <Button
                   variant="game"
                   className="h-32 flex-col gap-3"
@@ -125,8 +128,8 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
                       onClick={() => setPlayers(num)}
                       className={`
                         flex-1 py-3 rounded-lg font-semibold transition-all
-                        ${players === num 
-                          ? 'bg-primary text-primary-foreground' 
+                        ${players === num
+                          ? 'bg-primary text-primary-foreground'
                           : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}
                       `}
                     >
@@ -149,8 +152,8 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
                       onClick={() => setDuration(mins)}
                       className={`
                         flex-1 py-3 rounded-lg font-semibold transition-all
-                        ${duration === mins 
-                          ? 'bg-primary text-primary-foreground' 
+                        ${duration === mins
+                          ? 'bg-primary text-primary-foreground'
                           : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}
                       `}
                     >
@@ -164,9 +167,9 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
                 <Button variant="outline" onClick={() => setMode('choose')} className="flex-1">
                   {t('cancel')}
                 </Button>
-                <Button 
-                  variant="netflix" 
-                  onClick={handleCreate} 
+                <Button
+                  variant="netflix"
+                  onClick={handleCreate}
                   className="flex-1"
                   disabled={isLoading}
                 >
@@ -181,7 +184,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
               <h2 className="text-3xl font-display text-foreground">
                 {t('sessionCode')}
               </h2>
-              
+
               <div className="bg-secondary rounded-xl p-6">
                 <p className="text-5xl font-display tracking-[0.3em] text-primary">
                   {generatedCode}
@@ -230,15 +233,31 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
                 />
               </div>
 
+              {!isAuthenticated && (
+                <div className="space-y-3">
+                  <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+                    <Users className="h-4 w-4 text-primary" />
+                    {t('username')}
+                  </label>
+                  <input
+                    type="text"
+                    value={guestName}
+                    onChange={(e) => setGuestName(e.target.value)}
+                    placeholder="Enter your name"
+                    className="w-full px-4 py-3 bg-secondary border border-border rounded-lg focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-foreground"
+                  />
+                </div>
+              )}
+
               <div className="flex gap-3 pt-4">
                 <Button variant="outline" onClick={() => setMode('choose')} className="flex-1">
                   {t('cancel')}
                 </Button>
-                <Button 
-                  variant="netflix" 
-                  onClick={handleJoin} 
+                <Button
+                  variant="netflix"
+                  onClick={handleJoin}
                   className="flex-1"
-                  disabled={sessionCode.length !== 6 || isLoading}
+                  disabled={sessionCode.length !== 6 || (!isAuthenticated && !guestName.trim()) || isLoading}
                 >
                   {isLoading ? t('loading') : t('confirm')}
                 </Button>

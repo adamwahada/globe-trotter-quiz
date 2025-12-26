@@ -28,10 +28,10 @@ export const Dice: React.FC<DiceProps> = ({ onRoll, disabled = false, isRolling 
 
   const handleRoll = () => {
     if (disabled || rolling) return;
-    
+
     setRolling(true);
     playDiceSound();
-    
+
     // Extended animation for better effect
     setTimeout(() => {
       setRolling(false);
@@ -48,34 +48,33 @@ export const Dice: React.FC<DiceProps> = ({ onRoll, disabled = false, isRolling 
         onClick={handleRoll}
         disabled={disabled || rolling}
         className={`
-          relative p-5 rounded-2xl bg-gradient-to-br from-secondary to-card 
+          relative p-3 rounded-xl bg-gradient-to-br from-secondary to-card 
           border-2 transition-all duration-300 group
-          ${disabled 
-            ? 'opacity-50 cursor-not-allowed border-border' 
-            : 'hover:border-primary hover:shadow-xl hover:scale-105 cursor-pointer border-border'
+          ${disabled
+            ? 'opacity-50 cursor-not-allowed border-border'
+            : 'hover:border-primary hover:shadow-lg hover:scale-105 cursor-pointer border-border'
           }
           ${isActive ? 'dice-roll border-primary shadow-lg shadow-primary/30' : ''}
         `}
       >
         {/* Dice face indicator */}
         <div className={`
-          absolute -top-2 -right-2 w-7 h-7 rounded-full bg-primary 
-          flex items-center justify-center text-sm font-bold text-primary-foreground
+          absolute -top-1 -right-1 w-5 h-5 rounded-full bg-primary 
+          flex items-center justify-center text-[10px] font-bold text-primary-foreground
           transition-all duration-200
           ${isActive ? 'scale-110 animate-bounce' : 'scale-100'}
         `}>
           {diceValue}
         </div>
 
-        <Dices 
-          className={`h-14 w-14 text-primary transition-transform duration-200 ${
-            isActive ? 'animate-spin' : 'group-hover:rotate-12'
-          }`} 
+        <Dices
+          className={`h-8 w-8 text-primary transition-transform duration-200 ${isActive ? 'animate-spin' : 'group-hover:rotate-12'
+            }`}
         />
-        
+
         {/* Glow effect */}
         <div className={`
-          absolute inset-0 rounded-2xl bg-primary/30 blur-xl 
+          absolute inset-0 rounded-xl bg-primary/30 blur-lg 
           transition-opacity duration-300
           ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-50'}
         `} />

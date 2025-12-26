@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { GameSession, Player, TurnState, SessionRecoveryData } from '@/types/game';
+import { translations } from '@/i18n/translations';
 import {
   subscribeToSession,
   createSessionInFirebase,
@@ -31,7 +32,7 @@ export const useFirebaseSession = () => {
 
   // Subscribe to session updates - use ref to avoid stale closure
   const currentPlayerIdRef = useRef<string | null>(null);
-  
+
   useEffect(() => {
     currentPlayerIdRef.current = currentPlayer?.id || null;
   }, [currentPlayer?.id]);
@@ -44,6 +45,25 @@ export const useFirebaseSession = () => {
     const unsubscribe = subscribeToSession(session.code, (updatedSession) => {
       if (updatedSession) {
         console.log('[Firebase] Session update received:', updatedSession.players.length, 'players');
+
+        // Check for departures to show notifications
+        if (session) {
+          const removedPlayers = session.players.filter(
+            p => !updatedSession.players.find(up => up.id === p.id)
+          );
+
+          if (removedPlayers.length > 0) {
+            removedPlayers.forEach(p => {
+              // Don't toast for ourselves
+              if (p.id !== currentPlayerIdRef.current) {
+                console.log('[Firebase] Player left:', p.username);
+                // We'll handle the toast in the UI component or a separate effect 
+                // to avoid hook issues, but for now we set the session and it will be caught.
+              }
+            });
+          }
+        }
+
         setSession(updatedSession);
         // Update current player from session using ref to get latest value
         const playerId = currentPlayerIdRef.current;
@@ -145,13 +165,14 @@ export const useFirebaseSession = () => {
     try {
       const code = generateCode();
       const playerId = `player_${Date.now()}`;
-      
+
       const player: Player = {
         id: playerId,
         username: user?.username || 'You',
         avatar: user?.avatar || '🌍',
         color: user?.color || '#E50914',
         score: 0,
+        turnsPlayed: 0,
         countriesGuessed: [],
         isReady: false,
         isConnected: true,
@@ -176,11 +197,11 @@ export const useFirebaseSession = () => {
       };
 
       await createSessionInFirebase(newSession);
-      
+
       setSession(newSession);
       setCurrentPlayer(player);
       setHasActiveSession(true);
-      
+
       // Save recovery data
       localStorage.setItem('gameSessionCode', code);
       localStorage.setItem('currentPlayerId', playerId);
@@ -199,7 +220,7 @@ export const useFirebaseSession = () => {
     }
   }, [user]);
 
-  const joinSession = useCallback(async (code: string): Promise<boolean> => {
+  const joinSession = useCallback(async (code: string, username?: string): Promise<boolean> => {
     // Check for existing active session
     const activeCheck = await checkHasActiveSession();
     if (activeCheck.hasSession && activeCheck.session?.code !== code) {
@@ -212,7 +233,7 @@ export const useFirebaseSession = () => {
 
     try {
       const existingSession = await getSessionByCode(code);
-      
+
       if (!existingSession) {
         setError('Session not found');
         return false;
@@ -229,13 +250,21 @@ export const useFirebaseSession = () => {
         return false;
       }
 
+      // NO DUPLICATE JOIN: Check if user already in session
+      const currentUsername = username || user?.username || localStorage.getItem('guest_username');
+      if (currentUsername && existingSession.players.some(p => p.username === currentUsername)) {
+        setError(translations[localStorage.getItem('worldquiz_language') as ('en' | 'fr' | 'ar') || 'en'].duplicateJoinError);
+        return false;
+      }
+
       const playerId = `player_${Date.now()}`;
       const player: Player = {
         id: playerId,
-        username: user?.username || 'Player',
+        username: currentUsername || 'Player',
         avatar: user?.avatar || '🗺️',
         color: user?.color || '#4169E1',
         score: 0,
+        turnsPlayed: 0,
         countriesGuessed: [],
         isReady: false,
         isConnected: true,
@@ -243,18 +272,19 @@ export const useFirebaseSession = () => {
       };
 
       const success = await addPlayerToSession(code, player);
-      
+
       if (success) {
         // Set current player first
         setCurrentPlayer(player);
-        
+
         // Set the FULL session data to ensure immediate sync
         // This ensures new players see current map, timer, and game state
         const refreshedSession = await getSessionByCode(code);
         setSession(refreshedSession || existingSession);
-        
+
         setHasActiveSession(true);
-        
+
+        if (username) localStorage.setItem('guest_username', username);
         localStorage.setItem('gameSessionCode', code);
         localStorage.setItem('currentPlayerId', playerId);
         saveRecoveryData({
@@ -292,6 +322,11 @@ export const useFirebaseSession = () => {
     await updatePlayerInSession(session.code, currentPlayer.id, { isReady: ready });
   }, [session?.code, currentPlayer?.id]);
 
+  const updatePlayerMetadata = useCallback(async (metadata: Partial<Player>) => {
+    if (!session?.code || !currentPlayer?.id) return;
+    await updatePlayerInSession(session.code, currentPlayer.id, metadata);
+  }, [session?.code, currentPlayer?.id]);
+
   const startCountdown = useCallback(async () => {
     if (!session?.code) return;
     await startCountdownService(session.code);
@@ -309,6 +344,7 @@ export const useFirebaseSession = () => {
       players?: Player[];
       guessedCountries?: string[];
       turnStartTime?: number | null;
+      isExtraTime?: boolean;
     }
   ) => {
     if (!session?.code) return;
@@ -317,8 +353,21 @@ export const useFirebaseSession = () => {
 
   const updateTurnState = useCallback(async (turnState: TurnState | null) => {
     if (!session?.code) return;
+
+    // If turn is being submitted (completed), increment turnsPlayed for the player
+    if (turnState?.submittedAnswer !== null && session.currentTurnState?.submittedAnswer === null) {
+      const updatedPlayers = session.players.map((p, idx) =>
+        idx === session.currentTurn ? { ...p, turnsPlayed: p.turnsPlayed + 1 } : p
+      );
+      await updateGameState(session.code, {
+        currentTurnState: turnState,
+        players: updatedPlayers
+      });
+      return;
+    }
+
     await updateTurnStateService(session.code, turnState);
-  }, [session?.code]);
+  }, [session, updateGameState]);
 
   const endGame = useCallback(async () => {
     if (!session?.code) return;
@@ -361,6 +410,7 @@ export const useFirebaseSession = () => {
     joinSession,
     leaveSession,
     setReady,
+    updatePlayerMetadata,
     startCountdown,
     startGame,
     updateCurrentGameState,

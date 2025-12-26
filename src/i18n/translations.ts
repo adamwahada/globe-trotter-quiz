@@ -5,7 +5,7 @@ export const translations = {
     // Navigation & Branding
     appName: 'World Quiz',
     logo: 'World Quiz',
-    
+
     // Auth
     signIn: 'Sign In',
     signUp: 'Sign Up',
@@ -20,14 +20,14 @@ export const translations = {
     createAccount: 'Create Account',
     welcomeBack: 'Welcome Back',
     joinUs: 'Join the Adventure',
-    
+
     // Landing Page
     heroTitle: 'Test Your World Knowledge',
     heroSubtitle: 'Challenge friends in real-time geography battles',
     startGame: 'Start Game',
     howToPlay: 'How to Play',
     learnMore: 'Learn More',
-    
+
     // Rules
     rulesTitle: 'Game Rules',
     rulesSubtitle: 'Master the game in 4 simple steps',
@@ -39,7 +39,7 @@ export const translations = {
     ruleStep3Desc: 'Get 3 points for correct answers, 2 for nearby countries. Wrong guesses earn nothing!',
     ruleStep4Title: 'Use Hints Wisely',
     ruleStep4Desc: 'Stuck? Use a hint for help, but it costs 1 point. Strategy matters!',
-    
+
     // Scoring
     scoringTitle: 'Scoring System',
     scoringSubtitle: 'Every point counts towards victory',
@@ -51,7 +51,7 @@ export const translations = {
     pointsHintDesc: 'Each hint you use costs 1 point.',
     pointsSkip: 'Skip / Wrong Answer',
     pointsSkipDesc: 'No points. Try next one!',
-    
+
     // Game Settings
     createSession: 'Create Session',
     joinSession: 'Join Session',
@@ -62,7 +62,7 @@ export const translations = {
     minutes: 'minutes',
     confirm: 'Confirm',
     cancel: 'Cancel',
-    
+
     // Waiting Room
     waitingRoom: 'Waiting Room',
     waitingForPlayers: 'Waiting for players...',
@@ -72,7 +72,7 @@ export const translations = {
     voteYes: 'Vote Yes',
     startGame2: 'Start Game',
     timeRemaining: 'Time Remaining',
-    
+
     // Gameplay
     yourTurn: "It's Your Turn!",
     waitingTurn: 'Waiting for {player} to play...',
@@ -93,27 +93,27 @@ export const translations = {
     points: 'points',
     turnSkipped: 'Turn skipped',
     hintUsed: 'Hint used: -1 point',
-    
+
     // Map Controls
     recenter: 'Recenter Map',
     zoomIn: 'Zoom In',
     zoomOut: 'Zoom Out',
     focusContinent: 'Focus Continent',
-    
+
     // Leaderboard
     leaderboard: 'Leaderboard',
     rank: 'Rank',
     player: 'Player',
     score: 'Score',
     countriesGuessed: 'Countries',
-    
+
     // Results
     gameOver: 'Game Over!',
     finalResults: 'Final Results',
     winner: 'Winner',
     playAgain: 'Play Again',
     backToHome: 'Back to Home',
-    
+
     // Profile
     profile: 'Profile',
     editProfile: 'Edit Profile',
@@ -126,7 +126,7 @@ export const translations = {
     selectAvatar: 'Select Avatar',
     selectColor: 'Select Color',
     save: 'Save',
-    
+
     // Notifications
     playerJoined: '{player} joined the session',
     playerLeft: '{player} left the session',
@@ -136,7 +136,7 @@ export const translations = {
     usedHint: '{player} used a hint',
     gameStarting: 'Game is starting!',
     sessionCreated: 'Session created! Code: {code}',
-    
+
     // Errors
     invalidCode: 'Invalid session code',
     sessionFull: 'Session is full',
@@ -145,7 +145,7 @@ export const translations = {
     authRequired: 'Please sign in to continue',
     invalidCredentials: 'Invalid email or password',
     emailExists: 'Email already registered',
-    
+
     // Tooltips
     tooltipDice: 'Roll to select a random country',
     tooltipRecenter: 'Reset map to full view',
@@ -156,7 +156,7 @@ export const translations = {
     tooltipSkip: 'Skip this turn (0 points)',
     tooltipSubmit: 'Submit your answer',
     tooltipQuit: 'Leave the current game',
-    
+
     // Features Section
     featureMultiplayer: 'Multiplayer',
     featureMultiplayerDesc: 'Challenge 2-4 friends in real-time geography battles',
@@ -164,14 +164,14 @@ export const translations = {
     featureInteractiveMapDesc: 'Click, zoom, and explore the world map to find countries',
     featureLeaderboard: 'Leaderboard',
     featureLeaderboardDesc: 'Track your progress and compete for the top spot',
-    
+
     // CTA Section
     ctaTitle: 'Ready to Test Your Knowledge?',
     ctaSubtitle: 'Join thousands of players from around the world in the ultimate geography challenge.',
-    
+
     // Footer
     footerText: '© 2024 World Quiz. Test your geography knowledge.',
-    
+
     // Misc
     loading: 'Loading...',
     or: 'or',
@@ -182,13 +182,19 @@ export const translations = {
     no: 'No',
     soundOn: 'Sound On',
     soundOff: 'Sound Off',
+    duplicateJoinError: 'You are already in this session',
+    lonePlayerTitle: "You're All Alone!",
+    lonePlayerDesc: 'The other players have left. Would you like to wait for others or quit?',
+    waitForOthers: 'Wait for Players',
+    fairnessTitle: 'Extra Time for Fairness',
+    fairnessDesc: 'Time is up! To keep the game fair, remaining players have one last suggestion so everyone plays the same number of turns.',
   },
-  
+
   fr: {
     // Navigation & Branding
     appName: 'Quiz Mondial',
     logo: 'Quiz Mondial',
-    
+
     // Auth
     signIn: 'Se Connecter',
     signUp: "S'inscrire",
@@ -203,14 +209,14 @@ export const translations = {
     createAccount: 'Créer un compte',
     welcomeBack: 'Bon retour',
     joinUs: "Rejoignez l'aventure",
-    
+
     // Landing Page
     heroTitle: 'Testez Vos Connaissances',
     heroSubtitle: 'Défiez vos amis en géographie en temps réel',
     startGame: 'Commencer',
     howToPlay: 'Comment Jouer',
     learnMore: 'En savoir plus',
-    
+
     // Rules
     rulesTitle: 'Règles du Jeu',
     rulesSubtitle: 'Maîtrisez le jeu en 4 étapes simples',
@@ -222,7 +228,7 @@ export const translations = {
     ruleStep3Desc: 'Obtenez 3 points pour les bonnes réponses, 2 pour les pays proches. Les mauvaises réponses ne rapportent rien !',
     ruleStep4Title: 'Utilisez les Indices avec Sagesse',
     ruleStep4Desc: "Bloqué ? Utilisez un indice pour de l'aide, mais ça coûte 1 point. La stratégie compte !",
-    
+
     // Scoring
     scoringTitle: 'Système de Points',
     scoringSubtitle: 'Chaque point compte pour la victoire',
@@ -234,7 +240,7 @@ export const translations = {
     pointsHintDesc: 'Chaque indice utilisé coûte 1 point.',
     pointsSkip: 'Passer / Mauvaise Réponse',
     pointsSkipDesc: 'Pas de points. Essayez le suivant !',
-    
+
     // Game Settings
     createSession: 'Créer une Session',
     joinSession: 'Rejoindre une Session',
@@ -245,7 +251,7 @@ export const translations = {
     minutes: 'minutes',
     confirm: 'Confirmer',
     cancel: 'Annuler',
-    
+
     // Waiting Room
     waitingRoom: "Salle d'Attente",
     waitingForPlayers: 'En attente de joueurs...',
@@ -255,7 +261,7 @@ export const translations = {
     voteYes: 'Voter Oui',
     startGame2: 'Démarrer la Partie',
     timeRemaining: 'Temps Restant',
-    
+
     // Gameplay
     yourTurn: "C'est Votre Tour !",
     waitingTurn: 'En attente de {player}...',
@@ -276,27 +282,27 @@ export const translations = {
     points: 'points',
     turnSkipped: 'Tour passé',
     hintUsed: 'Indice utilisé : -1 point',
-    
+
     // Map Controls
     recenter: 'Recentrer la Carte',
     zoomIn: 'Zoom Avant',
     zoomOut: 'Zoom Arrière',
     focusContinent: 'Focus Continent',
-    
+
     // Leaderboard
     leaderboard: 'Classement',
     rank: 'Rang',
     player: 'Joueur',
     score: 'Score',
     countriesGuessed: 'Pays',
-    
+
     // Results
     gameOver: 'Fin de Partie !',
     finalResults: 'Résultats Finaux',
     winner: 'Gagnant',
     playAgain: 'Rejouer',
     backToHome: "Retour à l'Accueil",
-    
+
     // Profile
     profile: 'Profil',
     editProfile: 'Modifier le Profil',
@@ -309,7 +315,7 @@ export const translations = {
     selectAvatar: 'Choisir un Avatar',
     selectColor: 'Choisir une Couleur',
     save: 'Sauvegarder',
-    
+
     // Notifications
     playerJoined: '{player} a rejoint la session',
     playerLeft: '{player} a quitté la session',
@@ -319,7 +325,7 @@ export const translations = {
     usedHint: '{player} a utilisé un indice',
     gameStarting: 'La partie commence !',
     sessionCreated: 'Session créée ! Code: {code}',
-    
+
     // Errors
     invalidCode: 'Code de session invalide',
     sessionFull: 'La session est complète',
@@ -328,7 +334,7 @@ export const translations = {
     authRequired: 'Veuillez vous connecter pour continuer',
     invalidCredentials: 'Email ou mot de passe invalide',
     emailExists: 'Email déjà enregistré',
-    
+
     // Tooltips
     tooltipDice: 'Lancez pour sélectionner un pays au hasard',
     tooltipRecenter: 'Réinitialiser la vue de la carte',
@@ -339,7 +345,7 @@ export const translations = {
     tooltipSkip: 'Passer ce tour (0 points)',
     tooltipSubmit: 'Valider votre réponse',
     tooltipQuit: 'Quitter la partie en cours',
-    
+
     // Features Section
     featureMultiplayer: 'Multijoueur',
     featureMultiplayerDesc: 'Défiez 2-4 amis en batailles de géographie en temps réel',
@@ -347,14 +353,14 @@ export const translations = {
     featureInteractiveMapDesc: 'Cliquez, zoomez et explorez la carte du monde pour trouver les pays',
     featureLeaderboard: 'Classement',
     featureLeaderboardDesc: 'Suivez votre progression et visez la première place',
-    
+
     // CTA Section
     ctaTitle: 'Prêt à Tester Vos Connaissances ?',
     ctaSubtitle: 'Rejoignez des milliers de joueurs du monde entier dans le défi ultime de géographie.',
-    
+
     // Footer
     footerText: '© 2024 Quiz Mondial. Testez vos connaissances en géographie.',
-    
+
     // Misc
     loading: 'Chargement...',
     or: 'ou',
@@ -365,13 +371,17 @@ export const translations = {
     no: 'Non',
     soundOn: 'Son Activé',
     soundOff: 'Son Désactivé',
+    duplicateJoinError: 'Vous êtes déjà dans cette session',
+    lonePlayerTitle: 'Vous êtes seul !',
+    lonePlayerDesc: 'Les autres joueurs sont partis. Souhaitez-vous attendre ou quitter ?',
+    waitForOthers: 'Attendre des joueurs',
   },
-  
+
   ar: {
     // Navigation & Branding
     appName: 'مسابقة العالم',
     logo: 'مسابقة العالم',
-    
+
     // Auth
     signIn: 'تسجيل الدخول',
     signUp: 'إنشاء حساب',
@@ -386,14 +396,14 @@ export const translations = {
     createAccount: 'إنشاء حساب',
     welcomeBack: 'مرحباً بعودتك',
     joinUs: 'انضم إلى المغامرة',
-    
+
     // Landing Page
     heroTitle: 'اختبر معرفتك بالعالم',
     heroSubtitle: 'تحدى أصدقاءك في معارك جغرافية مباشرة',
     startGame: 'ابدأ اللعبة',
     howToPlay: 'كيف تلعب',
     learnMore: 'اعرف المزيد',
-    
+
     // Rules
     rulesTitle: 'قواعد اللعبة',
     rulesSubtitle: 'أتقن اللعبة في 4 خطوات بسيطة',
@@ -405,7 +415,7 @@ export const translations = {
     ruleStep3Desc: 'احصل على 3 نقاط للإجابات الصحيحة، 2 للدول القريبة. التخمينات الخاطئة لا تكسب شيئاً!',
     ruleStep4Title: 'استخدم التلميحات بحكمة',
     ruleStep4Desc: 'عالق؟ استخدم تلميحاً للمساعدة، لكنه يكلف نقطة واحدة. الاستراتيجية مهمة!',
-    
+
     // Scoring
     scoringTitle: 'نظام النقاط',
     scoringSubtitle: 'كل نقطة تحسب نحو الفوز',
@@ -417,7 +427,7 @@ export const translations = {
     pointsHintDesc: 'كل تلميح تستخدمه يكلف نقطة واحدة.',
     pointsSkip: 'تخطي / إجابة خاطئة',
     pointsSkipDesc: 'لا نقاط. جرب التالي!',
-    
+
     // Game Settings
     createSession: 'إنشاء جلسة',
     joinSession: 'الانضمام لجلسة',
@@ -428,7 +438,7 @@ export const translations = {
     minutes: 'دقائق',
     confirm: 'تأكيد',
     cancel: 'إلغاء',
-    
+
     // Waiting Room
     waitingRoom: 'غرفة الانتظار',
     waitingForPlayers: 'في انتظار اللاعبين...',
@@ -438,7 +448,7 @@ export const translations = {
     voteYes: 'صوت بنعم',
     startGame2: 'ابدأ اللعبة',
     timeRemaining: 'الوقت المتبقي',
-    
+
     // Gameplay
     yourTurn: 'دورك!',
     waitingTurn: 'في انتظار {player}...',
@@ -459,27 +469,27 @@ export const translations = {
     points: 'نقاط',
     turnSkipped: 'تم تخطي الدور',
     hintUsed: 'تم استخدام التلميح: -1 نقطة',
-    
+
     // Map Controls
     recenter: 'إعادة توسيط الخريطة',
     zoomIn: 'تكبير',
     zoomOut: 'تصغير',
     focusContinent: 'التركيز على القارة',
-    
+
     // Leaderboard
     leaderboard: 'لوحة المتصدرين',
     rank: 'الترتيب',
     player: 'اللاعب',
     score: 'النتيجة',
     countriesGuessed: 'الدول',
-    
+
     // Results
     gameOver: 'انتهت اللعبة!',
     finalResults: 'النتائج النهائية',
     winner: 'الفائز',
     playAgain: 'العب مرة أخرى',
     backToHome: 'العودة للرئيسية',
-    
+
     // Profile
     profile: 'الملف الشخصي',
     editProfile: 'تعديل الملف الشخصي',
@@ -492,7 +502,7 @@ export const translations = {
     selectAvatar: 'اختر صورة رمزية',
     selectColor: 'اختر لوناً',
     save: 'حفظ',
-    
+
     // Notifications
     playerJoined: 'انضم {player} إلى الجلسة',
     playerLeft: 'غادر {player} الجلسة',
@@ -502,7 +512,7 @@ export const translations = {
     usedHint: 'استخدم {player} تلميحاً',
     gameStarting: 'اللعبة تبدأ!',
     sessionCreated: 'تم إنشاء الجلسة! الرمز: {code}',
-    
+
     // Errors
     invalidCode: 'رمز الجلسة غير صالح',
     sessionFull: 'الجلسة ممتلئة',
@@ -511,7 +521,7 @@ export const translations = {
     authRequired: 'يرجى تسجيل الدخول للمتابعة',
     invalidCredentials: 'البريد الإلكتروني أو كلمة المرور غير صحيحة',
     emailExists: 'البريد الإلكتروني مسجل بالفعل',
-    
+
     // Tooltips
     tooltipDice: 'ارمِ لاختيار دولة عشوائية',
     tooltipRecenter: 'إعادة ضبط عرض الخريطة',
@@ -522,7 +532,7 @@ export const translations = {
     tooltipSkip: 'تخطي هذا الدور (0 نقاط)',
     tooltipSubmit: 'إرسال إجابتك',
     tooltipQuit: 'مغادرة اللعبة الحالية',
-    
+
     // Features Section
     featureMultiplayer: 'متعدد اللاعبين',
     featureMultiplayerDesc: 'تحدى 2-4 أصدقاء في معارك جغرافية مباشرة',
@@ -530,14 +540,14 @@ export const translations = {
     featureInteractiveMapDesc: 'انقر وكبّر واستكشف خريطة العالم للعثور على الدول',
     featureLeaderboard: 'لوحة المتصدرين',
     featureLeaderboardDesc: 'تتبع تقدمك وتنافس على المركز الأول',
-    
+
     // CTA Section
     ctaTitle: 'مستعد لاختبار معرفتك؟',
     ctaSubtitle: 'انضم إلى آلاف اللاعبين من حول العالم في تحدي الجغرافيا النهائي.',
-    
+
     // Footer
     footerText: '© 2024 مسابقة العالم. اختبر معرفتك الجغرافية.',
-    
+
     // Misc
     loading: 'جاري التحميل...',
     or: 'أو',
@@ -548,6 +558,10 @@ export const translations = {
     no: 'لا',
     soundOn: 'الصوت مفعّل',
     soundOff: 'الصوت مغلق',
+    duplicateJoinError: 'أنت موجود بالفعل في هذه الجلسة',
+    lonePlayerTitle: 'أنت وحيد هنا!',
+    lonePlayerDesc: 'غادر اللاعبون الآخرون. هل تريد الانتظار أم المغادرة؟',
+    waitForOthers: 'انتظار الآخرين',
   },
 };
 

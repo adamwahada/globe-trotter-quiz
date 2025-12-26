@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar/Navbar';
 import { Button } from '@/components/ui/button';
@@ -9,18 +9,32 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useGame } from '@/contexts/GameContext';
 import { useToastContext } from '@/contexts/ToastContext';
 import { GameTooltip } from '@/components/Tooltip/GameTooltip';
+import { LonePlayerOverlay } from '@/components/Modal/LonePlayerOverlay';
+import { useSound } from '@/contexts/SoundContext';
 import { COUNTDOWN_SECONDS, WAITING_ROOM_TIMEOUT } from '@/types/game';
+import { Player } from '@/types/game';
 import { Copy, Check, Users, Clock, Play, LogOut } from 'lucide-react';
 
 const WaitingRoom = () => {
   const { t } = useLanguage();
-  const { session, currentPlayer, setReady, startCountdown, startGame, leaveSession } = useGame();
+  const { session, currentPlayer, setReady, updatePlayerMetadata, startCountdown, startGame, leaveSession } = useGame();
   const { addToast } = useToastContext();
+  const { playToastSound } = useSound();
   const navigate = useNavigate();
 
+  const prevPlayersRef = useRef<Player[]>([]);
+
   const [copied, setCopied] = useState(false);
-  const [avatar, setAvatar] = useState(currentPlayer?.avatar || '🌍');
+  const [avatar, setAvatar] = useState(currentPlayer?.avatar || '🦁');
   const [color, setColor] = useState(currentPlayer?.color || '#E50914');
+
+  // Sync state with currentPlayer when it loads
+  useEffect(() => {
+    if (currentPlayer) {
+      setAvatar(currentPlayer.avatar || '🦁');
+      setColor(currentPlayer.color || '#E50914');
+    }
+  }, [currentPlayer?.id, currentPlayer?.avatar, currentPlayer?.color]);
 
   useEffect(() => {
     if (!session) {
@@ -37,21 +51,40 @@ const WaitingRoom = () => {
 
   // Auto-start countdown when all players join
   useEffect(() => {
-    if (session?.status === 'waiting' && 
-        session.players.length === session.maxPlayers &&
-        session.players.every(p => p.isReady) &&
-        session.host === currentPlayer?.id) {
+    if (session?.status === 'waiting' &&
+      session.players.length === session.maxPlayers &&
+      session.players.every(p => p.isReady) &&
+      session.host === currentPlayer?.id) {
       // All players joined and ready - start countdown
       startCountdown();
     }
   }, [session, currentPlayer, startCountdown]);
+
+  // Handle player departures notifications
+  useEffect(() => {
+    if (!session?.players) return;
+
+    if (prevPlayersRef.current.length > 0) {
+      const removedPlayers = prevPlayersRef.current.filter(
+        prev => !session.players.find(curr => curr.id === prev.id)
+      );
+
+      removedPlayers.forEach(p => {
+        if (p.id !== currentPlayer?.id) {
+          addToast('info', t('playerLeft', { player: p.username }));
+          playToastSound('info');
+        }
+      });
+    }
+    prevPlayersRef.current = session.players;
+  }, [session?.players, currentPlayer?.id, addToast, playToastSound, t]);
 
   // Handle countdown completion
   useEffect(() => {
     if (session?.status === 'countdown' && session.countdownStartTime) {
       const elapsed = Math.floor((Date.now() - session.countdownStartTime) / 1000);
       const remaining = COUNTDOWN_SECONDS - elapsed;
-      
+
       if (remaining <= 0 && session.host === currentPlayer?.id) {
         startGame();
       }
@@ -78,6 +111,16 @@ const WaitingRoom = () => {
     addToast('game', t('gameStarting'));
   };
 
+  const handleAvatarChange = async (newAvatar: string) => {
+    setAvatar(newAvatar);
+    await updatePlayerMetadata({ avatar: newAvatar });
+  };
+
+  const handleColorChange = async (newColor: string) => {
+    setColor(newColor);
+    await updatePlayerMetadata({ color: newColor });
+  };
+
   const handleLeave = async () => {
     await leaveSession();
     navigate('/');
@@ -97,7 +140,7 @@ const WaitingRoom = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <Navbar 
+      <Navbar
         rightContent={
           <GameTooltip content={t('tooltipQuit')} position="bottom">
             <Button variant="outline" onClick={handleLeave} className="gap-2">
@@ -114,7 +157,7 @@ const WaitingRoom = () => {
           <h1 className="text-4xl md:text-5xl font-display text-foreground mb-4">
             {t('waitingRoom')}
           </h1>
-          
+
           {/* Session Code */}
           <div className="inline-flex items-center gap-4 bg-card border border-border rounded-xl p-4 mb-6">
             <div>
@@ -135,7 +178,7 @@ const WaitingRoom = () => {
 
         {/* Timer - shared across all players based on session start time */}
         <div className="mb-8">
-          <TimerProgress 
+          <TimerProgress
             totalSeconds={WAITING_ROOM_TIMEOUT}
             startTime={session.waitingRoomStartTime}
             onComplete={handleStartGame}
@@ -172,8 +215,8 @@ const WaitingRoom = () => {
             <AvatarSelector
               selectedAvatar={avatar}
               selectedColor={color}
-              onAvatarChange={setAvatar}
-              onColorChange={setColor}
+              onAvatarChange={handleAvatarChange}
+              onColorChange={handleColorChange}
             />
           </div>
 
@@ -184,16 +227,16 @@ const WaitingRoom = () => {
             </h3>
             <div className="space-y-3">
               {session.players.map((player) => (
-                <div 
+                <div
                   key={player.id}
                   className={`
                     flex items-center gap-3 p-3 rounded-lg border transition-colors
-                    ${player.isReady 
-                      ? 'bg-success/10 border-success/30' 
+                    ${player.isReady
+                      ? 'bg-success/10 border-success/30'
                       : 'bg-secondary border-border'}
                   `}
                 >
-                  <div 
+                  <div
                     className="w-12 h-12 rounded-full flex items-center justify-center text-xl"
                     style={{ backgroundColor: player.color }}
                   >
@@ -219,7 +262,7 @@ const WaitingRoom = () => {
 
               {/* Empty slots */}
               {Array.from({ length: session.maxPlayers - session.players.length }).map((_, i) => (
-                <div 
+                <div
                   key={`empty-${i}`}
                   className="flex items-center gap-3 p-3 rounded-lg border border-dashed border-border"
                 >
@@ -265,6 +308,14 @@ const WaitingRoom = () => {
           </p>
         )}
       </div>
+
+      {/* Lone Player Overlay - only show if someone left and now only 1 player remains */}
+      {session && session.status !== 'finished' && session.players.length === 1 && prevPlayersRef.current.length > 1 && (
+        <LonePlayerOverlay
+          onQuit={handleLeave}
+          onWait={() => { }}
+        />
+      )}
     </div>
   );
 };
