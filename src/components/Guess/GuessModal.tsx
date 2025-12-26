@@ -14,6 +14,7 @@ interface GuessModalProps {
   onSkip: () => void;
   onUseHint: () => string;
   turnTimeSeconds?: number;
+  turnStartTime?: number;
 }
 
 export const GuessModal: React.FC<GuessModalProps> = ({
@@ -24,6 +25,7 @@ export const GuessModal: React.FC<GuessModalProps> = ({
   onSkip,
   onUseHint,
   turnTimeSeconds = 30,
+  turnStartTime,
 }) => {
   const { t } = useLanguage();
   const [guess, setGuess] = useState('');
@@ -90,7 +92,8 @@ export const GuessModal: React.FC<GuessModalProps> = ({
           {/* Timer */}
           <div className="mb-6">
             <TimerProgress 
-              totalSeconds={turnTimeSeconds} 
+              totalSeconds={turnTimeSeconds}
+              startTime={turnStartTime}
               onComplete={handleSkip}
               label={t('timeLeft')}
             />
