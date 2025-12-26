@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { GameSession, Player, TurnState, SessionRecoveryData } from '@/types/game';
 import {
   subscribeToSession,
@@ -29,30 +29,44 @@ export const useFirebaseSession = () => {
   const [hasActiveSession, setHasActiveSession] = useState(false);
   const { user } = useAuth();
 
-  // Subscribe to session updates
+  // Subscribe to session updates - use ref to avoid stale closure
+  const currentPlayerIdRef = useRef<string | null>(null);
+  
+  useEffect(() => {
+    currentPlayerIdRef.current = currentPlayer?.id || null;
+  }, [currentPlayer?.id]);
+
   useEffect(() => {
     if (!session?.code) return;
 
+    console.log('[Firebase] Subscribing to session:', session.code);
+
     const unsubscribe = subscribeToSession(session.code, (updatedSession) => {
       if (updatedSession) {
+        console.log('[Firebase] Session update received:', updatedSession.players.length, 'players');
         setSession(updatedSession);
-        // Update current player from session
-        if (currentPlayer) {
-          const updatedPlayer = updatedSession.players.find(p => p.id === currentPlayer.id);
+        // Update current player from session using ref to get latest value
+        const playerId = currentPlayerIdRef.current;
+        if (playerId) {
+          const updatedPlayer = updatedSession.players.find(p => p.id === playerId);
           if (updatedPlayer) {
             setCurrentPlayer(updatedPlayer);
           }
         }
       } else {
         // Session was deleted
+        console.log('[Firebase] Session deleted');
         setSession(null);
         setCurrentPlayer(null);
         clearRecoveryData();
       }
     });
 
-    return () => unsubscribe();
-  }, [session?.code, currentPlayer?.id]);
+    return () => {
+      console.log('[Firebase] Unsubscribing from session:', session.code);
+      unsubscribe();
+    };
+  }, [session?.code]); // Remove currentPlayer.id from deps to prevent re-subscription
 
   // Keep player connection alive
   useEffect(() => {
@@ -230,9 +244,16 @@ export const useFirebaseSession = () => {
       const success = await addPlayerToSession(code, player);
       
       if (success) {
+        // Set current player first
         setCurrentPlayer(player);
-        const updatedSession = await getSessionByCode(code);
-        setSession(updatedSession);
+        
+        // Create a minimal session object with the code to trigger subscription
+        // The subscription will fetch the full session data
+        setSession({
+          ...existingSession,
+          code, // Ensure code is set for subscription
+        });
+        
         setHasActiveSession(true);
         
         localStorage.setItem('gameSessionCode', code);
