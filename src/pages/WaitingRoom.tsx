@@ -4,15 +4,17 @@ import { Navbar } from '@/components/Navbar/Navbar';
 import { Button } from '@/components/ui/button';
 import { TimerProgress } from '@/components/Timer/TimerProgress';
 import { AvatarSelector } from '@/components/Avatar/AvatarSelector';
+import { CountdownOverlay } from '@/components/Countdown/CountdownOverlay';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useGame } from '@/contexts/GameContext';
 import { useToastContext } from '@/contexts/ToastContext';
 import { GameTooltip } from '@/components/Tooltip/GameTooltip';
+import { COUNTDOWN_SECONDS, WAITING_ROOM_TIMEOUT } from '@/types/game';
 import { Copy, Check, Users, Clock, Play, LogOut } from 'lucide-react';
 
 const WaitingRoom = () => {
   const { t } = useLanguage();
-  const { session, currentPlayer, setReady, startGame, leaveSession } = useGame();
+  const { session, currentPlayer, setReady, startCountdown, startGame, leaveSession } = useGame();
   const { addToast } = useToastContext();
   const navigate = useNavigate();
 
@@ -33,6 +35,29 @@ const WaitingRoom = () => {
     }
   }, [session?.status, navigate]);
 
+  // Auto-start countdown when all players join
+  useEffect(() => {
+    if (session?.status === 'waiting' && 
+        session.players.length === session.maxPlayers &&
+        session.players.every(p => p.isReady) &&
+        session.host === currentPlayer?.id) {
+      // All players joined and ready - start countdown
+      startCountdown();
+    }
+  }, [session, currentPlayer, startCountdown]);
+
+  // Handle countdown completion
+  useEffect(() => {
+    if (session?.status === 'countdown' && session.countdownStartTime) {
+      const elapsed = Math.floor((Date.now() - session.countdownStartTime) / 1000);
+      const remaining = COUNTDOWN_SECONDS - elapsed;
+      
+      if (remaining <= 0 && session.host === currentPlayer?.id) {
+        startGame();
+      }
+    }
+  }, [session, currentPlayer, startGame]);
+
   const copyCode = () => {
     if (session) {
       navigator.clipboard.writeText(session.code);
@@ -49,9 +74,8 @@ const WaitingRoom = () => {
   };
 
   const handleStartGame = async () => {
-    await startGame();
+    await startCountdown();
     addToast('game', t('gameStarting'));
-    // Navigation will happen via the useEffect above when status changes
   };
 
   const handleLeave = async () => {
@@ -61,8 +85,14 @@ const WaitingRoom = () => {
 
   const allReady = session?.players.every(p => p.isReady);
   const isHost = session?.host === currentPlayer?.id;
+  const isFull = session?.players.length === session?.maxPlayers;
 
   if (!session) return null;
+
+  // Show countdown overlay
+  if (session.status === 'countdown' && session.countdownStartTime) {
+    return <CountdownOverlay startTime={session.countdownStartTime} />;
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -106,12 +136,21 @@ const WaitingRoom = () => {
         {/* Timer - shared across all players based on session start time */}
         <div className="mb-8">
           <TimerProgress 
-            totalSeconds={300}
+            totalSeconds={WAITING_ROOM_TIMEOUT}
             startTime={session.waitingRoomStartTime}
             onComplete={handleStartGame}
             label={t('timeRemaining')}
           />
         </div>
+
+        {/* Auto-start indicator */}
+        {isFull && allReady && (
+          <div className="mb-6 p-4 bg-primary/20 border border-primary/30 rounded-xl text-center animate-pulse">
+            <p className="text-primary font-display text-lg">
+              🎮 All players ready! Starting countdown...
+            </p>
+          </div>
+        )}
 
         {/* Game Settings Summary */}
         <div className="flex justify-center gap-8 mb-8">
@@ -173,6 +212,8 @@ const WaitingRoom = () => {
                       {player.isReady ? '✓ Ready' : 'Waiting...'}
                     </p>
                   </div>
+                  {/* Connection indicator */}
+                  <div className={`w-2 h-2 rounded-full ${player.isConnected ? 'bg-success' : 'bg-muted'}`} />
                 </div>
               ))}
 

@@ -1,28 +1,63 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Navbar } from '@/components/Navbar/Navbar';
 import { GameSettingsModal } from '@/components/Modal/GameSettingsModal';
 import { Button } from '@/components/ui/button';
 import { GameRuleCard } from '@/components/RuleCards/GameRuleCard';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useGame } from '@/contexts/GameContext';
 import { useToastContext } from '@/contexts/ToastContext';
 import { GameTooltip } from '@/components/Tooltip/GameTooltip';
-import { Play, BookOpen, Trophy, Users, Target, Lightbulb, ChevronDown, Dice5, MapPin, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Play, BookOpen, Trophy, Users, Target, Lightbulb, ChevronDown, Dice5, MapPin, ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
 import worldMapBg from '@/assets/world-map-bg.png';
 
 const Index = () => {
   const { t } = useLanguage();
   const { isAuthenticated } = useAuth();
+  const { hasActiveSession, session, resumeSession, checkActiveSession } = useGame();
   const { addToast } = useToastContext();
+  const navigate = useNavigate();
   const carouselRef = useRef<HTMLDivElement>(null);
   
   const [gameModalOpen, setGameModalOpen] = useState(false);
+  const [isCheckingSession, setIsCheckingSession] = useState(true);
+
+  // Check for active session on mount
+  useEffect(() => {
+    const check = async () => {
+      await checkActiveSession();
+      setIsCheckingSession(false);
+    };
+    check();
+  }, [checkActiveSession]);
 
   const handleStartGame = () => {
     if (!isAuthenticated) {
       addToast('info', t('authRequired'));
+    } else if (hasActiveSession) {
+      addToast('info', 'You have an active session. Resume or leave it first.');
     } else {
       setGameModalOpen(true);
+    }
+  };
+
+  const handleResumeGame = async () => {
+    if (!isAuthenticated) {
+      addToast('info', t('authRequired'));
+      return;
+    }
+
+    const success = await resumeSession();
+    if (success) {
+      // Navigate based on session status
+      if (session?.status === 'waiting' || session?.status === 'countdown') {
+        navigate('/waiting-room');
+      } else if (session?.status === 'playing') {
+        navigate('/game');
+      }
+    } else {
+      addToast('error', 'Could not resume session');
     }
   };
 
@@ -75,12 +110,29 @@ const Index = () => {
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <GameTooltip content="Start a new game session" position="bottom">
+            {/* Resume Play Button - Show if has active session */}
+            {hasActiveSession && !isCheckingSession && (
+              <GameTooltip content="Resume your active game session" position="bottom">
+                <Button 
+                  variant="hero" 
+                  size="xl"
+                  onClick={handleResumeGame}
+                  className="glow-red pulse-glow gap-2"
+                >
+                  <RotateCcw className="h-6 w-6" />
+                  Resume Play
+                </Button>
+              </GameTooltip>
+            )}
+
+            {/* Start New Game Button */}
+            <GameTooltip content={hasActiveSession ? "Leave current session to start new" : "Start a new game session"} position="bottom">
               <Button 
-                variant="hero" 
+                variant={hasActiveSession ? "outline" : "hero"}
                 size="xl"
                 onClick={handleStartGame}
-                className="glow-red pulse-glow"
+                className={!hasActiveSession ? "glow-red pulse-glow" : ""}
+                disabled={hasActiveSession}
               >
                 <Play className="h-6 w-6" />
                 {t('startGame')}
@@ -96,6 +148,15 @@ const Index = () => {
               {t('howToPlay')}
             </Button>
           </div>
+
+          {/* Active Session Indicator */}
+          {hasActiveSession && !isCheckingSession && (
+            <div className="mt-6 p-4 bg-primary/20 border border-primary/30 rounded-xl inline-block">
+              <p className="text-primary text-sm">
+                🎮 You have an active game session. Click "Resume Play" to continue.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Scroll indicator */}
@@ -228,11 +289,11 @@ const Index = () => {
           <Button 
             variant="hero" 
             size="xl"
-            onClick={handleStartGame}
+            onClick={hasActiveSession ? handleResumeGame : handleStartGame}
             className="glow-red"
           >
             <Play className="h-6 w-6" />
-            {t('startGame')}
+            {hasActiveSession ? 'Resume Play' : t('startGame')}
           </Button>
         </div>
       </section>

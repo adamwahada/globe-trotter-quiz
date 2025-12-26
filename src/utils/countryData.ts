@@ -287,3 +287,10 @@ export const getRandomCountry = (): string => {
   const countries = getAllCountries();
   return countries[Math.floor(Math.random() * countries.length)];
 };
+
+// Get random unplayed country
+export const getRandomUnplayedCountry = (guessedCountries: string[]): string | null => {
+  const countries = getAllCountries().filter(c => !guessedCountries.includes(c));
+  if (countries.length === 0) return null;
+  return countries[Math.floor(Math.random() * countries.length)];
+};
