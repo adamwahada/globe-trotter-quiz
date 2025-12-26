@@ -73,7 +73,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ players, currentPlayer
             <div className="flex-1 min-w-0">
               <p className="font-medium text-foreground truncate">{player.username}</p>
               <p className="text-xs text-muted-foreground">
-                {player.countriesGuessed.length} {t('countriesGuessed')}
+                {player.countriesGuessed?.length || 0} {t('countriesGuessed')}
               </p>
             </div>
             
