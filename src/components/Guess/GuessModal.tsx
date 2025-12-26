@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Lightbulb, User, Send, SkipForward } from 'lucide-react';
+import { X, Lightbulb, User, Send, SkipForward, Flag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { GameTooltip } from '@/components/Tooltip/GameTooltip';
@@ -10,7 +10,7 @@ interface GuessModalProps {
   onClose: () => void;
   onSubmit: (guess: string) => void;
   onSkip: () => void;
-  onUseHint: (type: 'letter' | 'famous') => string;
+  onUseHint: (type: 'letter' | 'famous' | 'flag') => string;
   turnTimeSeconds?: number;
   turnStartTime?: number;
 }
@@ -28,8 +28,10 @@ export const GuessModal: React.FC<GuessModalProps> = ({
   const [guess, setGuess] = useState('');
   const [hintUsed, setHintUsed] = useState(false);
   const [famousPersonUsed, setFamousPersonUsed] = useState(false);
+  const [flagUsed, setFlagUsed] = useState(false);
   const [firstLetter, setFirstLetter] = useState('');
   const [famousPerson, setFamousPerson] = useState('');
+  const [countryFlag, setCountryFlag] = useState('');
 
   // Reset state when modal opens
   useEffect(() => {
@@ -37,8 +39,10 @@ export const GuessModal: React.FC<GuessModalProps> = ({
       setGuess('');
       setHintUsed(false);
       setFamousPersonUsed(false);
+      setFlagUsed(false);
       setFirstLetter('');
       setFamousPerson('');
+      setCountryFlag('');
     }
   }, [isOpen]);
 
@@ -57,6 +61,14 @@ export const GuessModal: React.FC<GuessModalProps> = ({
       const name = onUseHint('famous');
       setFamousPersonUsed(true);
       setFamousPerson(name);
+    }
+  };
+
+  const handleFlag = () => {
+    if (!flagUsed) {
+      const flag = onUseHint('flag');
+      setFlagUsed(true);
+      setCountryFlag(flag);
     }
   };
 
@@ -81,9 +93,10 @@ export const GuessModal: React.FC<GuessModalProps> = ({
         <div className="p-6">
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 p-2 rounded-full hover:bg-secondary transition-colors"
+            className="absolute top-3 right-3 p-2.5 rounded-full bg-secondary border border-border hover:bg-destructive hover:text-white hover:border-destructive transition-all duration-200 z-10 shadow-lg"
+            aria-label="Close"
           >
-            <X className="h-5 w-5 text-muted-foreground" />
+            <X className="h-5 w-5" />
           </button>
 
           {/* Timer */}
@@ -128,8 +141,18 @@ export const GuessModal: React.FC<GuessModalProps> = ({
             {famousPerson && (
               <div className="bg-primary/20 border border-primary/30 rounded-lg p-3 text-center animate-fade-in">
                 <p className="text-sm text-primary">
-                  {famousPerson}
+                  🎭 {famousPerson}
                 </p>
+              </div>
+            )}
+
+            {countryFlag && (
+              <div className="bg-warning/20 border border-warning/30 rounded-lg p-4 text-center animate-fade-in">
+                <img
+                  src={countryFlag}
+                  alt="Country Flag"
+                  className="w-32 h-auto mx-auto rounded shadow-lg"
+                />
               </div>
             )}
           </div>
@@ -147,15 +170,15 @@ export const GuessModal: React.FC<GuessModalProps> = ({
             />
 
             {/* Hint buttons */}
-            <div className="flex gap-2">
+            <div className="grid grid-cols-3 gap-3">
               <GameTooltip content={t('tooltipHint')} position="top">
                 <Button
                   variant="outline"
                   onClick={handleHint}
                   disabled={hintUsed}
-                  className="flex-1 gap-2"
+                  className="gap-2 py-3 text-sm font-medium hover:bg-primary/10 hover:border-primary"
                 >
-                  <Lightbulb className="h-4 w-4" />
+                  <Lightbulb className="h-5 w-5" />
                   {t('useHint')} {hintUsed && '✓'}
                 </Button>
               </GameTooltip>
@@ -165,10 +188,22 @@ export const GuessModal: React.FC<GuessModalProps> = ({
                   variant="outline"
                   onClick={handleFamousPerson}
                   disabled={famousPersonUsed}
-                  className="flex-1 gap-2"
+                  className="gap-2 py-3 text-sm font-medium hover:bg-primary/10 hover:border-primary"
                 >
-                  <User className="h-4 w-4" />
+                  <User className="h-5 w-5" />
                   {t('famousPerson')} {famousPersonUsed && '✓'}
+                </Button>
+              </GameTooltip>
+
+              <GameTooltip content="Show country flag" position="top">
+                <Button
+                  variant="outline"
+                  onClick={handleFlag}
+                  disabled={flagUsed}
+                  className="gap-2 py-3 text-sm font-medium hover:bg-primary/10 hover:border-primary"
+                >
+                  <Flag className="h-5 w-5" />
+                  Flag {flagUsed && '✓'}
                 </Button>
               </GameTooltip>
             </div>

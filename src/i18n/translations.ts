@@ -38,7 +38,7 @@ export const translations = {
     ruleStep3Title: 'Earn Points',
     ruleStep3Desc: 'Get 3 points for correct answers, 2 for nearby countries. Wrong guesses earn nothing!',
     ruleStep4Title: 'Use Hints Wisely',
-    ruleStep4Desc: 'Stuck? Use a hint for help, but it costs 1 point. Strategy matters!',
+    ruleStep4Desc: 'Stuck? Use hints for help: reveal the first letter (-1 pt), see a famous person (-1 pt), or view the flag (-1 pt & -10 sec).',
 
     // Scoring
     scoringTitle: 'Scoring System',
@@ -229,7 +229,7 @@ export const translations = {
     ruleStep3Title: 'Gagnez des Points',
     ruleStep3Desc: 'Obtenez 3 points pour les bonnes réponses, 2 pour les pays proches. Les mauvaises réponses ne rapportent rien !',
     ruleStep4Title: 'Utilisez les Indices avec Sagesse',
-    ruleStep4Desc: "Bloqué ? Utilisez un indice pour de l'aide, mais ça coûte 1 point. La stratégie compte !",
+    ruleStep4Desc: "Bloqué ? Utilisez les indices : révéler la 1ère lettre (-1 pt), voir une célébrité (-1 pt), ou voir le drapeau (-1 pt & -10 sec).",
 
     // Scoring
     scoringTitle: 'Système de Points',
@@ -420,7 +420,7 @@ export const translations = {
     ruleStep3Title: 'اكسب النقاط',
     ruleStep3Desc: 'احصل على 3 نقاط للإجابات الصحيحة، 2 للدول القريبة. التخمينات الخاطئة لا تكسب شيئاً!',
     ruleStep4Title: 'استخدم التلميحات بحكمة',
-    ruleStep4Desc: 'عالق؟ استخدم تلميحاً للمساعدة، لكنه يكلف نقطة واحدة. الاستراتيجية مهمة!',
+    ruleStep4Desc: 'عالق؟ استخدم التلميحات: كشف الحرف الأول (-1 نقطة)، شخص مشهور (-1 نقطة)، أو العلم (-1 نقطة و -10 ثانية).',
 
     // Scoring
     scoringTitle: 'نظام النقاط',

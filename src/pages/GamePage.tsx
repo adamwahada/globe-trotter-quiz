@@ -18,7 +18,7 @@ import { useGame, TurnState, Player } from '@/contexts/GameContext';
 import { useToastContext } from '@/contexts/ToastContext';
 import { useSound } from '@/contexts/SoundContext';
 import { isCorrectGuess } from '@/utils/scoring';
-import { getRandomUnplayedCountry, getFamousPerson, getMapCountryName } from '@/utils/countryData';
+import { getRandomUnplayedCountry, getFamousPerson, getMapCountryName, getCountryFlag } from '@/utils/countryData';
 import { TURN_TIME_SECONDS, COUNTDOWN_SECONDS } from '@/types/game';
 import { Trophy, LogOut, Volume2, VolumeX, Users, Clock } from 'lucide-react';
 
@@ -102,7 +102,7 @@ const GamePage = () => {
         addToast('game', `🎯 ${t('yourTurn')}! ${t('rollDice')} 🎲`);
         playToastSound('game');
       } else {
-        addToast('info', t('waitingTurn', { player: currentTurnPlayer.username }));
+        // Don't show toast for other player's turn - reduces noise
       }
     }
   }, [currentTurnIndex, session?.status]);
@@ -158,7 +158,7 @@ const GamePage = () => {
       await updateGameState({ turnStartTime: Date.now() });
 
       setIsRolling(false);
-      addToast('game', '🎯 Identify the highlighted country on the map!');
+      // Country selected - no toast needed, visual highlight is enough
     }, 800);
   }, [isMyTurn, isRolling, currentCountry, guessedCountries, currentPlayer, updateTurnState, updateGameState, addToast, endGame, playDiceSound]);
 
@@ -211,7 +211,7 @@ const GamePage = () => {
 
     // Only allow clicking the selected country
     if (countryName !== currentCountry) {
-      addToast('info', 'Click on the highlighted country to guess!');
+      // Don't show toast - visual feedback is enough
       return;
     }
 
@@ -345,8 +345,8 @@ const GamePage = () => {
     setTimeout(() => moveToNextTurn(), 2000);
   }, [isMyTurn, currentTurnState, currentCountry, guessedCountries, updateGameState, addToast, t, moveToNextTurn, updateTurnState]);
 
-  const handleUseHint = useCallback((type: 'letter' | 'famous') => {
-    if (!currentCountry || !currentPlayer) return '';
+  const handleUseHint = useCallback((type: 'letter' | 'famous' | 'flag') => {
+    if (!currentCountry || !currentPlayer || !session) return '';
 
     // Calculate new score (deduct 1 point, minimum 0)
     const newScore = Math.max(0, currentPlayer.score - 1);
@@ -356,6 +356,14 @@ const GamePage = () => {
         ? { ...p, score: newScore }
         : p
     );
+
+    // For flag hint, also subtract 10 seconds from timer
+    if (type === 'flag' && session.turnStartTime) {
+      const newTurnStartTime = session.turnStartTime - 10000; // Subtract 10 seconds (10000ms)
+      updateGameState({ players: updatedPlayers, turnStartTime: newTurnStartTime });
+      addToast('info', t('hintUsed') + ' (-1 point, -10 seconds)');
+      return getCountryFlag(currentCountry);
+    }
 
     // Update game state immediately to reflect points deduction
     updateGameState({ players: updatedPlayers });
@@ -367,7 +375,7 @@ const GamePage = () => {
     } else {
       return getFamousPerson(currentCountry) || 'No famous person data found';
     }
-  }, [currentCountry, currentPlayer, players, currentTurnIndex, updateGameState, addToast, t]);
+  }, [currentCountry, currentPlayer, players, currentTurnIndex, session, updateGameState, addToast, t]);
 
   const handleLeave = useCallback(async () => {
     await leaveSession();
