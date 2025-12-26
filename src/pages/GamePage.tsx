@@ -383,76 +383,103 @@ const GamePage = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Map Area - Fixed container with scroll isolation */}
-        <div className="flex-1 relative p-2 md:p-4 overflow-hidden">
-          {/* Turn indicator */}
-          <div className={`absolute top-4 left-4 z-10 backdrop-blur-sm border rounded-xl px-5 py-3 ${
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden p-4 gap-4">
+        {/* Left side - Game info and controls */}
+        <div className="lg:w-80 flex flex-col gap-4 shrink-0">
+          {/* Turn Indicator Card */}
+          <div className={`rounded-xl p-4 border-2 transition-all ${
             isMyTurn 
-              ? 'bg-primary/20 border-primary shadow-lg shadow-primary/20' 
-              : 'bg-card/90 border-border'
+              ? 'bg-primary/10 border-primary shadow-lg shadow-primary/20 animate-pulse-glow' 
+              : 'bg-card border-border'
           }`}>
-            <p className={`font-display text-lg ${isMyTurn ? 'text-primary' : 'text-muted-foreground'}`}>
-              {isMyTurn ? `🎯 ${t('yourTurn')}` : `⏳ ${t('waitingTurn', { player: currentTurnPlayer?.username || 'Opponent' })}`}
-            </p>
-            {currentCountry && isMyTurn && (
-              <p className="text-sm text-foreground mt-1">
-                {t('clickCountryToGuess')}
-              </p>
+            <div className="flex items-center gap-3 mb-3">
+              <div className={`w-3 h-3 rounded-full ${isMyTurn ? 'bg-primary animate-ping' : 'bg-muted'}`} />
+              <h3 className="font-display text-xl">
+                {isMyTurn ? `🎯 ${t('yourTurn')}` : `⏳ ${currentTurnPlayer?.username}'s Turn`}
+              </h3>
+            </div>
+            
+            {isMyTurn && !currentCountry && (
+              <p className="text-sm text-muted-foreground mb-2">{t('rollDice')} 🎲</p>
             )}
+            
+            {currentCountry && (
+              <>
+                <div className="bg-warning/20 border border-warning rounded-lg px-3 py-2 mb-3">
+                  <p className="text-xs text-muted-foreground">Current Country</p>
+                  <p className="font-semibold text-warning">{currentCountry}</p>
+                </div>
+                
+                {isMyTurn && (
+                  <p className="text-sm text-foreground">{t('clickCountryToGuess')}</p>
+                )}
+              </>
+            )}
+            
             {/* Turn Timer */}
             {currentCountry && session.turnStartTime && (
-              <div className="mt-2">
+              <div className="mt-3 pt-3 border-t border-border">
                 <TimerProgress 
                   totalSeconds={TURN_TIME_SECONDS}
                   startTime={session.turnStartTime}
                   onComplete={isMyTurn ? handleTurnTimeout : undefined}
+                  label={t('timeLeft')}
                 />
               </div>
             )}
           </div>
 
-          {/* Spectator Answer Display */}
+          {/* Spectator View - Answer Display */}
           {!isMyTurn && currentTurnState?.submittedAnswer && (
-            <div className={`absolute top-4 right-20 z-10 backdrop-blur-sm border rounded-xl px-5 py-3 ${
-              currentTurnState.isCorrect ? 'bg-success/20 border-success' : 'bg-destructive/20 border-destructive'
+            <div className={`rounded-xl p-4 border-2 ${
+              currentTurnState.isCorrect 
+                ? 'bg-success/10 border-success' 
+                : 'bg-destructive/10 border-destructive'
             }`}>
-              <p className="text-sm text-muted-foreground">Answer:</p>
-              <p className="font-display text-lg">{currentTurnState.submittedAnswer}</p>
-              <p className={`text-sm ${currentTurnState.isCorrect ? 'text-success' : 'text-destructive'}`}>
-                {currentTurnState.isCorrect ? `+${currentTurnState.pointsEarned} points` : 'Wrong'}
-              </p>
+              <p className="text-xs text-muted-foreground mb-1">Submitted Answer</p>
+              <p className="font-display text-xl">{currentTurnState.submittedAnswer}</p>
+              <div className={`mt-2 flex items-center gap-2 ${
+                currentTurnState.isCorrect ? 'text-success' : 'text-destructive'
+              }`}>
+                {currentTurnState.isCorrect ? '✓' : '✗'}
+                <span className="font-semibold">
+                  {currentTurnState.isCorrect ? `+${currentTurnState.pointsEarned} points` : 'Wrong answer'}
+                </span>
+              </div>
             </div>
           )}
 
           {/* Dice */}
-          <div className="absolute bottom-4 left-4 z-10">
+          <div className="flex justify-center py-4">
             <Dice 
               onRoll={handleRollDice} 
               disabled={!isMyTurn || !!currentCountry || isRolling}
               isRolling={isRolling}
             />
-            {!currentCountry && isMyTurn && (
-              <p className="text-xs text-muted-foreground mt-2 text-center">
-                {t('rollDice')}
-              </p>
-            )}
           </div>
 
-          {/* Map Container */}
-          <div className="w-full h-full overflow-auto rounded-xl">
-            <WorldMap
-              guessedCountries={guessedCountries}
-              currentCountry={currentCountry || undefined}
-              onCountryClick={handleCountryClick}
-              disabled={!isMyTurn || !currentCountry}
+          {/* Mini Leaderboard for mobile */}
+          <div className="lg:hidden">
+            <Leaderboard 
+              players={players} 
+              currentPlayerId={currentPlayer?.id}
             />
           </div>
         </div>
 
-        {/* Leaderboard Sidebar */}
+        {/* Map Area - Fixed container */}
+        <div className="flex-1 min-h-[400px] lg:min-h-0">
+          <WorldMap
+            guessedCountries={guessedCountries}
+            currentCountry={currentCountry || undefined}
+            onCountryClick={handleCountryClick}
+            disabled={!isMyTurn || !currentCountry}
+          />
+        </div>
+
+        {/* Leaderboard Sidebar - Desktop */}
         {showLeaderboard && (
-          <div className="w-80 border-l border-border p-4 bg-card/50 backdrop-blur-sm overflow-y-auto animate-fade-in">
+          <div className="hidden lg:block w-72 shrink-0 border border-border rounded-xl p-4 bg-card/50 backdrop-blur-sm overflow-y-auto animate-fade-in">
             <Leaderboard 
               players={players} 
               currentPlayerId={currentPlayer?.id}
