@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { GameSession, Player } from '@/contexts/GameContext';
+import type { GameSession, Player, TurnState, SessionRecoveryData } from '@/types/game';
 import {
   subscribeToSession,
   createSessionInFirebase,
@@ -8,16 +8,26 @@ import {
   removePlayerFromSession,
   updatePlayerInSession,
   updateGameState,
+  updateTurnState as updateTurnStateService,
   startGameSession,
+  startCountdown as startCountdownService,
   endGameSession,
   generateCode,
+  saveRecoveryData,
+  getRecoveryData,
+  clearRecoveryData,
+  hasActiveSession as checkHasActiveSession,
+  updatePlayerConnection,
 } from '@/services/gameSessionService';
+import { useAuth } from '@/contexts/AuthContext';
 
 export const useFirebaseSession = () => {
   const [session, setSession] = useState<GameSession | null>(null);
   const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasActiveSession, setHasActiveSession] = useState(false);
+  const { user } = useAuth();
 
   // Subscribe to session updates
   useEffect(() => {
@@ -37,11 +47,40 @@ export const useFirebaseSession = () => {
         // Session was deleted
         setSession(null);
         setCurrentPlayer(null);
+        clearRecoveryData();
       }
     });
 
     return () => unsubscribe();
   }, [session?.code, currentPlayer?.id]);
+
+  // Keep player connection alive
+  useEffect(() => {
+    if (!session?.code || !currentPlayer?.id) return;
+
+    // Update connection status on mount
+    updatePlayerConnection(session.code, currentPlayer.id, true);
+
+    // Heartbeat every 10 seconds
+    const heartbeat = setInterval(() => {
+      updatePlayerConnection(session.code, currentPlayer.id, true);
+    }, 10000);
+
+    // Update on unmount
+    return () => {
+      clearInterval(heartbeat);
+      updatePlayerConnection(session.code, currentPlayer.id, false);
+    };
+  }, [session?.code, currentPlayer?.id]);
+
+  // Check for active session on mount
+  useEffect(() => {
+    const checkSession = async () => {
+      const result = await checkHasActiveSession();
+      setHasActiveSession(result.hasSession);
+    };
+    checkSession();
+  }, []);
 
   // Restore session from localStorage on mount
   useEffect(() => {
@@ -52,27 +91,40 @@ export const useFirebaseSession = () => {
       setIsLoading(true);
       getSessionByCode(savedSessionCode)
         .then((restoredSession) => {
-          if (restoredSession) {
+          if (restoredSession && restoredSession.status !== 'finished') {
             setSession(restoredSession);
             const player = restoredSession.players.find(p => p.id === savedPlayerId);
             if (player) {
               setCurrentPlayer(player);
+              setHasActiveSession(true);
+              // Update recovery data
+              saveRecoveryData({
+                sessionCode: savedSessionCode,
+                playerId: savedPlayerId,
+                timestamp: Date.now(),
+              });
             }
           } else {
-            // Session no longer exists, clear localStorage
-            localStorage.removeItem('gameSessionCode');
-            localStorage.removeItem('currentPlayerId');
+            clearRecoveryData();
+            setHasActiveSession(false);
           }
         })
         .catch(() => {
-          localStorage.removeItem('gameSessionCode');
-          localStorage.removeItem('currentPlayerId');
+          clearRecoveryData();
+          setHasActiveSession(false);
         })
         .finally(() => setIsLoading(false));
     }
   }, []);
 
   const createSession = useCallback(async (maxPlayers: number, duration: number): Promise<string> => {
+    // Check for existing active session
+    const activeCheck = await checkHasActiveSession();
+    if (activeCheck.hasSession) {
+      setError('You already have an active session. Resume or leave it first.');
+      throw new Error('Active session exists');
+    }
+
     setIsLoading(true);
     setError(null);
 
@@ -82,12 +134,14 @@ export const useFirebaseSession = () => {
       
       const player: Player = {
         id: playerId,
-        username: 'You',
-        avatar: '🌍',
-        color: '#E50914',
+        username: user?.username || 'You',
+        avatar: user?.avatar || '🌍',
+        color: user?.color || '#E50914',
         score: 0,
         countriesGuessed: [],
         isReady: false,
+        isConnected: true,
+        lastSeen: Date.now(),
       };
 
       const newSession: GameSession = {
@@ -99,19 +153,28 @@ export const useFirebaseSession = () => {
         duration,
         status: 'waiting',
         currentTurn: 0,
-        currentCountry: null,
+        currentTurnState: null,
+        guessedCountries: [],
         startTime: null,
         waitingRoomStartTime: Date.now(),
+        countdownStartTime: null,
+        turnStartTime: null,
       };
 
       await createSessionInFirebase(newSession);
       
       setSession(newSession);
       setCurrentPlayer(player);
+      setHasActiveSession(true);
       
-      // Save to localStorage for persistence
+      // Save recovery data
       localStorage.setItem('gameSessionCode', code);
       localStorage.setItem('currentPlayerId', playerId);
+      saveRecoveryData({
+        sessionCode: code,
+        playerId,
+        timestamp: Date.now(),
+      });
 
       return code;
     } catch (err) {
@@ -120,9 +183,16 @@ export const useFirebaseSession = () => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [user]);
 
   const joinSession = useCallback(async (code: string): Promise<boolean> => {
+    // Check for existing active session
+    const activeCheck = await checkHasActiveSession();
+    if (activeCheck.hasSession && activeCheck.session?.code !== code) {
+      setError('You already have an active session. Resume or leave it first.');
+      return false;
+    }
+
     setIsLoading(true);
     setError(null);
 
@@ -147,24 +217,31 @@ export const useFirebaseSession = () => {
       const playerId = `player_${Date.now()}`;
       const player: Player = {
         id: playerId,
-        username: 'Player',
-        avatar: '🗺️',
-        color: '#4169E1',
+        username: user?.username || 'Player',
+        avatar: user?.avatar || '🗺️',
+        color: user?.color || '#4169E1',
         score: 0,
         countriesGuessed: [],
         isReady: false,
+        isConnected: true,
+        lastSeen: Date.now(),
       };
 
       const success = await addPlayerToSession(code, player);
       
       if (success) {
         setCurrentPlayer(player);
-        // Session will be updated via subscription
         const updatedSession = await getSessionByCode(code);
         setSession(updatedSession);
+        setHasActiveSession(true);
         
         localStorage.setItem('gameSessionCode', code);
         localStorage.setItem('currentPlayerId', playerId);
+        saveRecoveryData({
+          sessionCode: code,
+          playerId,
+          timestamp: Date.now(),
+        });
       }
 
       return success;
@@ -174,7 +251,7 @@ export const useFirebaseSession = () => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [user]);
 
   const leaveSession = useCallback(async () => {
     if (!session?.code || !currentPlayer?.id) return;
@@ -184,8 +261,8 @@ export const useFirebaseSession = () => {
     } finally {
       setSession(null);
       setCurrentPlayer(null);
-      localStorage.removeItem('gameSessionCode');
-      localStorage.removeItem('currentPlayerId');
+      setHasActiveSession(false);
+      clearRecoveryData();
     }
   }, [session?.code, currentPlayer?.id]);
 
@@ -195,6 +272,11 @@ export const useFirebaseSession = () => {
     await updatePlayerInSession(session.code, currentPlayer.id, { isReady: ready });
   }, [session?.code, currentPlayer?.id]);
 
+  const startCountdown = useCallback(async () => {
+    if (!session?.code) return;
+    await startCountdownService(session.code);
+  }, [session?.code]);
+
   const startGame = useCallback(async () => {
     if (!session?.code) return;
     await startGameSession(session.code);
@@ -203,31 +285,68 @@ export const useFirebaseSession = () => {
   const updateCurrentGameState = useCallback(async (
     updates: {
       currentTurn?: number;
-      currentCountry?: string | null;
+      currentTurnState?: TurnState | null;
       players?: Player[];
       guessedCountries?: string[];
+      turnStartTime?: number | null;
     }
   ) => {
     if (!session?.code) return;
     await updateGameState(session.code, updates);
   }, [session?.code]);
 
+  const updateTurnState = useCallback(async (turnState: TurnState | null) => {
+    if (!session?.code) return;
+    await updateTurnStateService(session.code, turnState);
+  }, [session?.code]);
+
   const endGame = useCallback(async () => {
     if (!session?.code) return;
     await endGameSession(session.code);
+    setHasActiveSession(false);
+    clearRecoveryData();
   }, [session?.code]);
+
+  const resumeSession = useCallback(async (): Promise<boolean> => {
+    const activeCheck = await checkHasActiveSession();
+    if (!activeCheck.hasSession || !activeCheck.session || !activeCheck.playerId) {
+      return false;
+    }
+
+    setSession(activeCheck.session);
+    const player = activeCheck.session.players.find(p => p.id === activeCheck.playerId);
+    if (player) {
+      setCurrentPlayer(player);
+      setHasActiveSession(true);
+      // Update connection
+      await updatePlayerConnection(activeCheck.session.code, activeCheck.playerId, true);
+      return true;
+    }
+    return false;
+  }, []);
+
+  const checkActiveSession = useCallback(async (): Promise<boolean> => {
+    const result = await checkHasActiveSession();
+    setHasActiveSession(result.hasSession);
+    return result.hasSession;
+  }, []);
 
   return {
     session,
     currentPlayer,
     isLoading,
     error,
+    hasActiveSession,
     createSession,
     joinSession,
     leaveSession,
     setReady,
+    startCountdown,
     startGame,
     updateCurrentGameState,
+    updateTurnState,
     endGame,
+    resumeSession,
+    checkActiveSession,
   };
 };

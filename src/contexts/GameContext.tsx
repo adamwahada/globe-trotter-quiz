@@ -1,48 +1,33 @@
 import React, { createContext, useContext, ReactNode } from 'react';
 import { useFirebaseSession } from '@/hooks/useFirebaseSession';
+import type { GameSession, Player, TurnState } from '@/types/game';
 
-export interface Player {
-  id: string;
-  username: string;
-  avatar: string;
-  color: string;
-  score: number;
-  countriesGuessed: string[];
-  isReady: boolean;
-}
-
-export interface GameSession {
-  id: string;
-  code: string;
-  host: string;
-  players: Player[];
-  maxPlayers: number;
-  duration: number;
-  status: 'waiting' | 'playing' | 'finished';
-  currentTurn: number;
-  currentCountry: string | null;
-  startTime: number | null;
-  waitingRoomStartTime: number;
-  guessedCountries?: string[];
-}
+// Re-export types for backward compatibility
+export type { GameSession, Player, TurnState };
 
 interface GameContextType {
   session: GameSession | null;
   currentPlayer: Player | null;
   isLoading: boolean;
   error: string | null;
+  hasActiveSession: boolean;
   createSession: (maxPlayers: number, duration: number) => Promise<string>;
   joinSession: (code: string) => Promise<boolean>;
   leaveSession: () => Promise<void>;
   setReady: (ready: boolean) => Promise<void>;
+  startCountdown: () => Promise<void>;
   startGame: () => Promise<void>;
   updateGameState: (updates: {
     currentTurn?: number;
-    currentCountry?: string | null;
+    currentTurnState?: TurnState | null;
     players?: Player[];
     guessedCountries?: string[];
+    turnStartTime?: number | null;
   }) => Promise<void>;
+  updateTurnState: (turnState: TurnState | null) => Promise<void>;
   endGame: () => Promise<void>;
+  resumeSession: () => Promise<boolean>;
+  checkActiveSession: () => Promise<boolean>;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -53,13 +38,18 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     currentPlayer,
     isLoading,
     error,
+    hasActiveSession,
     createSession,
     joinSession,
     leaveSession,
     setReady,
+    startCountdown,
     startGame,
     updateCurrentGameState,
+    updateTurnState,
     endGame,
+    resumeSession,
+    checkActiveSession,
   } = useFirebaseSession();
 
   return (
@@ -68,13 +58,18 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       currentPlayer,
       isLoading,
       error,
+      hasActiveSession,
       createSession,
       joinSession,
       leaveSession,
       setReady,
+      startCountdown,
       startGame,
       updateGameState: updateCurrentGameState,
+      updateTurnState,
       endGame,
+      resumeSession,
+      checkActiveSession,
     }}>
       {children}
     </GameContext.Provider>

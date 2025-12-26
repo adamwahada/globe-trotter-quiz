@@ -1,7 +1,8 @@
 import { database, ref, set, onValue, update, remove, get, isFirebaseReady } from '@/lib/firebase';
-import type { GameSession, Player } from '@/contexts/GameContext';
+import type { GameSession, Player, TurnState, SessionRecoveryData } from '@/types/game';
 
 const SESSIONS_PATH = 'sessions';
+const RECOVERY_PATH = 'recovery';
 
 // Generate random 6-character code
 export const generateCode = (): string => {
@@ -38,7 +39,6 @@ export const subscribeToSession = (
   callback: (session: GameSession | null) => void
 ): (() => void) => {
   if (!isFirebaseReady() || !database) {
-    // For local mode, just call callback once with local data
     const localSession = localStorage.getItem(`session_${code}`);
     callback(localSession ? JSON.parse(localSession) : null);
     return () => {};
@@ -129,13 +129,22 @@ export const updateGameState = async (
   code: string,
   gameState: {
     currentTurn?: number;
-    currentCountry?: string | null;
+    currentTurnState?: TurnState | null;
     players?: Player[];
     guessedCountries?: string[];
-    status?: 'waiting' | 'playing' | 'finished';
+    status?: 'waiting' | 'countdown' | 'playing' | 'finished';
+    turnStartTime?: number | null;
   }
 ): Promise<void> => {
   await updateSession(code, gameState);
+};
+
+// Start countdown before game
+export const startCountdown = async (code: string): Promise<void> => {
+  await updateSession(code, {
+    status: 'countdown',
+    countdownStartTime: Date.now(),
+  });
 };
 
 // Start game
@@ -143,6 +152,9 @@ export const startGameSession = async (code: string): Promise<void> => {
   await updateSession(code, {
     status: 'playing',
     startTime: Date.now(),
+    currentTurn: 0,
+    turnStartTime: null,
+    currentTurnState: null,
   });
 };
 
@@ -150,5 +162,81 @@ export const startGameSession = async (code: string): Promise<void> => {
 export const endGameSession = async (code: string): Promise<void> => {
   await updateSession(code, {
     status: 'finished',
+  });
+};
+
+// Update turn state (for realtime sync of turn actions)
+export const updateTurnState = async (
+  code: string,
+  turnState: TurnState | null
+): Promise<void> => {
+  await updateSession(code, { 
+    currentTurnState: turnState,
+    turnStartTime: turnState?.startTime || null,
+  });
+};
+
+// Save recovery data for reconnection
+export const saveRecoveryData = (data: SessionRecoveryData): void => {
+  localStorage.setItem('gameRecovery', JSON.stringify(data));
+};
+
+// Get recovery data
+export const getRecoveryData = (): SessionRecoveryData | null => {
+  const data = localStorage.getItem('gameRecovery');
+  return data ? JSON.parse(data) : null;
+};
+
+// Clear recovery data
+export const clearRecoveryData = (): void => {
+  localStorage.removeItem('gameRecovery');
+  localStorage.removeItem('gameSessionCode');
+  localStorage.removeItem('currentPlayerId');
+};
+
+// Check if player has active session
+export const hasActiveSession = async (): Promise<{ hasSession: boolean; session: GameSession | null; playerId: string | null }> => {
+  const recoveryData = getRecoveryData();
+  if (!recoveryData) {
+    return { hasSession: false, session: null, playerId: null };
+  }
+
+  // Check if recovery data is recent (within 1 hour)
+  if (Date.now() - recoveryData.timestamp > 3600000) {
+    clearRecoveryData();
+    return { hasSession: false, session: null, playerId: null };
+  }
+
+  const session = await getSessionByCode(recoveryData.sessionCode);
+  if (!session) {
+    clearRecoveryData();
+    return { hasSession: false, session: null, playerId: null };
+  }
+
+  // Check if session is still active (not finished)
+  if (session.status === 'finished') {
+    clearRecoveryData();
+    return { hasSession: false, session: null, playerId: null };
+  }
+
+  // Check if player is still in session
+  const playerExists = session.players.some(p => p.id === recoveryData.playerId);
+  if (!playerExists) {
+    clearRecoveryData();
+    return { hasSession: false, session: null, playerId: null };
+  }
+
+  return { hasSession: true, session, playerId: recoveryData.playerId };
+};
+
+// Update player connection status
+export const updatePlayerConnection = async (
+  code: string,
+  playerId: string,
+  isConnected: boolean
+): Promise<void> => {
+  await updatePlayerInSession(code, playerId, { 
+    isConnected,
+    lastSeen: Date.now(),
   });
 };
