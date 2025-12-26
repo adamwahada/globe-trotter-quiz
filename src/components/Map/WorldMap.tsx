@@ -39,18 +39,25 @@ export const WorldMap: React.FC<WorldMapProps> = ({
   const { t } = useLanguage();
   const [position, setPosition] = useState({ coordinates: [0, 20] as [number, number], zoom: 1 });
   const [tooltip, setTooltip] = useState<{ country: string; x: number; y: number } | null>(null);
+  const [hoveredCountry, setHoveredCountry] = useState<string | null>(null);
+  const [mousePos, setMousePos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const mapContainerRef = useRef<HTMLDivElement>(null);
 
-  const updateTooltip = useCallback((country: string, e: React.MouseEvent<SVGPathElement>) => {
+  // Track mouse position relative to container
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const rect = mapContainerRef.current?.getBoundingClientRect();
     if (!rect) return;
-
-    setTooltip({
-      country,
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
-    });
+    setMousePos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
   }, []);
+
+  // Update tooltip when hovered country or mouse position changes
+  useEffect(() => {
+    if (hoveredCountry) {
+      setTooltip({ country: hoveredCountry, x: mousePos.x, y: mousePos.y });
+    } else {
+      setTooltip(null);
+    }
+  }, [hoveredCountry, mousePos]);
 
   // Auto-zoom to current country's continent when it changes
   useEffect(() => {
@@ -138,7 +145,9 @@ export const WorldMap: React.FC<WorldMapProps> = ({
       <div 
         ref={mapContainerRef}
         className="relative flex-1 h-[450px] md:h-[550px] lg:h-[600px] bg-card rounded-xl overflow-hidden border-2 border-border shadow-lg"
-        style={{ touchAction: 'none' }} // Prevent page scroll when interacting with map
+        style={{ touchAction: 'none' }}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={() => setHoveredCountry(null)}
       >
         {/* Country Tooltip - follows cursor inside map box */}
         {tooltip && (
@@ -203,9 +212,8 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                       key={geo.rsmKey}
                       geography={geo}
                       onClick={() => isClickable && onCountryClick(countryName)}
-                      onMouseEnter={(e) => updateTooltip(countryName, e)}
-                      onMouseMove={(e) => updateTooltip(countryName, e)}
-                      onMouseLeave={() => setTooltip(null)}
+                      onMouseEnter={() => setHoveredCountry(countryName)}
+                      onMouseLeave={() => setHoveredCountry(null)}
                       style={{
                         default: {
                           fill: getCountryFill(countryName),
