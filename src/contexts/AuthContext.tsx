@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
 import {
   auth,
   signInWithEmailAndPassword,
@@ -8,6 +8,9 @@ import {
   updateProfile as firebaseUpdateProfile,
   FirebaseUser
 } from '@/lib/firebase';
+import { trackUserPresence, subscribeToUserPresence, clearUserPresence } from '@/services/gameSessionService';
+import { translations } from '@/i18n/translations';
+import { useToastContext } from './ToastContext';
 
 export interface User {
   id: string;
@@ -28,8 +31,9 @@ interface AuthContextType {
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, username: string) => Promise<void>;
-  signOut: () => void;
+  signOut: () => Promise<void>;
   updateProfile: (updates: Partial<User>) => void;
+  tabSessionId: string;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -61,6 +65,11 @@ const mapFirebaseUser = (firebaseUser: FirebaseUser): User => {
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { addToast } = useToastContext();
+
+  // Unique ID for this specific tab/session instance
+  const tabSessionIdRef = useRef<string>(Math.random().toString(36).substring(2, 15) + Date.now().toString(36));
+  const presenceUnsubscribeRef = useRef<(() => void) | null>(null);
 
   // Listen for auth state changes
   useEffect(() => {
@@ -70,10 +79,29 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return;
     }
 
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         const mappedUser = mapFirebaseUser(firebaseUser);
         setUser(mappedUser);
+
+        // Register this tab's presence immediately
+        await trackUserPresence(firebaseUser.uid, tabSessionIdRef.current);
+
+        // Start watching for session conflicts
+        if (presenceUnsubscribeRef.current) presenceUnsubscribeRef.current();
+        presenceUnsubscribeRef.current = subscribeToUserPresence(firebaseUser.uid, (presence) => {
+          if (presence && presence.sessionId !== tabSessionIdRef.current) {
+            console.warn('[Security] Account active in another session. Logging out...');
+
+            // Get current language for toast
+            const lang = (localStorage.getItem('worldquiz_language') || 'en') as 'en' | 'fr' | 'ar';
+            addToast('error', translations[lang].sessionConflictDesc, 10000);
+
+            // Force logout
+            signOut();
+          }
+        });
+
         // Store user data
         localStorage.setItem(`user_${firebaseUser.uid}`, JSON.stringify({
           username: mappedUser.username,
@@ -83,11 +111,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }));
       } else {
         setUser(null);
+        if (presenceUnsubscribeRef.current) {
+          presenceUnsubscribeRef.current();
+          presenceUnsubscribeRef.current = null;
+        }
       }
       setIsLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      if (presenceUnsubscribeRef.current) {
+        presenceUnsubscribeRef.current();
+      }
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
@@ -126,6 +163,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const signOut = async () => {
     if (!auth) return;
     try {
+      if (user?.id) {
+        await clearUserPresence(user.id);
+      }
       await firebaseSignOut(auth);
       setUser(null);
     } catch (error) {
@@ -156,6 +196,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       signUp,
       signOut,
       updateProfile,
+      tabSessionId: tabSessionIdRef.current,
     }}>
       {children}
     </AuthContext.Provider>

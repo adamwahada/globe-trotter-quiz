@@ -1,9 +1,9 @@
 import { initializeApp, FirebaseApp } from 'firebase/app';
-import { getDatabase, ref, set, onValue, update, remove, get, push, Database, DatabaseReference } from 'firebase/database';
-import { 
-  getAuth, 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
+import { getDatabase, ref, set, onValue, update, remove, get, push, onDisconnect, Database, DatabaseReference } from 'firebase/database';
+import {
+  getAuth,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
   signOut as firebaseSignOut,
   onAuthStateChanged,
   updateProfile,
@@ -35,21 +35,22 @@ try {
   console.error('Failed to initialize Firebase:', error);
 }
 
-export { 
-  database, 
+export {
+  database,
   auth,
-  ref, 
-  set, 
-  onValue, 
-  update, 
-  remove, 
-  get, 
+  ref,
+  set,
+  onValue,
+  update,
+  remove,
+  get,
   push,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   firebaseSignOut,
   onAuthStateChanged,
-  updateProfile
+  updateProfile,
+  onDisconnect
 };
 export type { DatabaseReference, FirebaseUser };
 export const isFirebaseReady = () => database !== null && auth !== null;

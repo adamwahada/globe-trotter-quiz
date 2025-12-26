@@ -18,7 +18,7 @@ import { useGame, TurnState, Player } from '@/contexts/GameContext';
 import { useToastContext } from '@/contexts/ToastContext';
 import { useSound } from '@/contexts/SoundContext';
 import { isCorrectGuess } from '@/utils/scoring';
-import { getRandomUnplayedCountry } from '@/utils/countryData';
+import { getRandomUnplayedCountry, getFamousPerson, getMapCountryName } from '@/utils/countryData';
 import { TURN_TIME_SECONDS, COUNTDOWN_SECONDS } from '@/types/game';
 import { Trophy, LogOut, Volume2, VolumeX, Users, Clock } from 'lucide-react';
 
@@ -57,8 +57,8 @@ const GamePage = () => {
   const isMyTurn = session ? players[currentTurnIndex]?.id === currentPlayer?.id : false;
   const currentTurnPlayer = players[currentTurnIndex];
 
-  // A turn is complete once an answer/skip/timeout has been recorded
-  const turnCompleted = currentTurnState?.submittedAnswer !== null;
+  // A turn is finished once an answer/skip/timeout has been recorded
+  const isTurnFinished = !!currentTurnState?.submittedAnswer;
 
   // Handle scroll for navbar blur effect
   useEffect(() => {
@@ -158,7 +158,7 @@ const GamePage = () => {
       await updateGameState({ turnStartTime: Date.now() });
 
       setIsRolling(false);
-      addToast('game', '🎯 Find the highlighted country on the map to guess!');
+      addToast('game', '🎯 Identify the highlighted country on the map!');
     }, 800);
   }, [isMyTurn, isRolling, currentCountry, guessedCountries, currentPlayer, updateTurnState, updateGameState, addToast, endGame, playDiceSound]);
 
@@ -345,20 +345,28 @@ const GamePage = () => {
     setTimeout(() => moveToNextTurn(), 2000);
   }, [isMyTurn, currentTurnState, currentCountry, guessedCountries, updateGameState, addToast, t, moveToNextTurn, updateTurnState]);
 
-  const handleUseHint = useCallback(() => {
+  const handleUseHint = useCallback((type: 'letter' | 'famous') => {
     if (!currentCountry || !currentPlayer) return '';
+
+    // Calculate new score (deduct 1 point, minimum 0)
+    const newScore = Math.max(0, currentPlayer.score - 1);
 
     const updatedPlayers = players.map((p, idx) =>
       idx === currentTurnIndex
-        ? { ...p, score: Math.max(0, p.score - 1) }
+        ? { ...p, score: newScore }
         : p
     );
 
-    // Fire and forget - optimistic update
+    // Update game state immediately to reflect points deduction
     updateGameState({ players: updatedPlayers });
 
     addToast('info', t('hintUsed') + ' (-1 point)');
-    return currentCountry[0];
+
+    if (type === 'letter') {
+      return currentCountry[0];
+    } else {
+      return getFamousPerson(currentCountry) || 'No famous person data found';
+    }
   }, [currentCountry, currentPlayer, players, currentTurnIndex, updateGameState, addToast, t]);
 
   const handleLeave = useCallback(async () => {
@@ -524,28 +532,26 @@ const GamePage = () => {
             {currentCountry && (
               <>
                 <div className="bg-warning/20 border border-warning rounded-lg px-3 py-2 mb-3">
-                  <p className="text-xs text-muted-foreground">
-                    {turnCompleted ? 'Target Country' : isMyTurn ? 'Find the flashing country!' : 'Watching...'}
+                  <p className="text-xs text-muted-foreground uppercase tracking-widest font-bold">
+                    {isTurnFinished ? 'Target Country' : 'Active Turn'}
                   </p>
-                  <p className="font-semibold text-warning">
-                    {turnCompleted ? currentCountry : '???'}
+                  <p className="font-display text-2xl text-warning">
+                    {isTurnFinished ? currentCountry : '???'}
                   </p>
                 </div>
 
-                {turnCompleted && (
+                {isTurnFinished && currentTurnState?.submittedAnswer && (
                   <div className="text-sm text-muted-foreground space-y-1">
-                    {currentTurnState?.submittedAnswer && (
-                      <p>
-                        Submitted:{' '}
-                        <span className="font-semibold text-foreground">{currentTurnState.submittedAnswer}</span>
-                      </p>
-                    )}
-                    {!currentTurnState?.isCorrect && currentCountry && (
-                      <p>
-                        Correct:{' '}
-                        <span className="font-semibold text-success">{currentCountry}</span>
-                      </p>
-                    )}
+                    <p>
+                      Submitted:{' '}
+                      <span className="font-semibold text-foreground">
+                        {currentTurnState.submittedAnswer === '[TIME UP]'
+                          ? 'Timed out'
+                          : currentTurnState.submittedAnswer === '[SKIPPED]'
+                            ? 'Skipped'
+                            : currentTurnState.submittedAnswer}
+                      </span>
+                    </p>
                     {typeof currentTurnState?.pointsEarned === 'number' && (
                       <p>
                         Points:{' '}
@@ -555,11 +561,11 @@ const GamePage = () => {
                   </div>
                 )}
 
-                {isMyTurn && !turnCompleted && (
-                  <p className="text-sm text-foreground">Click the yellow flashing country to guess its name!</p>
+                {isMyTurn && !isTurnFinished && (
+                  <p className="text-sm text-foreground">What is the highlighted country called?</p>
                 )}
 
-                {!isMyTurn && !turnCompleted && (
+                {!isMyTurn && !isTurnFinished && (
                   <p className="text-sm text-muted-foreground">Spectating - wait for your turn</p>
                 )}
               </>
@@ -689,7 +695,6 @@ const GamePage = () => {
       {session && session.status !== 'finished' && session.players.length === 1 && (
         <LonePlayerOverlay
           onQuit={handleLeave}
-          onWait={() => { }} // Simply closing/doing nothing stays on the page
         />
       )}
     </div>

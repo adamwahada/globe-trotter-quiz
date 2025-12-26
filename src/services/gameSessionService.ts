@@ -1,4 +1,4 @@
-import { database, ref, set, onValue, update, remove, get, isFirebaseReady } from '@/lib/firebase';
+import { database, ref, set, onValue, update, remove, get, isFirebaseReady, onDisconnect } from '@/lib/firebase';
 import type { GameSession, Player, TurnState, SessionRecoveryData } from '@/types/game';
 
 const SESSIONS_PATH = 'sessions';
@@ -41,7 +41,7 @@ export const subscribeToSession = (
   if (!isFirebaseReady() || !database) {
     const localSession = localStorage.getItem(`session_${code}`);
     callback(localSession ? JSON.parse(localSession) : null);
-    return () => {};
+    return () => { };
   }
   const sessionRef = ref(database, `${SESSIONS_PATH}/${code}`);
   const unsubscribe = onValue(sessionRef, (snapshot) => {
@@ -91,7 +91,7 @@ export const removePlayerFromSession = async (
   if (!session) return;
 
   const updatedPlayers = session.players.filter(p => p.id !== playerId);
-  
+
   if (updatedPlayers.length === 0) {
     await deleteSession(code);
   } else {
@@ -170,7 +170,7 @@ export const updateTurnState = async (
   code: string,
   turnState: TurnState | null
 ): Promise<void> => {
-  await updateSession(code, { 
+  await updateSession(code, {
     currentTurnState: turnState,
     turnStartTime: turnState?.startTime || null,
   });
@@ -235,8 +235,76 @@ export const updatePlayerConnection = async (
   playerId: string,
   isConnected: boolean
 ): Promise<void> => {
-  await updatePlayerInSession(code, playerId, { 
+  await updatePlayerInSession(code, playerId, {
     isConnected,
     lastSeen: Date.now(),
   });
+};
+
+// --- User Presence & Single Session Enforcement ---
+
+/**
+ * Register a unique sessionId for a user's current session/tab.
+ * Uses onDisconnect() to ensure cleanup when the browser is closed.
+ */
+export const trackUserPresence = async (
+  uid: string,
+  sessionId: string,
+  sessionCode: string = ''
+): Promise<void> => {
+  if (!isFirebaseReady() || !database) return;
+
+  const userPresenceRef = ref(database, `activeSessions/${uid}`);
+
+  // Set the current session info
+  await set(userPresenceRef, {
+    sessionId,
+    sessionCode,
+    timestamp: Date.now(),
+    connected: true
+  });
+
+  // Ensure the record is removed when this specific client disconnects
+  // This prevents ghost sessions even if the browser crashes
+  await onDisconnect(userPresenceRef).remove();
+};
+
+/**
+ * Listen for changes to the user's active session.
+ * This is used globally to detect if the same account logs in elsewhere.
+ */
+export const subscribeToUserPresence = (
+  uid: string,
+  callback: (presence: { sessionId: string; sessionCode: string } | null) => void
+): (() => void) => {
+  if (!isFirebaseReady() || !database) return () => { };
+
+  const userPresenceRef = ref(database, `activeSessions/${uid}`);
+  const unsubscribe = onValue(userPresenceRef, (snapshot) => {
+    callback(snapshot.exists() ? snapshot.val() : null);
+  }, (error) => {
+    console.error('[Presence] Subscription error:', error);
+  });
+
+  return unsubscribe;
+};
+
+/**
+ * Explicitly clear presence (e.g., on manual logout)
+ */
+export const clearUserPresence = async (uid: string): Promise<void> => {
+  if (!isFirebaseReady() || !database) return;
+  const userPresenceRef = ref(database, `activeSessions/${uid}`);
+  await remove(userPresenceRef);
+};
+
+/**
+ * Validate that the current client matches the registered session in the database.
+ */
+export const validateUserPresence = async (uid: string, localSessionId: string): Promise<boolean> => {
+  if (!isFirebaseReady() || !database) return false;
+  const userPresenceRef = ref(database, `activeSessions/${uid}`);
+  const snapshot = await get(userPresenceRef);
+  if (!snapshot.exists()) return true; // No session registered yet
+  return snapshot.val().sessionId === localSessionId;
 };

@@ -19,8 +19,11 @@ import {
   clearRecoveryData,
   hasActiveSession as checkHasActiveSession,
   updatePlayerConnection,
+  trackUserPresence,
+  validateUserPresence,
 } from '@/services/gameSessionService';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToastContext } from '@/contexts/ToastContext';
 
 export const useFirebaseSession = () => {
   const [session, setSession] = useState<GameSession | null>(null);
@@ -28,7 +31,8 @@ export const useFirebaseSession = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasActiveSession, setHasActiveSession] = useState(false);
-  const { user } = useAuth();
+  const { user, tabSessionId } = useAuth();
+  const { addToast } = useToastContext();
 
   // Subscribe to session updates - use ref to avoid stale closure
   const currentPlayerIdRef = useRef<string | null>(null);
@@ -131,6 +135,12 @@ export const useFirebaseSession = () => {
             if (player) {
               setCurrentPlayer(player);
               setHasActiveSession(true);
+
+              // Register this session for the current game
+              if (user?.id) {
+                trackUserPresence(user.id, tabSessionId, savedSessionCode);
+              }
+
               // Update recovery data
               saveRecoveryData({
                 sessionCode: savedSessionCode,
@@ -157,6 +167,15 @@ export const useFirebaseSession = () => {
     if (activeCheck.hasSession) {
       setError('You already have an active session. Resume or leave it first.');
       throw new Error('Active session exists');
+    }
+
+    // MANDATORY: Validate that this is the authorized session
+    if (user?.id) {
+      const isValid = await validateUserPresence(user.id, tabSessionId);
+      if (!isValid) {
+        addToast('error', translations[localStorage.getItem('worldquiz_language') as 'en' | 'fr' | 'ar' || 'en'].sessionConflictDesc, 8000);
+        throw new Error('Unauthorized session instance');
+      }
     }
 
     setIsLoading(true);
@@ -202,6 +221,11 @@ export const useFirebaseSession = () => {
       setCurrentPlayer(player);
       setHasActiveSession(true);
 
+      // Track user session for single-session enforcement
+      if (user?.id) {
+        await trackUserPresence(user.id, tabSessionId, code);
+      }
+
       // Save recovery data
       localStorage.setItem('gameSessionCode', code);
       localStorage.setItem('currentPlayerId', playerId);
@@ -230,6 +254,16 @@ export const useFirebaseSession = () => {
 
     setIsLoading(true);
     setError(null);
+
+    // MANDATORY: Validate that this is the authorized session
+    if (user?.id) {
+      const isValid = await validateUserPresence(user.id, tabSessionId);
+      if (!isValid) {
+        addToast('error', translations[localStorage.getItem('worldquiz_language') as 'en' | 'fr' | 'ar' || 'en'].sessionConflictDesc, 8000);
+        setIsLoading(false);
+        return false;
+      }
+    }
 
     try {
       const existingSession = await getSessionByCode(code);
@@ -287,6 +321,12 @@ export const useFirebaseSession = () => {
         if (username) localStorage.setItem('guest_username', username);
         localStorage.setItem('gameSessionCode', code);
         localStorage.setItem('currentPlayerId', playerId);
+
+        // Track user session for single-session enforcement
+        if (user?.id) {
+          await trackUserPresence(user.id, tabSessionId, code);
+        }
+
         saveRecoveryData({
           sessionCode: code,
           playerId,
@@ -382,11 +422,26 @@ export const useFirebaseSession = () => {
       return false;
     }
 
+    // MANDATORY: Validate that this is the authorized session
+    if (user?.id) {
+      const isValid = await validateUserPresence(user.id, tabSessionId);
+      if (!isValid) {
+        addToast('error', translations[localStorage.getItem('worldquiz_language') as 'en' | 'fr' | 'ar' || 'en'].sessionConflictDesc, 8000);
+        return false;
+      }
+    }
+
     setSession(activeCheck.session);
     const player = activeCheck.session.players.find(p => p.id === activeCheck.playerId);
     if (player) {
       setCurrentPlayer(player);
       setHasActiveSession(true);
+
+      // Track user session for single-session enforcement
+      if (user?.id) {
+        await trackUserPresence(user.id, tabSessionId, activeCheck.session.code);
+      }
+
       // Update connection
       await updatePlayerConnection(activeCheck.session.code, activeCheck.playerId, true);
       return true;

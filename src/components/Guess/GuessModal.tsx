@@ -10,7 +10,7 @@ interface GuessModalProps {
   onClose: () => void;
   onSubmit: (guess: string) => void;
   onSkip: () => void;
-  onUseHint: () => string;
+  onUseHint: (type: 'letter' | 'famous') => string;
   turnTimeSeconds?: number;
   turnStartTime?: number;
 }
@@ -46,7 +46,7 @@ export const GuessModal: React.FC<GuessModalProps> = ({
 
   const handleHint = () => {
     if (!hintUsed) {
-      const letter = onUseHint();
+      const letter = onUseHint('letter');
       setFirstLetter(letter);
       setHintUsed(true);
     }
@@ -54,11 +54,9 @@ export const GuessModal: React.FC<GuessModalProps> = ({
 
   const handleFamousPerson = () => {
     if (!famousPersonUsed) {
-      // For famous person hint, we'd need the country name passed in
-      // For now, just deduct a point
-      onUseHint();
+      const name = onUseHint('famous');
       setFamousPersonUsed(true);
-      setFamousPerson('Famous person hint used (-1 point)');
+      setFamousPerson(name);
     }
   };
 
@@ -74,11 +72,11 @@ export const GuessModal: React.FC<GuessModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div 
+      <div
         className="absolute inset-0 bg-background/80 backdrop-blur-sm"
         onClick={onClose}
       />
-      
+
       <div className="relative w-full max-w-lg mx-4 bg-card border border-border rounded-2xl shadow-2xl animate-scale-in overflow-hidden">
         <div className="p-6">
           <button
@@ -90,7 +88,7 @@ export const GuessModal: React.FC<GuessModalProps> = ({
 
           {/* Timer */}
           <div className="mb-6">
-            <TimerProgress 
+            <TimerProgress
               totalSeconds={turnTimeSeconds}
               startTime={turnStartTime}
               onComplete={handleSkip}
@@ -102,7 +100,7 @@ export const GuessModal: React.FC<GuessModalProps> = ({
           <h2 className="text-3xl font-display text-foreground text-center mb-2">
             {t('guessCountry')}
           </h2>
-          
+
           <p className="text-sm text-muted-foreground text-center mb-6">
             What is the name of the highlighted country?
           </p>
@@ -110,9 +108,9 @@ export const GuessModal: React.FC<GuessModalProps> = ({
           {/* Scoring info */}
           <div className="bg-secondary/50 rounded-lg p-3 mb-6 text-center">
             <p className="text-xs text-muted-foreground">
-              <span className="text-success font-semibold">+3</span> correct • 
-              <span className="text-warning font-semibold ml-2">+2</span> close • 
-              <span className="text-destructive font-semibold ml-2">0</span> wrong/skip • 
+              <span className="text-success font-semibold">+3</span> correct •
+              <span className="text-warning font-semibold ml-2">+2</span> close •
+              <span className="text-destructive font-semibold ml-2">0</span> wrong/skip •
               <span className="text-destructive font-semibold ml-2">-1</span> per hint
             </p>
           </div>
@@ -126,7 +124,7 @@ export const GuessModal: React.FC<GuessModalProps> = ({
                 </p>
               </div>
             )}
-            
+
             {famousPerson && (
               <div className="bg-primary/20 border border-primary/30 rounded-lg p-3 text-center animate-fade-in">
                 <p className="text-sm text-primary">

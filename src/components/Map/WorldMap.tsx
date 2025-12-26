@@ -9,7 +9,7 @@ import { GameTooltip } from '@/components/Tooltip/GameTooltip';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ZoomIn, ZoomOut, Maximize, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { getContinent, normalizeCountryName } from '@/utils/countryData';
+import { getContinent, getMapCountryName } from '@/utils/countryData';
 
 const geoUrl = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
 
@@ -106,16 +106,17 @@ export const WorldMap: React.FC<WorldMapProps> = ({
     setPosition(pos);
   }, []);
 
-  const normalizedCurrent = currentCountry ? normalizeCountryName(currentCountry) : null;
-  const normalizedGuessed = guessedCountries.map(normalizeCountryName);
+  const normalizedCurrent = currentCountry ? getMapCountryName(currentCountry) : null;
+  const normalizedGuessed = guessedCountries.map(getMapCountryName);
 
   const getCountryFill = (countryName: string) => {
+    const normalizedName = getMapCountryName(countryName);
     // Guessed countries - permanent green
-    if (normalizedGuessed.includes(countryName)) {
+    if (normalizedGuessed.includes(normalizedName)) {
       return 'hsl(142 76% 36%)'; // success color - bright green
     }
     // Current active country - flashing bright yellow until guessed
-    if (normalizedCurrent === countryName) {
+    if (normalizedCurrent === normalizedName) {
       return 'hsl(60 100% 50%)'; // Vibrant Yellow
     }
     // Default country color
@@ -123,10 +124,11 @@ export const WorldMap: React.FC<WorldMapProps> = ({
   };
 
   const getCountryStroke = (countryName: string) => {
-    if (normalizedCurrent === countryName) {
+    const normalizedName = getMapCountryName(countryName);
+    if (normalizedCurrent === normalizedName) {
       return 'hsl(60 100% 60%)';
     }
-    if (normalizedGuessed.includes(countryName)) {
+    if (normalizedGuessed.includes(normalizedName)) {
       return 'hsl(142 76% 45%)';
     }
     return 'hsl(0 0% 20%)';
@@ -138,7 +140,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
     const isCurrent = normalizedCurrent === countryName;
 
     if (isPlayed) return `✓ ${countryName}`;
-    if (isCurrent) return disabled ? '🎯 Selected Country' : '🎯 Click to guess this country!';
+    if (isCurrent) return disabled ? '🎯 Highlighted' : '🎯 This is the country to guess!';
     return '???';
   };
 
@@ -200,8 +202,9 @@ export const WorldMap: React.FC<WorldMapProps> = ({
               {({ geographies }) =>
                 geographies.map((geo) => {
                   const countryName = geo.properties.name;
-                  const isGuessed = normalizedGuessed.includes(countryName);
-                  const isCurrent = normalizedCurrent === countryName;
+                  const normalizedGeoName = getMapCountryName(countryName);
+                  const isGuessed = normalizedGuessed.includes(normalizedGeoName);
+                  const isCurrent = normalizedCurrent === normalizedGeoName;
                   const isClickable = !disabled && isCurrent && !isGuessed;
 
                   return (

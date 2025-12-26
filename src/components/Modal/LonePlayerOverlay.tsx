@@ -5,10 +5,9 @@ import { useLanguage } from '@/contexts/LanguageContext';
 
 interface LonePlayerOverlayProps {
     onQuit: () => void;
-    onWait?: () => void;
 }
 
-export const LonePlayerOverlay: React.FC<LonePlayerOverlayProps> = ({ onQuit, onWait }) => {
+export const LonePlayerOverlay: React.FC<LonePlayerOverlayProps> = ({ onQuit }) => {
     const { t } = useLanguage();
 
     return (
@@ -25,13 +24,6 @@ export const LonePlayerOverlay: React.FC<LonePlayerOverlayProps> = ({ onQuit, on
                 <div className="flex flex-col gap-3">
                     <Button
                         variant="hero"
-                        onClick={onWait}
-                        className="w-full"
-                    >
-                        {t('waitForOthers')}
-                    </Button>
-                    <Button
-                        variant="outline"
                         onClick={onQuit}
                         className="w-full"
                     >

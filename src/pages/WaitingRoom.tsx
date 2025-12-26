@@ -313,7 +313,6 @@ const WaitingRoom = () => {
       {session && session.status !== 'finished' && session.players.length === 1 && prevPlayersRef.current.length > 1 && (
         <LonePlayerOverlay
           onQuit={handleLeave}
-          onWait={() => { }}
         />
       )}
     </div>

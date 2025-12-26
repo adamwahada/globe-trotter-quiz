@@ -277,42 +277,72 @@ export const getContinent = (country: string): string | null => {
   return countryContinent[country] || null;
 };
 
-// SVG Name Overrides (Dataset Name -> SVG Name)
-const countryNameOverrides: Record<string, string> = {
+// Map name mapping: Dataset Name -> GeoJSON Name
+// This mapping is EXHAUSTIVE and based on the actual country names in the world-atlas TopoJSON file.
+const countryMapping: Record<string, string> = {
+  // Americas
   'United States': 'United States of America',
+  'United States of America': 'United States of America',
+  'USA': 'United States of America',
+  'Dominican Republic': 'Dominican Rep.',
+
+  // Africa
   'DR Congo': 'Dem. Rep. Congo',
+  'Democratic Republic of the Congo': 'Dem. Rep. Congo',
   'Congo': 'Congo',
-  'Tanzania': 'United Republic of Tanzania',
+  'Tanzania': 'Tanzania', // Same name
   'Central African Republic': 'Central African Rep.',
   'South Sudan': 'S. Sudan',
   'Western Sahara': 'W. Sahara',
-  'North Korea': 'North Korea',
-  'South Korea': 'South Korea',
+  'Equatorial Guinea': 'Eq. Guinea',
+  'Ivory Coast': "Côte d'Ivoire",
+  "Cote d'Ivoire": "Côte d'Ivoire",
+  'Eswatini': 'eSwatini', // Lowercase 'e' in GeoJSON
+  'Swaziland': 'eSwatini',
+  'Guinea-Bissau': 'Guinea-Bissau', // Same name
+
+  // Europe
   'Bosnia and Herzegovina': 'Bosnia and Herz.',
   'Czech Republic': 'Czechia',
-  'Dominican Republic': 'Dominican Rep.',
-  'Equatorial Guinea': 'Eq. Guinea',
-  'Falkland Islands': 'Falkland Is.',
-  'Ivory Coast': 'Côte d\'Ivoire',
-  'Laos': 'Lao PDR',
-  'Myanmar': 'Myanmar',
-  'Solomon Islands': 'Solomon Is.',
-  'Russia': 'Russia',
+  'Czechia': 'Czechia',
+  'North Macedonia': 'Macedonia', // GeoJSON uses 'Macedonia'
+  'Macedonia': 'Macedonia',
+
+  // Asia
+  'Laos': 'Laos', // GeoJSON uses 'Laos' not 'Lao PDR'
+  'Myanmar': 'Myanmar', // Same name
+  'Vietnam': 'Vietnam', // Same name
   'Viet Nam': 'Vietnam',
+  'Brunei': 'Brunei', // Same name
   'Brunei Darussalam': 'Brunei',
-  'The Bahamas': 'Bahamas',
-  'Swaziland': 'Eswatini',
-  'Gambia': 'Gambia',
-  'Guinea Bissau': 'Guinea-Bissau',
-  'Iran': 'Iran',
+  'Syria': 'Syria', // Same name
   'Syrian Arab Republic': 'Syria',
-  'Macedonia': 'North Macedonia',
+  'Iran': 'Iran', // Same name
+  'North Korea': 'North Korea', // Same name
+  'South Korea': 'South Korea', // Same name
+  'Taiwan': 'Taiwan', // Same name
+
+  // Oceania
+  'Solomon Islands': 'Solomon Is.',
+  'Papua New Guinea': 'Papua New Guinea', // Same name
+
+  // Other
+  'Falkland Islands': 'Falkland Is.',
+  'The Bahamas': 'Bahamas',
+  'Bahamas': 'Bahamas',
+  'Gambia': 'Gambia', // Same name
+  'Russia': 'Russia', // Same name
 };
 
-// Normalize names for comparison
-export const normalizeCountryName = (name: string): string => {
-  return countryNameOverrides[name] || name;
+/**
+ * Get the name used in the Map GeoJSON for a given country name.
+ * Essential for highlighting the correct polygon on the map.
+ */
+export const getMapCountryName = (name: string): string => {
+  return countryMapping[name] || name;
 };
+
+export const normalizeCountryName = getMapCountryName;
 
 // Get all countries
 export const getAllCountries = (): string[] => {
