@@ -1,0 +1,100 @@
+{
+    "rules": {
+        ".read": false,
+        ".write": false,
+        "sessions": {
+            "$sessionCode": {
+                ".read": "auth != null && (data.child('players').child(auth.uid).exists() || !data.exists())",
+                ".write": "auth != null && (!data.exists() && newData.child('creatorId').val() === auth.uid || data.child('players').child(auth.uid).exists())",
+                "creatorId": {
+                    ".validate": "newData.isString() && newData.val().length > 0"
+                },
+                "code": {
+                    ".validate": "newData.isString() && newData.val().length === 6"
+                },
+                "players": {
+                    "$uid": {
+                        ".read": "auth != null && ($uid === auth.uid || data.parent().child(auth.uid).exists())",
+                        ".write": "auth != null && ($uid === auth.uid || (data.parent().parent().child('creatorId').val() === auth.uid && !newData.exists()))",
+                        ".validate": "newData.hasChildren(['username', 'avatar', 'color', 'score', 'isReady', 'isConnected'])",
+                        "username": {
+                            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 20"
+                        },
+                        "avatar": {
+                            ".validate": "newData.isString()"
+                        },
+                        "color": {
+                            ".validate": "newData.isString()"
+                        },
+                        "score": {
+                            ".validate": "newData.isNumber()"
+                        },
+                        "turnsPlayed": {
+                            ".validate": "newData.isNumber()"
+                        },
+                        "countriesGuessed": {
+                            ".validate": "true"
+                        },
+                        "isReady": {
+                            ".validate": "newData.isBoolean()"
+                        },
+                        "isConnected": {
+                            ".validate": "newData.isBoolean()"
+                        },
+                        "lastSeen": {
+                            ".validate": "newData.isNumber()"
+                        }
+                    }
+                },
+                "status": {
+                    ".validate": "newData.isString() && (newData.val() === 'waiting' || newData.val() === 'countdown' || newData.val() === 'playing' || newData.val() === 'finished')"
+                },
+                "maxPlayers": {
+                    ".validate": "newData.isNumber() && newData.val() >= 2 && newData.val() <= 8"
+                },
+                "duration": {
+                    ".validate": "newData.isNumber() && newData.val() > 0"
+                },
+                "currentTurn": {
+                    ".validate": "newData.isNumber() && newData.val() >= 0"
+                },
+                "currentTurnState": {
+                    ".validate": "true"
+                },
+                "guessedCountries": {
+                    ".validate": "true"
+                },
+                "startTime": {
+                    ".validate": "newData.isNumber() || newData.val() === null"
+                },
+                "waitingRoomStartTime": {
+                    ".validate": "newData.isNumber()"
+                },
+                "countdownStartTime": {
+                    ".validate": "newData.isNumber() || newData.val() === null"
+                },
+                "turnStartTime": {
+                    ".validate": "newData.isNumber() || newData.val() === null"
+                }
+            }
+        },
+        "activeSessions": {
+            "$uid": {
+                ".read": "auth != null && $uid === auth.uid",
+                ".write": "auth != null && $uid === auth.uid",
+                "sessionId": {
+                    ".validate": "newData.isString()"
+                },
+                "sessionCode": {
+                    ".validate": "newData.isString()"
+                },
+                "timestamp": {
+                    ".validate": "newData.isNumber()"
+                },
+                "connected": {
+                    ".validate": "newData.isBoolean()"
+                }
+            }
+        }
+    }
+}

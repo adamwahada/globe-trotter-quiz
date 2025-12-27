@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { GameSession, Player, TurnState, SessionRecoveryData } from '@/types/game';
+import type { GameSession, Player, PlayerData, PlayersMap, TurnState, SessionRecoveryData } from '@/types/game';
+import { playersMapToArray, getPlayerUids } from '@/types/game';
 import { translations } from '@/i18n/translations';
 import {
   subscribeToSession,
@@ -21,6 +22,8 @@ import {
   updatePlayerConnection,
   trackUserPresence,
   validateUserPresence,
+  getCurrentUid,
+  updatePlayerData,
 } from '@/services/gameSessionService';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToastContext } from '@/contexts/ToastContext';
@@ -48,12 +51,14 @@ export const useFirebaseSession = () => {
 
     const unsubscribe = subscribeToSession(session.code, (updatedSession) => {
       if (updatedSession) {
-        console.log('[Firebase] Session update received:', updatedSession.players.length, 'players');
+        const updatedPlayers = playersMapToArray(updatedSession.players);
+        console.log('[Firebase] Session update received:', updatedPlayers.length, 'players');
 
         // Check for departures to show notifications
         if (session) {
-          const removedPlayers = session.players.filter(
-            p => !updatedSession.players.find(up => up.id === p.id)
+          const currentPlayers = playersMapToArray(session.players);
+          const removedPlayers = currentPlayers.filter(
+            p => !updatedSession.players || !updatedSession.players[p.id]
           );
 
           if (removedPlayers.length > 0) {
@@ -61,8 +66,6 @@ export const useFirebaseSession = () => {
               // Don't toast for ourselves
               if (p.id !== currentPlayerIdRef.current) {
                 console.log('[Firebase] Player left:', p.username);
-                // We'll handle the toast in the UI component or a separate effect 
-                // to avoid hook issues, but for now we set the session and it will be caught.
               }
             });
           }
@@ -71,11 +74,12 @@ export const useFirebaseSession = () => {
         setSession(updatedSession);
         // Update current player from session using ref to get latest value
         const playerId = currentPlayerIdRef.current;
-        if (playerId) {
-          const updatedPlayer = updatedSession.players.find(p => p.id === playerId);
-          if (updatedPlayer) {
-            setCurrentPlayer(updatedPlayer);
-          }
+        if (playerId && updatedSession.players && updatedSession.players[playerId]) {
+          const playerData = updatedSession.players[playerId];
+          setCurrentPlayer({
+            id: playerId,
+            ...playerData
+          });
         }
       } else {
         // Session was deleted
@@ -90,7 +94,7 @@ export const useFirebaseSession = () => {
       console.log('[Firebase] Unsubscribing from session:', session.code);
       unsubscribe();
     };
-  }, [session?.code]); // Remove currentPlayer.id from deps to prevent re-subscription
+  }, [session?.code]);
 
   // Keep player connection alive
   useEffect(() => {
@@ -131,9 +135,14 @@ export const useFirebaseSession = () => {
         .then((restoredSession) => {
           if (restoredSession && restoredSession.status !== 'finished') {
             setSession(restoredSession);
-            const player = restoredSession.players.find(p => p.id === savedPlayerId);
-            if (player) {
-              setCurrentPlayer(player);
+
+            // Get player from the players map using the saved playerId (which is now auth.uid)
+            if (restoredSession.players && restoredSession.players[savedPlayerId]) {
+              const playerData = restoredSession.players[savedPlayerId];
+              setCurrentPlayer({
+                id: savedPlayerId,
+                ...playerData
+              });
               setHasActiveSession(true);
 
               // Register this session for the current game
@@ -162,6 +171,13 @@ export const useFirebaseSession = () => {
   }, []);
 
   const createSession = useCallback(async (maxPlayers: number, duration: number): Promise<string> => {
+    // Get current user's auth.uid
+    const uid = getCurrentUid();
+    if (!uid || !user) {
+      setError('You must be signed in to create a session');
+      throw new Error('Not authenticated');
+    }
+
     // Check for existing active session
     const activeCheck = await checkHasActiveSession();
     if (activeCheck.hasSession) {
@@ -170,12 +186,10 @@ export const useFirebaseSession = () => {
     }
 
     // MANDATORY: Validate that this is the authorized session
-    if (user?.id) {
-      const isValid = await validateUserPresence(user.id, tabSessionId);
-      if (!isValid) {
-        addToast('error', translations[localStorage.getItem('worldquiz_language') as 'en' | 'fr' | 'ar' || 'en'].sessionConflictDesc, 8000);
-        throw new Error('Unauthorized session instance');
-      }
+    const isValid = await validateUserPresence(uid, tabSessionId);
+    if (!isValid) {
+      addToast('error', translations[localStorage.getItem('worldquiz_language') as 'en' | 'fr' | 'ar' || 'en'].sessionConflictDesc, 8000);
+      throw new Error('Unauthorized session instance');
     }
 
     setIsLoading(true);
@@ -183,10 +197,11 @@ export const useFirebaseSession = () => {
 
     try {
       const code = generateCode();
-      const playerId = `player_${Date.now()}`;
 
-      const player: Player = {
-        id: playerId,
+      // Use auth.uid as player ID
+      const playerId = uid;
+
+      const playerData: PlayerData = {
         username: user?.username || 'You',
         avatar: user?.avatar || '🌍',
         color: user?.color || '#E50914',
@@ -198,11 +213,17 @@ export const useFirebaseSession = () => {
         lastSeen: Date.now(),
       };
 
+      // Create players map with auth.uid as key
+      const playersMap: PlayersMap = {
+        [playerId]: playerData
+      };
+
       const newSession: GameSession = {
         id: Date.now().toString(),
         code,
+        creatorId: uid, // Store creator's auth.uid
         host: playerId,
-        players: [player],
+        players: playersMap,
         maxPlayers,
         duration,
         status: 'waiting',
@@ -218,15 +239,16 @@ export const useFirebaseSession = () => {
       await createSessionInFirebase(newSession);
 
       setSession(newSession);
-      setCurrentPlayer(player);
+      setCurrentPlayer({
+        id: playerId,
+        ...playerData
+      });
       setHasActiveSession(true);
 
       // Track user session for single-session enforcement
-      if (user?.id) {
-        await trackUserPresence(user.id, tabSessionId, code);
-      }
+      await trackUserPresence(uid, tabSessionId, code);
 
-      // Save recovery data
+      // Save recovery data with auth.uid as playerId
       localStorage.setItem('gameSessionCode', code);
       localStorage.setItem('currentPlayerId', playerId);
       saveRecoveryData({
@@ -242,9 +264,16 @@ export const useFirebaseSession = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [user]);
+  }, [user, tabSessionId, addToast]);
 
   const joinSession = useCallback(async (code: string, username?: string): Promise<boolean> => {
+    // Get current user's auth.uid
+    const uid = getCurrentUid();
+    if (!uid) {
+      setError('You must be signed in to join a session');
+      return false;
+    }
+
     // Check for existing active session
     const activeCheck = await checkHasActiveSession();
     if (activeCheck.hasSession && activeCheck.session?.code !== code) {
@@ -256,13 +285,11 @@ export const useFirebaseSession = () => {
     setError(null);
 
     // MANDATORY: Validate that this is the authorized session
-    if (user?.id) {
-      const isValid = await validateUserPresence(user.id, tabSessionId);
-      if (!isValid) {
-        addToast('error', translations[localStorage.getItem('worldquiz_language') as 'en' | 'fr' | 'ar' || 'en'].sessionConflictDesc, 8000);
-        setIsLoading(false);
-        return false;
-      }
+    const isValid = await validateUserPresence(uid, tabSessionId);
+    if (!isValid) {
+      addToast('error', translations[localStorage.getItem('worldquiz_language') as 'en' | 'fr' | 'ar' || 'en'].sessionConflictDesc, 8000);
+      setIsLoading(false);
+      return false;
     }
 
     try {
@@ -273,7 +300,9 @@ export const useFirebaseSession = () => {
         return false;
       }
 
-      if (existingSession.players.length >= existingSession.maxPlayers) {
+      const currentPlayers = playersMapToArray(existingSession.players);
+
+      if (currentPlayers.length >= existingSession.maxPlayers) {
         setError('Session is full');
         return false;
       }
@@ -284,16 +313,17 @@ export const useFirebaseSession = () => {
         return false;
       }
 
-      // NO DUPLICATE JOIN: Check if user already in session
-      const currentUsername = username || user?.username || localStorage.getItem('guest_username');
-      if (currentUsername && existingSession.players.some(p => p.username === currentUsername)) {
+      // Check if user already in session (using auth.uid)
+      if (existingSession.players && existingSession.players[uid]) {
         setError(translations[localStorage.getItem('worldquiz_language') as ('en' | 'fr' | 'ar') || 'en'].duplicateJoinError);
         return false;
       }
 
-      const playerId = `player_${Date.now()}`;
-      const player: Player = {
-        id: playerId,
+      // Use auth.uid as player ID
+      const playerId = uid;
+      const currentUsername = username || user?.username || localStorage.getItem('guest_username');
+
+      const playerData: PlayerData = {
         username: currentUsername || 'Player',
         avatar: user?.avatar || '🗺️',
         color: user?.color || '#4169E1',
@@ -305,14 +335,16 @@ export const useFirebaseSession = () => {
         lastSeen: Date.now(),
       };
 
-      const success = await addPlayerToSession(code, player);
+      const success = await addPlayerToSession(code, playerData);
 
       if (success) {
-        // Set current player first
-        setCurrentPlayer(player);
+        // Set current player
+        setCurrentPlayer({
+          id: playerId,
+          ...playerData
+        });
 
-        // Set the FULL session data to ensure immediate sync
-        // This ensures new players see current map, timer, and game state
+        // Get the refreshed session
         const refreshedSession = await getSessionByCode(code);
         setSession(refreshedSession || existingSession);
 
@@ -323,9 +355,7 @@ export const useFirebaseSession = () => {
         localStorage.setItem('currentPlayerId', playerId);
 
         // Track user session for single-session enforcement
-        if (user?.id) {
-          await trackUserPresence(user.id, tabSessionId, code);
-        }
+        await trackUserPresence(uid, tabSessionId, code);
 
         saveRecoveryData({
           sessionCode: code,
@@ -341,7 +371,7 @@ export const useFirebaseSession = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [user]);
+  }, [user, tabSessionId, addToast]);
 
   const leaveSession = useCallback(async () => {
     if (!session?.code || !currentPlayer?.id) return;
@@ -362,7 +392,7 @@ export const useFirebaseSession = () => {
     await updatePlayerInSession(session.code, currentPlayer.id, { isReady: ready });
   }, [session?.code, currentPlayer?.id]);
 
-  const updatePlayerMetadata = useCallback(async (metadata: Partial<Player>) => {
+  const updatePlayerMetadata = useCallback(async (metadata: Partial<PlayerData>) => {
     if (!session?.code || !currentPlayer?.id) return;
     await updatePlayerInSession(session.code, currentPlayer.id, metadata);
   }, [session?.code, currentPlayer?.id]);
@@ -381,7 +411,7 @@ export const useFirebaseSession = () => {
     updates: {
       currentTurn?: number;
       currentTurnState?: TurnState | null;
-      players?: Player[];
+      players?: PlayersMap;
       guessedCountries?: string[];
       turnStartTime?: number | null;
       isExtraTime?: boolean;
@@ -396,18 +426,29 @@ export const useFirebaseSession = () => {
 
     // If turn is being submitted (completed), increment turnsPlayed for the player
     if (turnState?.submittedAnswer !== null && session.currentTurnState?.submittedAnswer === null) {
-      const updatedPlayers = session.players.map((p, idx) =>
-        idx === session.currentTurn ? { ...p, turnsPlayed: p.turnsPlayed + 1 } : p
-      );
-      await updateGameState(session.code, {
-        currentTurnState: turnState,
-        players: updatedPlayers
-      });
-      return;
+      const playerUids = getPlayerUids(session.players);
+      const currentPlayerUid = playerUids[session.currentTurn];
+
+      if (currentPlayerUid && session.players[currentPlayerUid]) {
+        const currentPlayerData = session.players[currentPlayerUid];
+        const updatedPlayers: PlayersMap = {
+          ...session.players,
+          [currentPlayerUid]: {
+            ...currentPlayerData,
+            turnsPlayed: currentPlayerData.turnsPlayed + 1
+          }
+        };
+
+        await updateGameState(session.code, {
+          currentTurnState: turnState,
+          players: updatedPlayers
+        });
+        return;
+      }
     }
 
     await updateTurnStateService(session.code, turnState);
-  }, [session, updateGameState]);
+  }, [session]);
 
   const endGame = useCallback(async () => {
     if (!session?.code) return;
@@ -422,9 +463,11 @@ export const useFirebaseSession = () => {
       return false;
     }
 
+    const uid = getCurrentUid();
+
     // MANDATORY: Validate that this is the authorized session
-    if (user?.id) {
-      const isValid = await validateUserPresence(user.id, tabSessionId);
+    if (uid) {
+      const isValid = await validateUserPresence(uid, tabSessionId);
       if (!isValid) {
         addToast('error', translations[localStorage.getItem('worldquiz_language') as 'en' | 'fr' | 'ar' || 'en'].sessionConflictDesc, 8000);
         return false;
@@ -432,14 +475,18 @@ export const useFirebaseSession = () => {
     }
 
     setSession(activeCheck.session);
-    const player = activeCheck.session.players.find(p => p.id === activeCheck.playerId);
-    if (player) {
-      setCurrentPlayer(player);
+
+    if (activeCheck.session.players && activeCheck.session.players[activeCheck.playerId]) {
+      const playerData = activeCheck.session.players[activeCheck.playerId];
+      setCurrentPlayer({
+        id: activeCheck.playerId,
+        ...playerData
+      });
       setHasActiveSession(true);
 
       // Track user session for single-session enforcement
-      if (user?.id) {
-        await trackUserPresence(user.id, tabSessionId, activeCheck.session.code);
+      if (uid) {
+        await trackUserPresence(uid, tabSessionId, activeCheck.session.code);
       }
 
       // Update connection
@@ -447,13 +494,18 @@ export const useFirebaseSession = () => {
       return true;
     }
     return false;
-  }, []);
+  }, [tabSessionId, addToast]);
 
   const checkActiveSession = useCallback(async (): Promise<boolean> => {
     const result = await checkHasActiveSession();
     setHasActiveSession(result.hasSession);
     return result.hasSession;
   }, []);
+
+  // Helper to get players as array for UI components
+  const getPlayersArray = useCallback((): Player[] => {
+    return playersMapToArray(session?.players);
+  }, [session?.players]);
 
   return {
     session,
@@ -473,5 +525,6 @@ export const useFirebaseSession = () => {
     endGame,
     resumeSession,
     checkActiveSession,
+    getPlayersArray, // New helper for UI components
   };
 };

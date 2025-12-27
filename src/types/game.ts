@@ -1,7 +1,7 @@
 // Game types for multiplayer World Quiz
 
-export interface Player {
-  id: string;
+// Player data stored in Firebase under sessions/{code}/players/{uid}
+export interface PlayerData {
   username: string;
   avatar: string;
   color: string;
@@ -13,8 +13,18 @@ export interface Player {
   lastSeen: number;
 }
 
+// Full player with uid (used in client-side arrays)
+export interface Player extends PlayerData {
+  id: string; // This is the auth.uid
+}
+
+// Players map as stored in Firebase
+export interface PlayersMap {
+  [uid: string]: PlayerData;
+}
+
 export interface TurnState {
-  playerId: string;
+  playerId: string; // This is the auth.uid of the current player
   startTime: number;
   country: string | null;
   diceRolled: boolean;
@@ -27,8 +37,9 @@ export interface TurnState {
 export interface GameSession {
   id: string;
   code: string;
-  host: string;
-  players: Player[];
+  creatorId: string; // auth.uid of session creator
+  host: string; // auth.uid of host (same as creatorId initially)
+  players: PlayersMap; // Map keyed by auth.uid
   maxPlayers: number;
   duration: number; // in minutes
   status: 'waiting' | 'countdown' | 'playing' | 'finished';
@@ -42,9 +53,24 @@ export interface GameSession {
   isExtraTime?: boolean;
 }
 
+// Helper function to convert PlayersMap to Player array
+export const playersMapToArray = (playersMap: PlayersMap | undefined): Player[] => {
+  if (!playersMap) return [];
+  return Object.entries(playersMap).map(([uid, data]) => ({
+    id: uid,
+    ...data
+  }));
+};
+
+// Helper function to get player UIDs in order (for turn management)
+export const getPlayerUids = (playersMap: PlayersMap | undefined): string[] => {
+  if (!playersMap) return [];
+  return Object.keys(playersMap);
+};
+
 export interface SessionRecoveryData {
   sessionCode: string;
-  playerId: string;
+  playerId: string; // This is now auth.uid
   timestamp: number;
 }
 

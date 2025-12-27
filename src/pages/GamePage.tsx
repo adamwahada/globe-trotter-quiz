@@ -19,7 +19,7 @@ import { useToastContext } from '@/contexts/ToastContext';
 import { useSound } from '@/contexts/SoundContext';
 import { isCorrectGuess } from '@/utils/scoring';
 import { getRandomUnplayedCountry, getFamousPerson, getMapCountryName, getCountryFlag } from '@/utils/countryData';
-import { TURN_TIME_SECONDS, COUNTDOWN_SECONDS } from '@/types/game';
+import { TURN_TIME_SECONDS, COUNTDOWN_SECONDS, playersMapToArray, PlayersMap } from '@/types/game';
 import { Trophy, LogOut, Volume2, VolumeX, Users, Clock } from 'lucide-react';
 
 const GamePage = () => {
@@ -32,12 +32,13 @@ const GamePage = () => {
     updateTurnState,
     endGame,
     startGame,
+    getPlayersArray,
   } = useGame();
   const { addToast } = useToastContext();
   const { playToastSound, playDiceSound, toggleSound, soundEnabled } = useSound();
   const navigate = useNavigate();
 
-  const prevPlayersRef = useRef<Player[]>([]); // Added prevPlayersRef
+  const prevPlayersRef = useRef<Player[]>([]);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [guessModalOpen, setGuessModalOpen] = useState(false);
   const [showResults, setShowResults] = useState(false);
@@ -46,8 +47,10 @@ const GamePage = () => {
   const [floatingScore, setFloatingScore] = useState<{ points: number; show: boolean }>({ points: 0, show: false });
   const [isRolling, setIsRolling] = useState(false);
 
-  // Derived state from session
-  const players = session?.players || [];
+  // Get players as array for rendering and game logic
+  const players = getPlayersArray ? getPlayersArray() : playersMapToArray(session?.players);
+  const playerUids = players.map(p => p.id);
+
   const currentTurnIndex = session?.currentTurn || 0;
   const currentTurnState = session?.currentTurnState;
   const guessedCountries = session?.guessedCountries || [];
@@ -101,8 +104,6 @@ const GamePage = () => {
       if (isMyTurn) {
         addToast('game', `🎯 ${t('yourTurn')}! ${t('rollDice')} 🎲`);
         playToastSound('game');
-      } else {
-        // Don't show toast for other player's turn - reduces noise
       }
     }
   }, [currentTurnIndex, session?.status]);
@@ -133,7 +134,7 @@ const GamePage = () => {
     if (!isMyTurn || isRolling || currentCountry) return;
 
     setIsRolling(true);
-    playDiceSound(); // Play dice roll sound
+    playDiceSound();
 
     setTimeout(async () => {
       const country = getRandomUnplayedCountry(guessedCountries);
@@ -148,7 +149,7 @@ const GamePage = () => {
         startTime: Date.now(),
         country,
         diceRolled: true,
-        modalOpen: false, // Do NOT auto-open modal
+        modalOpen: false,
         submittedAnswer: null,
         pointsEarned: null,
         isCorrect: null,
@@ -158,7 +159,6 @@ const GamePage = () => {
       await updateGameState({ turnStartTime: Date.now() });
 
       setIsRolling(false);
-      // Country selected - no toast needed, visual highlight is enough
     }, 800);
   }, [isMyTurn, isRolling, currentCountry, guessedCountries, currentPlayer, updateTurnState, updateGameState, addToast, endGame, playDiceSound]);
 
@@ -168,7 +168,7 @@ const GamePage = () => {
 
     if (prevPlayersRef.current.length > 0) {
       const removedPlayers = prevPlayersRef.current.filter(
-        prev => !session.players.find(curr => curr.id === prev.id)
+        prev => !players.find(curr => curr.id === prev.id)
       );
 
       removedPlayers.forEach(p => {
@@ -178,13 +178,12 @@ const GamePage = () => {
         }
       });
     }
-    prevPlayersRef.current = session.players;
-  }, [session?.players, currentPlayer?.id, addToast, playToastSound, t]);
+    prevPlayersRef.current = players;
+  }, [session?.players, currentPlayer?.id, addToast, playToastSound, t, players]);
 
   // Auto-roll dice if not done in 3 seconds
   useEffect(() => {
     if (isMyTurn && !currentCountry && !isRolling && session?.status === 'playing') {
-      // Initialize countdown if not started
       if (autoRollCountdown === null) {
         setAutoRollCountdown(3);
         return;
@@ -200,31 +199,26 @@ const GamePage = () => {
         setAutoRollCountdown(null);
       }
     } else {
-      // Reset if conditions not met
       if (autoRollCountdown !== null) setAutoRollCountdown(null);
     }
   }, [isMyTurn, currentCountry, isRolling, session?.status, autoRollCountdown, handleRollDice]);
 
   const handleCountryClick = useCallback(async (countryName: string) => {
-    // Only active player can click
     if (!isMyTurn || !currentCountry) return;
 
-    // Only allow clicking the selected country
     if (countryName !== currentCountry) {
-      // Don't show toast - visual feedback is enough
       return;
     }
 
     setGuessModalOpen(true);
 
-    // Update turn state to show modal is open
     if (currentTurnState) {
       await updateTurnState({
         ...currentTurnState,
         modalOpen: true,
       });
     }
-  }, [isMyTurn, currentCountry, currentTurnState, updateTurnState, addToast]);
+  }, [isMyTurn, currentCountry, currentTurnState, updateTurnState]);
 
   const moveToNextTurn = useCallback(async () => {
     const nextTurn = (currentTurnIndex + 1) % players.length;
@@ -239,12 +233,10 @@ const GamePage = () => {
   const handleTurnTimeout = useCallback(async () => {
     if (!isMyTurn) return;
 
-    // Mark country as played so it can't be rolled again
     if (currentCountry && !guessedCountries.includes(currentCountry)) {
       await updateGameState({ guessedCountries: [...guessedCountries, currentCountry] });
     }
 
-    // Update turn state with timeout result
     if (currentTurnState && currentCountry) {
       await updateTurnState({
         ...currentTurnState,
@@ -259,7 +251,6 @@ const GamePage = () => {
     playToastSound('error');
     setGuessModalOpen(false);
 
-    // Wait to show result, then move to next turn
     setTimeout(() => moveToNextTurn(), 2000);
   }, [isMyTurn, currentTurnState, currentCountry, guessedCountries, updateGameState, addToast, t, moveToNextTurn, playToastSound, updateTurnState]);
 
@@ -268,12 +259,10 @@ const GamePage = () => {
 
     const result = isCorrectGuess(guess, currentCountry);
 
-    // Mark country as played (locked) regardless of outcome
     const nextGuessedCountries = guessedCountries.includes(currentCountry)
       ? guessedCountries
       : [...guessedCountries, currentCountry];
 
-    // Update turn state with result (visible to all players)
     if (currentTurnState) {
       await updateTurnState({
         ...currentTurnState,
@@ -284,26 +273,29 @@ const GamePage = () => {
       });
     }
 
-    // Show floating score
     setFloatingScore({ points: result.points, show: true });
     setTimeout(() => setFloatingScore({ points: 0, show: false }), 2000);
 
-    // Update players + played countries
-    const updatedPlayers = players.map((p, idx) =>
-      idx === currentTurnIndex
-        ? {
-          ...p,
-          score: p.score + result.points,
-          countriesGuessed:
-            result.correct ? [...(p.countriesGuessed || []), currentCountry] : p.countriesGuessed,
+    // Build updated players map
+    const currentPlayerUid = playerUids[currentTurnIndex];
+    if (currentPlayerUid && session?.players[currentPlayerUid]) {
+      const currentPlayerData = session.players[currentPlayerUid];
+      const updatedPlayers: PlayersMap = {
+        ...session.players,
+        [currentPlayerUid]: {
+          ...currentPlayerData,
+          score: currentPlayerData.score + result.points,
+          countriesGuessed: result.correct
+            ? [...(currentPlayerData.countriesGuessed || []), currentCountry]
+            : currentPlayerData.countriesGuessed,
         }
-        : p
-    );
+      };
 
-    await updateGameState({
-      players: updatedPlayers,
-      guessedCountries: nextGuessedCountries,
-    });
+      await updateGameState({
+        players: updatedPlayers,
+        guessedCountries: nextGuessedCountries,
+      });
+    }
 
     if (result.correct) {
       addToast('success', `+${result.points} ${t('points')} - Correct!`);
@@ -315,19 +307,16 @@ const GamePage = () => {
 
     setGuessModalOpen(false);
 
-    // Wait a moment to show result, then move to next turn
     setTimeout(() => moveToNextTurn(), 2000);
-  }, [currentCountry, currentPlayer, isMyTurn, currentTurnState, updateTurnState, guessedCountries, players, currentTurnIndex, updateGameState, addToast, t, moveToNextTurn, playToastSound]);
+  }, [currentCountry, currentPlayer, isMyTurn, currentTurnState, updateTurnState, guessedCountries, session, playerUids, currentTurnIndex, updateGameState, addToast, t, moveToNextTurn, playToastSound]);
 
   const handleSkip = useCallback(async () => {
     if (!isMyTurn) return;
 
-    // Mark country as played so it can't be rolled again
     if (currentCountry && !guessedCountries.includes(currentCountry)) {
       await updateGameState({ guessedCountries: [...guessedCountries, currentCountry] });
     }
 
-    // Update turn state with skip result
     if (currentTurnState && currentCountry) {
       await updateTurnState({
         ...currentTurnState,
@@ -341,31 +330,33 @@ const GamePage = () => {
     addToast('info', t('turnSkipped'));
     setGuessModalOpen(false);
 
-    // Wait to show result, then move to next turn
     setTimeout(() => moveToNextTurn(), 2000);
   }, [isMyTurn, currentTurnState, currentCountry, guessedCountries, updateGameState, addToast, t, moveToNextTurn, updateTurnState]);
 
   const handleUseHint = useCallback((type: 'letter' | 'famous' | 'flag') => {
     if (!currentCountry || !currentPlayer || !session) return '';
 
-    // Calculate new score (deduct 1 point, minimum 0)
-    const newScore = Math.max(0, currentPlayer.score - 1);
+    const currentPlayerUid = currentPlayer.id;
+    if (!session.players[currentPlayerUid]) return '';
 
-    const updatedPlayers = players.map((p, idx) =>
-      idx === currentTurnIndex
-        ? { ...p, score: newScore }
-        : p
-    );
+    const currentPlayerData = session.players[currentPlayerUid];
+    const newScore = Math.max(0, currentPlayerData.score - 1);
 
-    // For flag hint, also subtract 10 seconds from timer
+    const updatedPlayers: PlayersMap = {
+      ...session.players,
+      [currentPlayerUid]: {
+        ...currentPlayerData,
+        score: newScore,
+      }
+    };
+
     if (type === 'flag' && session.turnStartTime) {
-      const newTurnStartTime = session.turnStartTime - 10000; // Subtract 10 seconds (10000ms)
+      const newTurnStartTime = session.turnStartTime - 10000;
       updateGameState({ players: updatedPlayers, turnStartTime: newTurnStartTime });
       addToast('info', t('hintUsed') + ' (-1 point, -10 seconds)');
       return getCountryFlag(currentCountry);
     }
 
-    // Update game state immediately to reflect points deduction
     updateGameState({ players: updatedPlayers });
 
     addToast('info', t('hintUsed') + ' (-1 point)');
@@ -375,7 +366,7 @@ const GamePage = () => {
     } else {
       return getFamousPerson(currentCountry) || 'No famous person data found';
     }
-  }, [currentCountry, currentPlayer, players, currentTurnIndex, session, updateGameState, addToast, t]);
+  }, [currentCountry, currentPlayer, session, updateGameState, addToast, t]);
 
   const handleLeave = useCallback(async () => {
     await leaveSession();
@@ -385,9 +376,8 @@ const GamePage = () => {
   const handleEndGame = useCallback(async () => {
     if (!session) return;
 
-    // Check for fairness: Have all players played the same number of turns?
-    const maxTurns = Math.max(...session.players.map(p => p.turnsPlayed));
-    const isBalanced = session.players.every(p => p.turnsPlayed === maxTurns);
+    const maxTurns = Math.max(...players.map(p => p.turnsPlayed));
+    const isBalanced = players.every(p => p.turnsPlayed === maxTurns);
 
     if (!isBalanced) {
       if (!session.isExtraTime) {
@@ -400,7 +390,7 @@ const GamePage = () => {
 
     await endGame();
     setShowResults(true);
-  }, [session, endGame, updateGameState, addToast, t, playToastSound]);
+  }, [session, players, endGame, updateGameState, addToast, t, playToastSound]);
 
   const handlePlayAgain = useCallback(async () => {
     setShowResults(false);
@@ -490,7 +480,7 @@ const GamePage = () => {
         </div>
       </nav>
 
-      {/* Spacer for fixed navbar - increased padding */}
+      {/* Spacer for fixed navbar */}
       <div className="h-24 md:h-32" />
 
       {/* Mobile Timer or Extra Time Message */}
@@ -700,7 +690,7 @@ const GamePage = () => {
       />
 
       {/* Lone Player Overlay */}
-      {session && session.status !== 'finished' && session.players.length === 1 && (
+      {session && session.status !== 'finished' && players.length === 1 && (
         <LonePlayerOverlay
           onQuit={handleLeave}
         />

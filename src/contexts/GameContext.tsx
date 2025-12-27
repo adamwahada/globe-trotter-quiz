@@ -1,9 +1,9 @@
 import React, { createContext, useContext, ReactNode } from 'react';
 import { useFirebaseSession } from '@/hooks/useFirebaseSession';
-import type { GameSession, Player, TurnState } from '@/types/game';
+import type { GameSession, Player, PlayerData, PlayersMap, TurnState } from '@/types/game';
 
 // Re-export types for backward compatibility
-export type { GameSession, Player, TurnState };
+export type { GameSession, Player, PlayerData, PlayersMap, TurnState };
 
 interface GameContextType {
   session: GameSession | null;
@@ -15,13 +15,13 @@ interface GameContextType {
   joinSession: (code: string, username?: string) => Promise<boolean>;
   leaveSession: () => Promise<void>;
   setReady: (ready: boolean) => Promise<void>;
-  updatePlayerMetadata: (metadata: Partial<Player>) => Promise<void>;
+  updatePlayerMetadata: (metadata: Partial<PlayerData>) => Promise<void>;
   startCountdown: () => Promise<void>;
   startGame: () => Promise<void>;
   updateGameState: (updates: {
     currentTurn?: number;
     currentTurnState?: TurnState | null;
-    players?: Player[];
+    players?: PlayersMap;
     guessedCountries?: string[];
     turnStartTime?: number | null;
     isExtraTime?: boolean;
@@ -30,6 +30,7 @@ interface GameContextType {
   endGame: () => Promise<void>;
   resumeSession: () => Promise<boolean>;
   checkActiveSession: () => Promise<boolean>;
+  getPlayersArray: () => Player[];
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -53,6 +54,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     endGame,
     resumeSession,
     checkActiveSession,
+    getPlayersArray,
   } = useFirebaseSession();
 
   return (
@@ -74,6 +76,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       endGame,
       resumeSession,
       checkActiveSession,
+      getPlayersArray,
     }}>
       {children}
     </GameContext.Provider>

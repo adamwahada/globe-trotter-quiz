@@ -11,13 +11,13 @@ import { useToastContext } from '@/contexts/ToastContext';
 import { GameTooltip } from '@/components/Tooltip/GameTooltip';
 import { LonePlayerOverlay } from '@/components/Modal/LonePlayerOverlay';
 import { useSound } from '@/contexts/SoundContext';
-import { COUNTDOWN_SECONDS, WAITING_ROOM_TIMEOUT } from '@/types/game';
+import { COUNTDOWN_SECONDS, WAITING_ROOM_TIMEOUT, playersMapToArray } from '@/types/game';
 import { Player } from '@/types/game';
 import { Copy, Check, Users, Clock, Play, LogOut } from 'lucide-react';
 
 const WaitingRoom = () => {
   const { t } = useLanguage();
-  const { session, currentPlayer, setReady, updatePlayerMetadata, startCountdown, startGame, leaveSession } = useGame();
+  const { session, currentPlayer, setReady, updatePlayerMetadata, startCountdown, startGame, leaveSession, getPlayersArray } = useGame();
   const { addToast } = useToastContext();
   const { playToastSound } = useSound();
   const navigate = useNavigate();
@@ -27,6 +27,9 @@ const WaitingRoom = () => {
   const [copied, setCopied] = useState(false);
   const [avatar, setAvatar] = useState(currentPlayer?.avatar || '🦁');
   const [color, setColor] = useState(currentPlayer?.color || '#E50914');
+
+  // Get players as array for rendering
+  const players = getPlayersArray ? getPlayersArray() : playersMapToArray(session?.players);
 
   // Sync state with currentPlayer when it loads
   useEffect(() => {
@@ -52,13 +55,13 @@ const WaitingRoom = () => {
   // Auto-start countdown when all players join
   useEffect(() => {
     if (session?.status === 'waiting' &&
-      session.players.length === session.maxPlayers &&
-      session.players.every(p => p.isReady) &&
+      players.length === session.maxPlayers &&
+      players.every(p => p.isReady) &&
       session.host === currentPlayer?.id) {
       // All players joined and ready - start countdown
       startCountdown();
     }
-  }, [session, currentPlayer, startCountdown]);
+  }, [session, currentPlayer, startCountdown, players]);
 
   // Handle player departures notifications
   useEffect(() => {
@@ -66,7 +69,7 @@ const WaitingRoom = () => {
 
     if (prevPlayersRef.current.length > 0) {
       const removedPlayers = prevPlayersRef.current.filter(
-        prev => !session.players.find(curr => curr.id === prev.id)
+        prev => !players.find(curr => curr.id === prev.id)
       );
 
       removedPlayers.forEach(p => {
@@ -76,8 +79,8 @@ const WaitingRoom = () => {
         }
       });
     }
-    prevPlayersRef.current = session.players;
-  }, [session?.players, currentPlayer?.id, addToast, playToastSound, t]);
+    prevPlayersRef.current = players;
+  }, [session?.players, currentPlayer?.id, addToast, playToastSound, t, players]);
 
   // Handle countdown completion
   useEffect(() => {
@@ -126,9 +129,9 @@ const WaitingRoom = () => {
     navigate('/');
   };
 
-  const allReady = session?.players.every(p => p.isReady);
+  const allReady = players.every(p => p.isReady);
   const isHost = session?.host === currentPlayer?.id;
-  const isFull = session?.players.length === session?.maxPlayers;
+  const isFull = players.length === session?.maxPlayers;
 
   if (!session) return null;
 
@@ -199,7 +202,7 @@ const WaitingRoom = () => {
         <div className="flex justify-center gap-8 mb-8">
           <div className="flex items-center gap-2 text-muted-foreground">
             <Users className="h-5 w-5" />
-            <span>{session.players.length}/{session.maxPlayers} {t('participants')}</span>
+            <span>{players.length}/{session.maxPlayers} {t('participants')}</span>
           </div>
           <div className="flex items-center gap-2 text-muted-foreground">
             <Clock className="h-5 w-5" />
@@ -226,7 +229,7 @@ const WaitingRoom = () => {
               {t('playersJoined')}
             </h3>
             <div className="space-y-3">
-              {session.players.map((player) => (
+              {players.map((player) => (
                 <div
                   key={player.id}
                   className={`
@@ -261,7 +264,7 @@ const WaitingRoom = () => {
               ))}
 
               {/* Empty slots */}
-              {Array.from({ length: session.maxPlayers - session.players.length }).map((_, i) => (
+              {Array.from({ length: session.maxPlayers - players.length }).map((_, i) => (
                 <div
                   key={`empty-${i}`}
                   className="flex items-center gap-3 p-3 rounded-lg border border-dashed border-border"
@@ -293,7 +296,7 @@ const WaitingRoom = () => {
               variant="hero"
               size="lg"
               onClick={handleStartGame}
-              disabled={!allReady || session.players.length < 2}
+              disabled={!allReady || players.length < 2}
               className="gap-2"
             >
               <Play className="h-5 w-5" />
@@ -310,7 +313,7 @@ const WaitingRoom = () => {
       </div>
 
       {/* Lone Player Overlay - only show if someone left and now only 1 player remains */}
-      {session && session.status !== 'finished' && session.players.length === 1 && prevPlayersRef.current.length > 1 && (
+      {session && session.status !== 'finished' && players.length === 1 && prevPlayersRef.current.length > 1 && (
         <LonePlayerOverlay
           onQuit={handleLeave}
         />

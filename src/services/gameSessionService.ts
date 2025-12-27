@@ -1,18 +1,28 @@
-import { database, ref, set, onValue, update, remove, get, isFirebaseReady, onDisconnect } from '@/lib/firebase';
-import type { GameSession, Player, TurnState, SessionRecoveryData } from '@/types/game';
+import { database, auth, ref, set, onValue, update, remove, get, isFirebaseReady, onDisconnect } from '@/lib/firebase';
+import type { GameSession, Player, PlayerData, PlayersMap, TurnState, SessionRecoveryData } from '@/types/game';
+import { playersMapToArray, getPlayerUids } from '@/types/game';
 
 const SESSIONS_PATH = 'sessions';
-const RECOVERY_PATH = 'recovery';
 
 // Generate random 6-character code
 export const generateCode = (): string => {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
 };
 
+// Get current authenticated user's UID
+export const getCurrentUid = (): string | null => {
+  return auth?.currentUser?.uid || null;
+};
+
 // Create a new session in Firebase
 export const createSessionInFirebase = async (
   sessionData: GameSession
 ): Promise<void> => {
+  const uid = getCurrentUid();
+  if (!uid) {
+    throw new Error('User must be authenticated to create a session');
+  }
+
   if (!isFirebaseReady() || !database) {
     console.warn('Firebase not ready, storing session locally');
     localStorage.setItem(`session_${sessionData.code}`, JSON.stringify(sessionData));
@@ -55,6 +65,11 @@ export const updateSession = async (
   code: string,
   updates: Partial<GameSession>
 ): Promise<void> => {
+  const uid = getCurrentUid();
+  if (!uid) {
+    throw new Error('User must be authenticated to update a session');
+  }
+
   if (!isFirebaseReady() || !database) {
     const localSession = localStorage.getItem(`session_${code}`);
     if (localSession) {
@@ -67,18 +82,35 @@ export const updateSession = async (
   await update(sessionRef, updates);
 };
 
-// Add player to session
+// Add player to session using auth.uid
 export const addPlayerToSession = async (
   code: string,
-  player: Player
+  playerData: PlayerData
 ): Promise<boolean> => {
+  const uid = getCurrentUid();
+  if (!uid) {
+    throw new Error('User must be authenticated to join a session');
+  }
+
   const session = await getSessionByCode(code);
   if (!session) return false;
-  if (session.players.length >= session.maxPlayers) return false;
+
+  const currentPlayers = playersMapToArray(session.players);
+  if (currentPlayers.length >= session.maxPlayers) return false;
   if (session.status !== 'waiting') return false;
 
-  const updatedPlayers = [...session.players, player];
-  await updateSession(code, { players: updatedPlayers });
+  // Check if user already in session
+  if (session.players && session.players[uid]) {
+    return false; // Already joined
+  }
+
+  if (!isFirebaseReady() || !database) {
+    return false;
+  }
+
+  // Write player entry using auth.uid as the key
+  const playerRef = ref(database, `${SESSIONS_PATH}/${code}/players/${uid}`);
+  await set(playerRef, playerData);
   return true;
 };
 
@@ -87,15 +119,31 @@ export const removePlayerFromSession = async (
   code: string,
   playerId: string
 ): Promise<void> => {
+  const uid = getCurrentUid();
+  if (!uid) {
+    throw new Error('User must be authenticated');
+  }
+
   const session = await getSessionByCode(code);
   if (!session) return;
 
-  const updatedPlayers = session.players.filter(p => p.id !== playerId);
+  const playerUids = getPlayerUids(session.players);
 
-  if (updatedPlayers.length === 0) {
+  // Can only remove yourself (or creator can remove others - handled by rules)
+  if (playerId !== uid && session.creatorId !== uid) {
+    throw new Error('Cannot remove other players');
+  }
+
+  if (!isFirebaseReady() || !database) {
+    return;
+  }
+
+  // Check if this would leave 0 players
+  if (playerUids.length <= 1 && playerUids.includes(playerId)) {
     await deleteSession(code);
   } else {
-    await updateSession(code, { players: updatedPlayers });
+    const playerRef = ref(database, `${SESSIONS_PATH}/${code}/players/${playerId}`);
+    await remove(playerRef);
   }
 };
 
@@ -103,15 +151,24 @@ export const removePlayerFromSession = async (
 export const updatePlayerInSession = async (
   code: string,
   playerId: string,
-  updates: Partial<Player>
+  updates: Partial<PlayerData>
 ): Promise<void> => {
-  const session = await getSessionByCode(code);
-  if (!session) return;
+  const uid = getCurrentUid();
+  if (!uid) {
+    throw new Error('User must be authenticated');
+  }
 
-  const updatedPlayers = session.players.map(p =>
-    p.id === playerId ? { ...p, ...updates } : p
-  );
-  await updateSession(code, { players: updatedPlayers });
+  // Can only update your own player data
+  if (playerId !== uid) {
+    throw new Error('Cannot update other players');
+  }
+
+  if (!isFirebaseReady() || !database) {
+    return;
+  }
+
+  const playerRef = ref(database, `${SESSIONS_PATH}/${code}/players/${playerId}`);
+  await update(playerRef, updates);
 };
 
 // Delete session
@@ -130,13 +187,27 @@ export const updateGameState = async (
   gameState: {
     currentTurn?: number;
     currentTurnState?: TurnState | null;
-    players?: Player[];
+    players?: PlayersMap;
     guessedCountries?: string[];
     status?: 'waiting' | 'countdown' | 'playing' | 'finished';
     turnStartTime?: number | null;
   }
 ): Promise<void> => {
   await updateSession(code, gameState);
+};
+
+// Update a specific player's data in the players map
+export const updatePlayerData = async (
+  code: string,
+  playerId: string,
+  updates: Partial<PlayerData>
+): Promise<void> => {
+  if (!isFirebaseReady() || !database) {
+    return;
+  }
+
+  const playerRef = ref(database, `${SESSIONS_PATH}/${code}/players/${playerId}`);
+  await update(playerRef, updates);
 };
 
 // Start countdown before game
@@ -219,8 +290,8 @@ export const hasActiveSession = async (): Promise<{ hasSession: boolean; session
     return { hasSession: false, session: null, playerId: null };
   }
 
-  // Check if player is still in session
-  const playerExists = session.players.some(p => p.id === recoveryData.playerId);
+  // Check if player is still in session (using auth.uid)
+  const playerExists = session.players && session.players[recoveryData.playerId];
   if (!playerExists) {
     clearRecoveryData();
     return { hasSession: false, session: null, playerId: null };
@@ -235,7 +306,12 @@ export const updatePlayerConnection = async (
   playerId: string,
   isConnected: boolean
 ): Promise<void> => {
-  await updatePlayerInSession(code, playerId, {
+  const uid = getCurrentUid();
+  if (!uid || playerId !== uid) {
+    return; // Can only update own connection status
+  }
+
+  await updatePlayerData(code, playerId, {
     isConnected,
     lastSeen: Date.now(),
   });
