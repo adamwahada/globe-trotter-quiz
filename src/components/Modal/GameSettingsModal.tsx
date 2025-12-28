@@ -28,6 +28,13 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
   const [guestName, setGuestName] = useState(localStorage.getItem('guest_username') || '');
   const [copied, setCopied] = useState(false);
 
+  const handleClose = () => {
+    setMode('choose');
+    setGeneratedCode('');
+    setSessionCode('');
+    onClose();
+  };
+
   if (!isOpen) return null;
 
   const handleCreate = async () => {
@@ -81,13 +88,13 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div
         className="absolute inset-0 bg-background/80 backdrop-blur-sm"
-        onClick={onClose}
+        onClick={handleClose}
       />
 
       <div className="relative w-full max-w-md mx-4 bg-card border border-border rounded-2xl shadow-2xl animate-scale-in overflow-hidden">
         <div className="p-6">
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="absolute top-4 right-4 p-2 rounded-full hover:bg-secondary transition-colors"
           >
             <X className="h-5 w-5 text-muted-foreground" />
