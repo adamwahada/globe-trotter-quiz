@@ -9,7 +9,7 @@ import { useGame } from '@/contexts/GameContext';
 import { useToastContext } from '@/contexts/ToastContext';
 import { GameTooltip } from '@/components/Tooltip/GameTooltip';
 import { useNavigate } from 'react-router-dom';
-import { Play, BookOpen, Trophy, Users, Target, Lightbulb, ChevronDown, Dice5, MapPin, ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
+import { Play, BookOpen, Trophy, Users, Target, Lightbulb, ChevronDown, Dice5, MapPin, ChevronLeft, ChevronRight, RotateCcw, User, Flag, Send, SkipForward, ZoomIn, Volume2, LogOut, BarChart3, Type } from 'lucide-react';
 import worldMapBg from '@/assets/world-map-bg.png';
 
 const Index = () => {
@@ -65,7 +65,15 @@ const Index = () => {
     { step: 1, title: t('ruleStep1Title'), description: t('ruleStep1Desc'), icon: Dice5 },
     { step: 2, title: t('ruleStep2Title'), description: t('ruleStep2Desc'), icon: MapPin },
     { step: 3, title: t('ruleStep3Title'), description: t('ruleStep3Desc'), icon: Trophy },
-    { step: 4, title: t('ruleStep4Title'), description: t('ruleStep4Desc'), icon: Lightbulb },
+    { step: 4, title: t('ruleStep4Title'), description: t('ruleStep4Desc'), icon: Type },
+    { step: 5, title: t('ruleStep5Title'), description: t('ruleStep5Desc'), icon: User },
+    { step: 6, title: t('ruleStep6Title'), description: t('ruleStep6Desc'), icon: Flag },
+  ];
+
+  const hints = [
+    { icon: Type, title: t('hintLetter'), description: t('hintLetterDesc'), cost: t('hintLetterCost'), color: 'text-warning' },
+    { icon: User, title: t('hintPerson'), description: t('hintPersonDesc'), cost: t('hintPersonCost'), color: 'text-info' },
+    { icon: Flag, title: t('hintFlag'), description: t('hintFlagDesc'), cost: t('hintFlagCost'), color: 'text-destructive' },
   ];
 
   const scoring = [
@@ -73,6 +81,20 @@ const Index = () => {
     { points: '2', label: t('pointsClose'), description: t('pointsCloseDesc'), color: 'text-info' },
     { points: '0', label: t('pointsSkip'), description: t('pointsSkipDesc'), color: 'text-muted-foreground' },
     { points: '-1', label: t('pointsHint'), description: t('pointsHintDesc'), color: 'text-warning' },
+  ];
+
+  const buttonGuide = [
+    { icon: Dice5, title: t('buttonDice'), description: t('buttonDiceDesc'), color: 'bg-primary/20 text-primary' },
+    { icon: Send, title: t('buttonSubmit'), description: t('buttonSubmitDesc'), color: 'bg-success/20 text-success' },
+    { icon: SkipForward, title: t('buttonSkip'), description: t('buttonSkipDesc'), color: 'bg-muted text-muted-foreground' },
+    { icon: Type, title: t('buttonHintLetter'), description: t('buttonHintLetterDesc'), color: 'bg-warning/20 text-warning' },
+    { icon: User, title: t('buttonHintPerson'), description: t('buttonHintPersonDesc'), color: 'bg-info/20 text-info' },
+    { icon: Flag, title: t('buttonHintFlag'), description: t('buttonHintFlagDesc'), color: 'bg-destructive/20 text-destructive' },
+    { icon: Target, title: t('buttonRecenter'), description: t('buttonRecenterDesc'), color: 'bg-accent text-accent-foreground' },
+    { icon: ZoomIn, title: t('buttonZoom'), description: t('buttonZoomDesc'), color: 'bg-accent text-accent-foreground' },
+    { icon: BarChart3, title: t('buttonLeaderboard'), description: t('buttonLeaderboardDesc'), color: 'bg-primary/20 text-primary' },
+    { icon: Volume2, title: t('buttonSound'), description: t('buttonSoundDesc'), color: 'bg-muted text-muted-foreground' },
+    { icon: LogOut, title: t('buttonQuit'), description: t('buttonQuitDesc'), color: 'bg-destructive/20 text-destructive' },
   ];
 
   const scrollCarousel = (direction: 'left' | 'right') => {
@@ -209,6 +231,37 @@ const Index = () => {
         </div>
       </section>
 
+      {/* Hints Section */}
+      <section className="relative z-10 py-20 px-4">
+        <div className="max-w-5xl mx-auto">
+          <h2 className="text-4xl md:text-5xl font-display text-foreground text-center mb-4">
+            {t('hintsTitle')}
+          </h2>
+          <p className="text-center text-muted-foreground mb-12">{t('hintsSubtitle')}</p>
+          
+          <div className="grid md:grid-cols-3 gap-6">
+            {hints.map((hint, index) => (
+              <div 
+                key={index}
+                className="group relative bg-gradient-to-br from-card/90 via-card/70 to-card/50 backdrop-blur-xl rounded-2xl p-6 border border-primary/30 text-center transition-all duration-300 hover:scale-105 hover:border-primary/60 hover:shadow-lg hover:shadow-primary/20"
+              >
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/10 via-transparent to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                
+                <div className={`w-16 h-16 rounded-full bg-card/80 border border-primary/30 flex items-center justify-center mx-auto mb-4 ${hint.color}`}>
+                  <hint.icon className="h-8 w-8" />
+                </div>
+                
+                <h3 className="relative text-xl font-display text-foreground mb-2">{hint.title}</h3>
+                <p className="relative text-sm text-muted-foreground mb-4">{hint.description}</p>
+                <p className={`relative text-lg font-bold ${hint.color}`}>{hint.cost}</p>
+                
+                <div className="absolute bottom-0 left-4 right-4 h-[2px] rounded-full bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Scoring Section */}
       <section className="relative z-10 py-20 px-4">
         <div className="max-w-5xl mx-auto">
@@ -240,6 +293,35 @@ const Index = () => {
                 
                 {/* Bottom accent */}
                 <div className="absolute bottom-0 left-4 right-4 h-[2px] rounded-full bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Button Guide Section */}
+      <section className="relative z-10 py-20 px-4">
+        <div className="max-w-6xl mx-auto">
+          <h2 className="text-4xl md:text-5xl font-display text-foreground text-center mb-4">
+            {t('buttonGuideTitle')}
+          </h2>
+          <p className="text-center text-muted-foreground mb-12">{t('buttonGuideSubtitle')}</p>
+          
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {buttonGuide.map((button, index) => (
+              <div 
+                key={index}
+                className="group relative bg-gradient-to-br from-card/80 via-card/60 to-card/40 backdrop-blur-xl rounded-xl p-4 border border-border/50 transition-all duration-300 hover:border-primary/50 hover:shadow-md hover:shadow-primary/10"
+              >
+                <div className="flex items-start gap-3">
+                  <div className={`w-10 h-10 rounded-lg ${button.color} flex items-center justify-center shrink-0`}>
+                    <button.icon className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className="font-semibold text-foreground text-sm mb-1">{button.title}</h4>
+                    <p className="text-xs text-muted-foreground leading-relaxed">{button.description}</p>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
