@@ -21,6 +21,8 @@ import { useToastContext } from '@/contexts/ToastContext';
 import { useSound } from '@/contexts/SoundContext';
 import { isCorrectGuess } from '@/utils/scoring';
 import { getRandomUnplayedCountry, getFamousPerson, getMapCountryName, getCountryFlag } from '@/utils/countryData';
+import { hasExtendedHints, getFamousPlayer, getFamousSinger, getCountryCapital } from '@/utils/countryHints';
+import { GuidedHintType } from '@/components/Guess/GuessModal';
 import { TURN_TIME_SECONDS, COUNTDOWN_SECONDS, playersMapToArray, PlayersMap } from '@/types/game';
 import { Trophy, LogOut, Volume2, VolumeX, Users, Clock } from 'lucide-react';
 import { removePlayerFromSession, clearRecoveryData } from '@/services/gameSessionService';
@@ -487,6 +489,63 @@ const GamePage = () => {
     return countryForHint[0];
   }, [currentCountry, currentPlayer, session, updateGameState, addToast, t, isSoloMode, soloClickedCountry]);
 
+  // Handle guided hints (player, singer, capital)
+  const handleUseGuidedHint = useCallback((type: GuidedHintType): { value: string; timePenalty: number } | null => {
+    const countryForHint = isSoloMode && soloClickedCountry ? soloClickedCountry : currentCountry;
+    if (!countryForHint || !currentPlayer || !session) return null;
+
+    const currentPlayerUid = currentPlayer.id;
+    if (!session.players[currentPlayerUid]) return null;
+
+    const currentPlayerData = session.players[currentPlayerUid];
+    
+    let hintValue: string | null = null;
+    let timePenalty = 0;
+    let pointCost = 0;
+
+    if (type === 'capital') {
+      hintValue = getCountryCapital(countryForHint);
+      timePenalty = 10; // 10 seconds penalty
+      pointCost = 0; // Capital costs only time
+    } else if (type === 'player') {
+      hintValue = getFamousPlayer(countryForHint);
+      timePenalty = 5; // 5 seconds penalty
+      pointCost = 1; // 1 point cost
+    } else if (type === 'singer') {
+      hintValue = getFamousSinger(countryForHint);
+      timePenalty = 5; // 5 seconds penalty
+      pointCost = 1; // 1 point cost
+    }
+
+    if (!hintValue) return null;
+
+    // Deduct points if applicable
+    const newScore = Math.max(0, currentPlayerData.score - pointCost);
+
+    const updatedPlayers: PlayersMap = {
+      ...session.players,
+      [currentPlayerUid]: {
+        ...currentPlayerData,
+        score: newScore,
+      }
+    };
+
+    // Apply time penalty
+    if (session.turnStartTime) {
+      const newTurnStartTime = session.turnStartTime - (timePenalty * 1000);
+      updateGameState({ players: updatedPlayers, turnStartTime: newTurnStartTime });
+    } else {
+      updateGameState({ players: updatedPlayers });
+    }
+
+    const costMessage = type === 'capital' 
+      ? `(-${timePenalty}s)` 
+      : `(-${pointCost}pt, -${timePenalty}s)`;
+    addToast('info', `${t('hintUsed')} ${costMessage}`);
+
+    return { value: hintValue, timePenalty };
+  }, [currentCountry, currentPlayer, session, updateGameState, addToast, t, isSoloMode, soloClickedCountry]);
+
   const handleLeave = useCallback(async () => {
     await leaveSession();
     navigate('/');
@@ -809,9 +868,11 @@ const GamePage = () => {
         onSubmit={handleSubmitGuess}
         onSkip={handleSkip}
         onUseHint={handleUseHint}
+        onUseGuidedHint={handleUseGuidedHint}
         turnTimeSeconds={TURN_TIME_SECONDS}
         turnStartTime={session.turnStartTime || undefined}
         playerScore={currentPlayer?.score || 0}
+        hasExtendedHints={hasExtendedHints(activeCountry || '')}
       />
 
       {/* Game Results */}

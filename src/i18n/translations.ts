@@ -212,6 +212,15 @@ export const translations = {
     tooltipSkip: 'Skip this turn (0 points)',
     tooltipSubmit: 'Submit your answer',
     tooltipQuit: 'Leave the current game',
+    tooltipGuidedHints: 'Choose a specific hint type (max 2 per round)',
+    maxHintsReached: 'Maximum hints reached for this round',
+    guidedHintsRemaining: 'Hints remaining',
+    hintCapital: 'Capital City',
+    hintPlayer: 'Famous Player',
+    hintSinger: 'Famous Singer',
+    capital: 'Capital',
+    famousPlayer: 'Famous Player',
+    famousSinger: 'Famous Singer',
 
     // Features Section
     featureMultiplayer: 'Multiplayer',
@@ -461,6 +470,15 @@ export const translations = {
     tooltipSkip: 'Passer ce tour (0 points)',
     tooltipSubmit: 'Valider votre réponse',
     tooltipQuit: 'Quitter la partie en cours',
+    tooltipGuidedHints: 'Choisir un type d\'indice spécifique (max 2 par tour)',
+    maxHintsReached: 'Nombre maximum d\'indices atteint pour ce tour',
+    guidedHintsRemaining: 'Indices restants',
+    hintCapital: 'Capitale',
+    hintPlayer: 'Joueur Célèbre',
+    hintSinger: 'Chanteur Célèbre',
+    capital: 'Capitale',
+    famousPlayer: 'Joueur Célèbre',
+    famousSinger: 'Chanteur Célèbre',
 
     // Features Section
     featureMultiplayer: 'Multijoueur',
@@ -710,6 +728,15 @@ export const translations = {
     tooltipSkip: 'تخطي هذا الدور (0 نقاط)',
     tooltipSubmit: 'إرسال إجابتك',
     tooltipQuit: 'مغادرة اللعبة الحالية',
+    tooltipGuidedHints: 'اختر نوع تلميح محدد (حد أقصى 2 لكل جولة)',
+    maxHintsReached: 'تم الوصول للحد الأقصى من التلميحات لهذه الجولة',
+    guidedHintsRemaining: 'التلميحات المتبقية',
+    hintCapital: 'العاصمة',
+    hintPlayer: 'لاعب مشهور',
+    hintSinger: 'مغني مشهور',
+    capital: 'العاصمة',
+    famousPlayer: 'لاعب مشهور',
+    famousSinger: 'مغني مشهور',
 
     // Features Section
     featureMultiplayer: 'متعدد اللاعبين',
