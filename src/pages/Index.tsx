@@ -106,6 +106,7 @@ const Index = () => {
     { icon: User, title: t('buttonHintPerson'), description: t('buttonHintPersonDesc'), color: 'bg-info/20 text-info' },
     { icon: Flag, title: t('buttonHintFlag'), description: t('buttonHintFlagDesc'), color: 'bg-destructive/20 text-destructive' },
     { icon: Target, title: t('buttonRecenter'), description: t('buttonRecenterDesc'), color: 'bg-accent text-accent-foreground' },
+    { icon: MapPin, title: t('buttonLocate'), description: t('buttonLocateDesc'), color: 'bg-primary/20 text-primary' },
     { icon: ZoomIn, title: t('buttonZoom'), description: t('buttonZoomDesc'), color: 'bg-accent text-accent-foreground' },
     { icon: BarChart3, title: t('buttonLeaderboard'), description: t('buttonLeaderboardDesc'), color: 'bg-primary/20 text-primary' },
     { icon: Volume2, title: t('buttonSound'), description: t('buttonSoundDesc'), color: 'bg-muted text-muted-foreground' },

@@ -7,9 +7,9 @@ import {
 } from 'react-simple-maps';
 import { GameTooltip } from '@/components/Tooltip/GameTooltip';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { ZoomIn, ZoomOut, Maximize, Globe } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize, Globe, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { getContinent, getMapCountryName, getGameCountryName } from '@/utils/countryData';
+import { getContinent, getMapCountryName, getGameCountryName, getCountryCoordinates } from '@/utils/countryData';
 
 const geoUrl = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
 
@@ -107,6 +107,15 @@ export const WorldMap: React.FC<WorldMapProps> = ({
     const nextIdx = (currentIdx + 1) % continents.length;
     setPosition(continentZoomPresets[continents[nextIdx]]);
   }, [currentCountry, position.coordinates]);
+
+  const handleLocateCountry = useCallback(() => {
+    if (currentCountry) {
+      const countryPos = getCountryCoordinates(currentCountry);
+      if (countryPos) {
+        setPosition(countryPos);
+      }
+    }
+  }, [currentCountry]);
 
   const handleMoveEnd = useCallback((pos: { coordinates: [number, number]; zoom: number }) => {
     setPosition(pos);
@@ -325,6 +334,18 @@ export const WorldMap: React.FC<WorldMapProps> = ({
             className="h-12 w-12 rounded-xl border-2 border-border hover:border-primary transition-all"
           >
             <Maximize className="h-5 w-5" />
+          </Button>
+        </GameTooltip>
+
+        <GameTooltip content={t('tooltipLocate')} position="left">
+          <Button
+            variant="secondary"
+            size="icon"
+            onClick={handleLocateCountry}
+            disabled={!currentCountry}
+            className="h-12 w-12 rounded-xl border-2 border-border hover:border-primary transition-all disabled:opacity-50"
+          >
+            <MapPin className="h-5 w-5" />
           </Button>
         </GameTooltip>
 
