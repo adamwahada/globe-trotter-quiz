@@ -103,28 +103,22 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
               <div className="grid grid-cols-2 gap-4">
                 <Button
                   variant="game"
-                  className="h-36 flex-col gap-3 relative overflow-hidden group"
+                  className="h-24 flex-col gap-3 relative overflow-hidden group"
                   onClick={() => setMode('solo')}
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                   <User className="h-8 w-8" />
                   <span className="text-lg font-semibold">{t('soloMode')}</span>
-                  <span className="text-xs text-muted-foreground text-center px-2 line-clamp-2">
-                    {t('soloModeDesc')}
-                  </span>
                 </Button>
 
                 <Button
                   variant="game"
-                  className="h-36 flex-col gap-3 relative overflow-hidden group"
+                  className="h-24 flex-col gap-3 relative overflow-hidden group"
                   onClick={() => setMode('multiplayer')}
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                   <Users className="h-8 w-8" />
                   <span className="text-lg font-semibold">{t('multiplayerMode')}</span>
-                  <span className="text-xs text-muted-foreground text-center px-2 line-clamp-2">
-                    {t('multiplayerModeDesc')}
-                  </span>
                 </Button>
               </div>
             </div>
@@ -140,28 +134,22 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
               <div className="grid grid-cols-2 gap-4">
                 <Button
                   variant="game"
-                  className="h-32 flex-col gap-3 relative overflow-hidden group"
+                  className="h-24 flex-col gap-3 relative overflow-hidden group"
                   onClick={() => setMode('create')}
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                   <Users className="h-7 w-7" />
                   <span className="text-base font-semibold">{t('createSession')}</span>
-                  <span className="text-xs text-muted-foreground text-center px-2">
-                    {t('createSessionDesc')}
-                  </span>
                 </Button>
 
                 <Button
                   variant="game"
-                  className="h-32 flex-col gap-3 relative overflow-hidden group"
+                  className="h-24 flex-col gap-3 relative overflow-hidden group"
                   onClick={() => setMode('join')}
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                   <Hash className="h-7 w-7" />
                   <span className="text-base font-semibold">{t('joinSession')}</span>
-                  <span className="text-xs text-muted-foreground text-center px-2">
-                    {t('joinSessionDesc')}
-                  </span>
                 </Button>
               </div>
 
