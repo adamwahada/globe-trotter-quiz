@@ -13,7 +13,7 @@ import { LonePlayerOverlay } from '@/components/Modal/LonePlayerOverlay';
 import { useSound } from '@/contexts/SoundContext';
 import { COUNTDOWN_SECONDS, WAITING_ROOM_TIMEOUT, playersMapToArray } from '@/types/game';
 import { Player } from '@/types/game';
-import { Copy, Check, Users, Clock, Play, LogOut } from 'lucide-react';
+import { Copy, Check, Users, Clock, Play, LogOut, Link } from 'lucide-react';
 
 const WaitingRoom = () => {
   const { t } = useLanguage();
@@ -25,6 +25,7 @@ const WaitingRoom = () => {
   const prevPlayersRef = useRef<Player[]>([]);
 
   const [copied, setCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   const [avatar, setAvatar] = useState(currentPlayer?.avatar || '🦁');
   const [color, setColor] = useState(currentPlayer?.color || '#E50914');
 
@@ -102,6 +103,16 @@ const WaitingRoom = () => {
     }
   };
 
+  const copyInviteLink = () => {
+    if (session) {
+      const inviteUrl = `${window.location.origin}/?join=${session.code}`;
+      navigator.clipboard.writeText(inviteUrl);
+      setLinkCopied(true);
+      addToast('success', 'Invite link copied!');
+      setTimeout(() => setLinkCopied(false), 2000);
+    }
+  };
+
   const handleVoteReady = async () => {
     await setReady(!currentPlayer?.isReady);
     if (!currentPlayer?.isReady) {
@@ -172,6 +183,11 @@ const WaitingRoom = () => {
             <GameTooltip content="Copy code" position="top">
               <Button variant="icon" size="icon" onClick={copyCode}>
                 {copied ? <Check className="h-5 w-5" /> : <Copy className="h-5 w-5" />}
+              </Button>
+            </GameTooltip>
+            <GameTooltip content="Copy invite link" position="top">
+              <Button variant="icon" size="icon" onClick={copyInviteLink}>
+                {linkCopied ? <Check className="h-5 w-5 text-success" /> : <Link className="h-5 w-5" />}
               </Button>
             </GameTooltip>
           </div>
