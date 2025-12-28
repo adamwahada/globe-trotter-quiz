@@ -811,6 +811,7 @@ const GamePage = () => {
         onUseHint={handleUseHint}
         turnTimeSeconds={TURN_TIME_SECONDS}
         turnStartTime={session.turnStartTime || undefined}
+        playerScore={currentPlayer?.score || 0}
       />
 
       {/* Game Results */}
