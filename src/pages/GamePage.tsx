@@ -13,6 +13,7 @@ import { LanguageSwitcher } from '@/components/LanguageSwitcher/LanguageSwitcher
 import { CountdownOverlay } from '@/components/Countdown/CountdownOverlay';
 import { FloatingScore } from '@/components/Score/FloatingScore';
 import { LonePlayerOverlay } from '@/components/Modal/LonePlayerOverlay';
+import { InactivityWarning } from '@/components/Modal/InactivityWarning';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useGame, TurnState, Player } from '@/contexts/GameContext';
 import { useToastContext } from '@/contexts/ToastContext';
@@ -21,6 +22,7 @@ import { isCorrectGuess } from '@/utils/scoring';
 import { getRandomUnplayedCountry, getFamousPerson, getMapCountryName, getCountryFlag } from '@/utils/countryData';
 import { TURN_TIME_SECONDS, COUNTDOWN_SECONDS, playersMapToArray, PlayersMap } from '@/types/game';
 import { Trophy, LogOut, Volume2, VolumeX, Users, Clock } from 'lucide-react';
+import { removePlayerFromSession, clearRecoveryData } from '@/services/gameSessionService';
 
 const GamePage = () => {
   const { t } = useLanguage();
@@ -256,7 +258,7 @@ const GamePage = () => {
   }, [players.length, currentTurnIndex, updateGameState]);
 
   const handleTurnTimeout = useCallback(async () => {
-    if (!isMyTurn) return;
+    if (!isMyTurn || !currentPlayer || !session) return;
 
     if (currentCountry && !guessedCountries.includes(currentCountry)) {
       await updateGameState({ guessedCountries: [...guessedCountries, currentCountry] });
@@ -272,12 +274,36 @@ const GamePage = () => {
       });
     }
 
+    // Track inactivity (timeout counts as inactive)
+    const currentPlayerData = session.players[currentPlayer.id];
+    const newInactiveTurns = (currentPlayerData?.inactiveTurns || 0) + 1;
+
+    if (newInactiveTurns >= 3) {
+      // Kick player after 3 inactive turns
+      addToast('error', 'You have been kicked for inactivity (3 missed turns)');
+      playToastSound('error');
+      await removePlayerFromSession(session.code, currentPlayer.id);
+      clearRecoveryData();
+      navigate('/');
+      return;
+    }
+
+    // Update inactivity count
+    const updatedPlayers: PlayersMap = {
+      ...session.players,
+      [currentPlayer.id]: {
+        ...currentPlayerData,
+        inactiveTurns: newInactiveTurns,
+      }
+    };
+    await updateGameState({ players: updatedPlayers });
+
     addToast('error', t('timeUp'));
     playToastSound('error');
     setGuessModalOpen(false);
 
     setTimeout(() => moveToNextTurn(), 2000);
-  }, [isMyTurn, currentTurnState, currentCountry, guessedCountries, updateGameState, addToast, t, moveToNextTurn, playToastSound, updateTurnState]);
+  }, [isMyTurn, currentTurnState, currentCountry, guessedCountries, updateGameState, addToast, t, moveToNextTurn, playToastSound, updateTurnState, session, currentPlayer, navigate]);
 
   const handleSubmitGuess = useCallback(async (guess: string) => {
     // For solo click mode, use soloClickedCountry if no dice was rolled
@@ -303,7 +329,7 @@ const GamePage = () => {
     setFloatingScore({ points: result.points, show: true });
     setTimeout(() => setFloatingScore({ points: 0, show: false }), 2000);
 
-    // Build updated players map
+    // Build updated players map - reset inactivity on active participation
     const currentPlayerUid = playerUids[currentTurnIndex];
     if (currentPlayerUid && session?.players[currentPlayerUid]) {
       const currentPlayerData = session.players[currentPlayerUid];
@@ -315,6 +341,7 @@ const GamePage = () => {
           countriesGuessed: result.correct
             ? [...(currentPlayerData.countriesGuessed || []), countryToGuess]
             : currentPlayerData.countriesGuessed,
+          inactiveTurns: 0, // Reset inactivity on active participation
         }
       };
 
@@ -346,7 +373,7 @@ const GamePage = () => {
   }, [activeCountry, currentPlayer, isMyTurn, currentTurnState, updateTurnState, guessedCountries, session, playerUids, currentTurnIndex, updateGameState, addToast, t, moveToNextTurn, playToastSound, isSoloMode, soloClickedCountry, currentCountry]);
 
   const handleSkip = useCallback(async () => {
-    if (!isMyTurn) return;
+    if (!isMyTurn || !currentPlayer || !session) return;
 
     if (currentCountry && !guessedCountries.includes(currentCountry)) {
       await updateGameState({ guessedCountries: [...guessedCountries, currentCountry] });
@@ -362,11 +389,35 @@ const GamePage = () => {
       });
     }
 
+    // Track inactivity (skip counts as inactive)
+    const currentPlayerData = session.players[currentPlayer.id];
+    const newInactiveTurns = (currentPlayerData?.inactiveTurns || 0) + 1;
+
+    if (newInactiveTurns >= 3) {
+      // Kick player after 3 inactive turns
+      addToast('error', 'You have been kicked for inactivity (3 skipped turns)');
+      playToastSound('error');
+      await removePlayerFromSession(session.code, currentPlayer.id);
+      clearRecoveryData();
+      navigate('/');
+      return;
+    }
+
+    // Update inactivity count
+    const updatedPlayers: PlayersMap = {
+      ...session.players,
+      [currentPlayer.id]: {
+        ...currentPlayerData,
+        inactiveTurns: newInactiveTurns,
+      }
+    };
+    await updateGameState({ players: updatedPlayers });
+
     addToast('info', t('turnSkipped'));
     setGuessModalOpen(false);
 
     setTimeout(() => moveToNextTurn(), 2000);
-  }, [isMyTurn, currentTurnState, currentCountry, guessedCountries, updateGameState, addToast, t, moveToNextTurn, updateTurnState]);
+  }, [isMyTurn, currentTurnState, currentCountry, guessedCountries, updateGameState, addToast, t, moveToNextTurn, updateTurnState, session, currentPlayer, navigate, playToastSound]);
 
   const handleUseHint = useCallback((type: 'letter' | 'famous' | 'flag') => {
     if (!currentCountry || !currentPlayer || !session) return '';
@@ -443,12 +494,18 @@ const GamePage = () => {
     return <CountdownOverlay startTime={session.countdownStartTime!} />;
   }
 
+  // Get current player's inactivity count for warning display
+  const myInactiveTurns = currentPlayer && session?.players[currentPlayer.id]?.inactiveTurns || 0;
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Floating Score Animation */}
       {floatingScore.show && (
         <FloatingScore points={floatingScore.points} />
       )}
+
+      {/* Inactivity Warning - shown only to the affected player */}
+      {!isSoloMode && <InactivityWarning inactiveTurns={myInactiveTurns} />}
 
       {/* Header - Fixed navbar with blur */}
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled

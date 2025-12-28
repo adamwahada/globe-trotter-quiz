@@ -11,6 +11,7 @@ export interface PlayerData {
   isReady: boolean;
   isConnected: boolean;
   lastSeen: number;
+  inactiveTurns?: number; // Track consecutive inactive turns (timeout/skip)
 }
 
 // Full player with uid (used in client-side arrays)
