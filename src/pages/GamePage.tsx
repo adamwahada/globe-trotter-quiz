@@ -442,7 +442,9 @@ const GamePage = () => {
   }, [isMyTurn, currentTurnState, currentCountry, guessedCountries, updateGameState, addToast, t, moveToNextTurn, updateTurnState, session, currentPlayer, navigate, playToastSound]);
 
   const handleUseHint = useCallback((type: 'letter' | 'famous' | 'flag') => {
-    if (!currentCountry || !currentPlayer || !session) return '';
+    // Use activeCountry which works for both dice mode and solo click mode
+    const countryForHint = isSoloMode && soloClickedCountry ? soloClickedCountry : currentCountry;
+    if (!countryForHint || !currentPlayer || !session) return '';
 
     const currentPlayerUid = currentPlayer.id;
     if (!session.players[currentPlayerUid]) return '';
@@ -465,19 +467,19 @@ const GamePage = () => {
       const newTurnStartTime = session.turnStartTime - 10000;
       updateGameState({ players: updatedPlayers, turnStartTime: newTurnStartTime });
       addToast('info', t('hintUsed') + ' (-1 point, -10 seconds)');
-      return getCountryFlag(currentCountry);
+      return getCountryFlag(countryForHint);
     }
 
     updateGameState({ players: updatedPlayers });
 
     if (type === 'famous') {
       addToast('info', t('hintUsed') + ' (-0.5 point)');
-      return getFamousPerson(currentCountry) || 'No famous person data found';
+      return getFamousPerson(countryForHint) || 'No famous person data found';
     }
 
     addToast('info', t('hintUsed') + ' (-1 point)');
-    return currentCountry[0];
-  }, [currentCountry, currentPlayer, session, updateGameState, addToast, t]);
+    return countryForHint[0];
+  }, [currentCountry, currentPlayer, session, updateGameState, addToast, t, isSoloMode, soloClickedCountry]);
 
   const handleLeave = useCallback(async () => {
     await leaveSession();
