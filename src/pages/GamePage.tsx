@@ -309,7 +309,7 @@ const GamePage = () => {
   const handleSubmitGuess = useCallback(async (guess: string) => {
     // For solo click mode, use soloClickedCountry if no dice was rolled
     const countryToGuess = isSoloMode && soloClickedCountry ? soloClickedCountry : currentCountry;
-    if (!countryToGuess || !currentPlayer || !isMyTurn) return;
+    if (!countryToGuess || !currentPlayer || !isMyTurn || !session) return;
 
     const result = isCorrectGuess(guess, countryToGuess);
 
@@ -317,6 +317,10 @@ const GamePage = () => {
       ? guessedCountries
       : [...guessedCountries, countryToGuess];
 
+    // Close modal immediately
+    setGuessModalOpen(false);
+
+    // Update turn state if it exists (dice mode)
     if (currentTurnState) {
       await updateTurnState({
         ...currentTurnState,
@@ -331,17 +335,21 @@ const GamePage = () => {
     setTimeout(() => setFloatingScore({ points: 0, show: false }), 2000);
 
     // Build updated players map - reset inactivity on active participation
-    const currentPlayerUid = playerUids[currentTurnIndex];
-    if (currentPlayerUid && session?.players[currentPlayerUid]) {
+    const currentPlayerUid = currentPlayer.id;
+    if (currentPlayerUid && session.players[currentPlayerUid]) {
       const currentPlayerData = session.players[currentPlayerUid];
+      // Ensure countriesGuessed is always an array, never undefined
+      const existingCountriesGuessed = currentPlayerData.countriesGuessed || [];
+      const newCountriesGuessed = result.correct
+        ? [...existingCountriesGuessed, countryToGuess]
+        : existingCountriesGuessed;
+      
       const updatedPlayers: PlayersMap = {
         ...session.players,
         [currentPlayerUid]: {
           ...currentPlayerData,
           score: currentPlayerData.score + result.points,
-          countriesGuessed: result.correct
-            ? [...(currentPlayerData.countriesGuessed || []), countryToGuess]
-            : currentPlayerData.countriesGuessed,
+          countriesGuessed: newCountriesGuessed,
           inactiveTurns: 0, // Reset inactivity on active participation
         }
       };
@@ -359,22 +367,20 @@ const GamePage = () => {
       addToast('error', t('wrongGuess', { player: '' }));
       playToastSound('error');
     }
-
-    setGuessModalOpen(false);
     
     // Reset solo clicked country after submission
     if (isSoloMode && soloClickedCountry) {
       setSoloClickedCountry(null);
     }
 
-    // In solo mode, clear turn state immediately so player can roll again
+    // In solo mode, clear turn state immediately so player can play again
     if (isSoloMode) {
       await updateTurnState(null);
     } else {
       // In multiplayer, wait then move to next turn
       setTimeout(() => moveToNextTurn(), 2000);
     }
-  }, [activeCountry, currentPlayer, isMyTurn, currentTurnState, updateTurnState, guessedCountries, session, playerUids, currentTurnIndex, updateGameState, addToast, t, moveToNextTurn, playToastSound, isSoloMode, soloClickedCountry, currentCountry]);
+  }, [currentPlayer, isMyTurn, currentTurnState, updateTurnState, guessedCountries, session, updateGameState, addToast, t, moveToNextTurn, playToastSound, isSoloMode, soloClickedCountry, currentCountry]);
 
   const handleSkip = useCallback(async () => {
     if (!isMyTurn || !currentPlayer || !session) return;
