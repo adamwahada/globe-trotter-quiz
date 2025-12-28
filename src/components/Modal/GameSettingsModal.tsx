@@ -20,7 +20,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
   const { addToast } = useToastContext();
   const navigate = useNavigate();
 
-  const [mode, setMode] = useState<'choose' | 'solo' | 'create' | 'join'>('choose');
+  const [mode, setMode] = useState<'choose' | 'multiplayer' | 'solo' | 'create' | 'join'>('choose');
   const [players, setPlayers] = useState(2);
   const [duration, setDuration] = useState(30);
   const [sessionCode, setSessionCode] = useState('');
@@ -114,25 +114,60 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
                   </span>
                 </Button>
 
-                <div className="flex flex-col gap-2">
-                  <Button
-                    variant="game"
-                    className="flex-1 flex-col gap-2"
-                    onClick={() => setMode('create')}
-                  >
-                    <Users className="h-6 w-6" />
-                    <span className="text-sm">{t('createSession')}</span>
-                  </Button>
-                  <Button
-                    variant="game"
-                    className="flex-1 flex-col gap-2"
-                    onClick={() => setMode('join')}
-                  >
-                    <Hash className="h-6 w-6" />
-                    <span className="text-sm">{t('joinSession')}</span>
-                  </Button>
-                </div>
+                <Button
+                  variant="game"
+                  className="h-36 flex-col gap-3 relative overflow-hidden group"
+                  onClick={() => setMode('multiplayer')}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <Users className="h-8 w-8" />
+                  <span className="text-lg font-semibold">{t('multiplayerMode')}</span>
+                  <span className="text-xs text-muted-foreground text-center px-2 line-clamp-2">
+                    {t('multiplayerModeDesc')}
+                  </span>
+                </Button>
               </div>
+            </div>
+          )}
+
+          {mode === 'multiplayer' && (
+            <div className="space-y-6">
+              <h2 className="text-3xl font-display text-foreground text-center">
+                {t('multiplayerMode')}
+              </h2>
+
+              {/* Create or Join choice */}
+              <div className="grid grid-cols-2 gap-4">
+                <Button
+                  variant="game"
+                  className="h-32 flex-col gap-3 relative overflow-hidden group"
+                  onClick={() => setMode('create')}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <Users className="h-7 w-7" />
+                  <span className="text-base font-semibold">{t('createSession')}</span>
+                  <span className="text-xs text-muted-foreground text-center px-2">
+                    {t('createSessionDesc')}
+                  </span>
+                </Button>
+
+                <Button
+                  variant="game"
+                  className="h-32 flex-col gap-3 relative overflow-hidden group"
+                  onClick={() => setMode('join')}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <Hash className="h-7 w-7" />
+                  <span className="text-base font-semibold">{t('joinSession')}</span>
+                  <span className="text-xs text-muted-foreground text-center px-2">
+                    {t('joinSessionDesc')}
+                  </span>
+                </Button>
+              </div>
+
+              <Button variant="outline" onClick={() => setMode('choose')} className="w-full">
+                {t('back')}
+              </Button>
             </div>
           )}
 
@@ -256,7 +291,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
               </div>
 
               <div className="flex gap-3 pt-4">
-                <Button variant="outline" onClick={() => setMode('choose')} className="flex-1">
+                <Button variant="outline" onClick={() => setMode('multiplayer')} className="flex-1">
                   {t('cancel')}
                 </Button>
                 <Button
@@ -342,7 +377,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
               )}
 
               <div className="flex gap-3 pt-4">
-                <Button variant="outline" onClick={() => setMode('choose')} className="flex-1">
+                <Button variant="outline" onClick={() => setMode('multiplayer')} className="flex-1">
                   {t('cancel')}
                 </Button>
                 <Button

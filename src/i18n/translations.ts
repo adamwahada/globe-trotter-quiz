@@ -92,9 +92,10 @@ export const translations = {
     buttonQuitDesc: 'Leave the current game session and return to home.',
 
     // Game Settings
-    // Game Settings
     createSession: 'Create Session',
+    createSessionDesc: 'Host a new game for friends',
     joinSession: 'Join Session',
+    joinSessionDesc: 'Enter a code to join a game',
     soloMode: 'Solo Practice',
     soloModeDesc: 'Practice and test your geography knowledge at your own pace',
     multiplayerMode: 'Multiplayer',
@@ -107,6 +108,7 @@ export const translations = {
     minutes: 'minutes',
     confirm: 'Confirm',
     cancel: 'Cancel',
+    back: 'Back',
     startPractice: 'Start Practice',
     soloPlayMode: 'Play Mode',
     soloModeDice: 'Roll dice to get random countries',
@@ -335,7 +337,9 @@ export const translations = {
 
     // Game Settings
     createSession: 'Créer une Session',
+    createSessionDesc: 'Héberger une nouvelle partie pour vos amis',
     joinSession: 'Rejoindre une Session',
+    joinSessionDesc: 'Entrer un code pour rejoindre une partie',
     soloMode: 'Mode Solo',
     soloModeDesc: 'Entraînez-vous et testez vos connaissances en géographie à votre rythme',
     multiplayerMode: 'Multijoueur',
@@ -348,6 +352,7 @@ export const translations = {
     minutes: 'minutes',
     confirm: 'Confirmer',
     cancel: 'Annuler',
+    back: 'Retour',
     startPractice: 'Commencer l\'Entraînement',
     soloPlayMode: 'Mode de Jeu',
     soloModeDice: 'Lancez le dé pour obtenir des pays aléatoires',
@@ -576,7 +581,9 @@ export const translations = {
 
     // Game Settings
     createSession: 'إنشاء جلسة',
+    createSessionDesc: 'استضافة لعبة جديدة لأصدقائك',
     joinSession: 'الانضمام لجلسة',
+    joinSessionDesc: 'أدخل رمزاً للانضمام إلى لعبة',
     soloMode: 'وضع التدريب',
     soloModeDesc: 'تدرب واختبر معرفتك الجغرافية بوتيرتك الخاصة',
     multiplayerMode: 'متعدد اللاعبين',
@@ -589,6 +596,7 @@ export const translations = {
     minutes: 'دقائق',
     confirm: 'تأكيد',
     cancel: 'إلغاء',
+    back: 'رجوع',
     startPractice: 'ابدأ التدريب',
     soloPlayMode: 'طريقة اللعب',
     soloModeDice: 'ارمِ النرد للحصول على دول عشوائية',
