@@ -51,6 +51,7 @@ export interface GameSession {
   countdownStartTime: number | null;
   turnStartTime: number | null;
   isExtraTime?: boolean;
+  isSoloMode?: boolean; // New: indicates solo practice mode
 }
 
 // Helper function to convert PlayersMap to Player array

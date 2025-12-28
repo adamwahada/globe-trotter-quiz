@@ -170,7 +170,7 @@ export const useFirebaseSession = () => {
     }
   }, []);
 
-  const createSession = useCallback(async (maxPlayers: number, duration: number): Promise<string> => {
+  const createSession = useCallback(async (maxPlayers: number, duration: number, isSoloMode?: boolean): Promise<string> => {
     // Get current user's auth.uid
     const uid = getCurrentUid();
     if (!uid || !user) {
@@ -208,7 +208,7 @@ export const useFirebaseSession = () => {
         score: 0,
         turnsPlayed: 0,
         countriesGuessed: [],
-        isReady: false,
+        isReady: isSoloMode ? true : false, // Auto-ready for solo
         isConnected: true,
         lastSeen: Date.now(),
       };
@@ -224,16 +224,17 @@ export const useFirebaseSession = () => {
         creatorId: uid, // Store creator's auth.uid
         host: playerId,
         players: playersMap,
-        maxPlayers,
-        duration,
-        status: 'waiting',
+        maxPlayers: isSoloMode ? 1 : maxPlayers,
+        duration: Math.min(duration, 60), // Max 60 minutes
+        status: isSoloMode ? 'playing' : 'waiting', // Solo skips waiting room
         currentTurn: 0,
         currentTurnState: null,
         guessedCountries: [],
-        startTime: null,
+        startTime: isSoloMode ? Date.now() : null, // Start immediately for solo
         waitingRoomStartTime: Date.now(),
         countdownStartTime: null,
         turnStartTime: null,
+        isSoloMode: isSoloMode || false,
       };
 
       await createSessionInFirebase(newSession);

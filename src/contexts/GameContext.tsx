@@ -11,7 +11,7 @@ interface GameContextType {
   isLoading: boolean;
   error: string | null;
   hasActiveSession: boolean;
-  createSession: (maxPlayers: number, duration: number) => Promise<string>;
+  createSession: (maxPlayers: number, duration: number, isSoloMode?: boolean) => Promise<string>;
   joinSession: (code: string, username?: string) => Promise<boolean>;
   leaveSession: () => Promise<void>;
   setReady: (ready: boolean) => Promise<void>;
