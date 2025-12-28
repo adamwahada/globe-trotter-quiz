@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useGame } from '@/contexts/GameContext';
 import { useToastContext } from '@/contexts/ToastContext';
 import { GameTooltip } from '@/components/Tooltip/GameTooltip';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Play, BookOpen, Trophy, Users, Target, Lightbulb, ChevronDown, Dice5, MapPin, ChevronLeft, ChevronRight, RotateCcw, User, Flag, Send, SkipForward, ZoomIn, Volume2, LogOut, BarChart3, Type, UserCircle } from 'lucide-react';
 import worldMapBg from '@/assets/world-map-bg.png';
 
@@ -18,10 +18,12 @@ const Index = () => {
   const { hasActiveSession, session, resumeSession, checkActiveSession } = useGame();
   const { addToast } = useToastContext();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const carouselRef = useRef<HTMLDivElement>(null);
   
   const [gameModalOpen, setGameModalOpen] = useState(false);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
+  const [inviteCode, setInviteCode] = useState<string | null>(null);
 
   // Check for active session on mount
   useEffect(() => {
@@ -31,6 +33,21 @@ const Index = () => {
     };
     check();
   }, [checkActiveSession]);
+
+  // Handle invite link with ?join=CODE parameter
+  useEffect(() => {
+    const joinCode = searchParams.get('join');
+    if (joinCode && !isCheckingSession) {
+      setInviteCode(joinCode.toUpperCase());
+      // Clear the URL parameter
+      setSearchParams({});
+      // Open the game modal to join
+      if (!hasActiveSession) {
+        setGameModalOpen(true);
+        addToast('info', `Joining session: ${joinCode.toUpperCase()}`);
+      }
+    }
+  }, [searchParams, setSearchParams, isCheckingSession, hasActiveSession, addToast]);
 
   const handleStartGame = () => {
     if (!isAuthenticated) {
@@ -397,7 +414,11 @@ const Index = () => {
       
       <GameSettingsModal 
         isOpen={gameModalOpen} 
-        onClose={() => setGameModalOpen(false)}
+        onClose={() => {
+          setGameModalOpen(false);
+          setInviteCode(null);
+        }}
+        initialJoinCode={inviteCode}
       />
     </div>
   );

@@ -11,9 +11,10 @@ import { GameTooltip } from '@/components/Tooltip/GameTooltip';
 interface GameSettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialJoinCode?: string | null;
 }
 
-export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, onClose }) => {
+export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, onClose, initialJoinCode }) => {
   const { t } = useLanguage();
   const { user, isAuthenticated } = useAuth();
   const { createSession, joinSession, isLoading, error } = useGame();
@@ -27,6 +28,14 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
   const [generatedCode, setGeneratedCode] = useState('');
   const [guestName, setGuestName] = useState(localStorage.getItem('guest_username') || '');
   const [copied, setCopied] = useState(false);
+
+  // Auto-fill session code from invite link
+  React.useEffect(() => {
+    if (isOpen && initialJoinCode) {
+      setSessionCode(initialJoinCode);
+      setMode('join');
+    }
+  }, [isOpen, initialJoinCode]);
 
   const handleClose = () => {
     setMode('choose');
