@@ -65,15 +65,13 @@ const Index = () => {
     { step: 1, title: t('ruleStep1Title'), description: t('ruleStep1Desc'), icon: Dice5 },
     { step: 2, title: t('ruleStep2Title'), description: t('ruleStep2Desc'), icon: MapPin },
     { step: 3, title: t('ruleStep3Title'), description: t('ruleStep3Desc'), icon: Trophy },
-    { step: 4, title: t('ruleStep4Title'), description: t('ruleStep4Desc'), icon: Type },
-    { step: 5, title: t('ruleStep5Title'), description: t('ruleStep5Desc'), icon: User },
-    { step: 6, title: t('ruleStep6Title'), description: t('ruleStep6Desc'), icon: Flag },
+    { step: 4, title: t('ruleStep4Title'), description: t('ruleStep4Desc'), icon: Lightbulb },
   ];
 
   const hints = [
-    { icon: Type, name: t('hintLetterName'), info: t('hintLetterInfo'), color: 'text-warning' },
-    { icon: User, name: t('hintPersonName'), info: t('hintPersonInfo'), color: 'text-info' },
-    { icon: Flag, name: t('hintFlagName'), info: t('hintFlagInfo'), color: 'text-destructive' },
+    { icon: Type, title: t('hintLetter'), description: t('hintLetterDesc'), cost: t('hintLetterCost'), color: 'text-warning' },
+    { icon: User, title: t('hintPerson'), description: t('hintPersonDesc'), cost: t('hintPersonCost'), color: 'text-info' },
+    { icon: Flag, title: t('hintFlag'), description: t('hintFlagDesc'), cost: t('hintFlagCost'), color: 'text-destructive' },
   ];
 
   const scoring = [
@@ -233,49 +231,31 @@ const Index = () => {
 
       {/* Hints Section */}
       <section className="relative z-10 py-20 px-4">
-        <div className="max-w-4xl mx-auto">
-          <div className="group relative bg-gradient-to-br from-card/90 via-card/70 to-card/50 backdrop-blur-xl rounded-2xl p-8 md:p-10 border border-primary/30 transition-all duration-300 hover:border-primary/60 hover:shadow-lg hover:shadow-primary/20">
-            {/* Glow effect */}
-            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/10 via-transparent to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-            
-            {/* Header with icon */}
-            <div className="relative flex items-center gap-4 mb-6">
-              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center border border-primary/40 shadow-lg shadow-primary/20">
-                <Lightbulb className="h-7 w-7 text-primary" />
-              </div>
-              <div>
-                <h2 className="text-3xl md:text-4xl font-display text-foreground">
-                  {t('hintsTitle')}
-                </h2>
-                <p className="text-muted-foreground">{t('hintsSubtitle')}</p>
-              </div>
-            </div>
-            
-            {/* Introduction text */}
-            <p className="relative text-foreground/80 mb-8 text-lg leading-relaxed">
-              {t('hintsIntro')}
-            </p>
-            
-            {/* Hint types list */}
-            <div className="relative space-y-4">
-              {hints.map((hint, index) => (
-                <div 
-                  key={index}
-                  className="flex items-start gap-4 p-4 rounded-xl bg-background/30 border border-border/50 transition-all duration-200 hover:bg-background/50 hover:border-primary/30"
-                >
-                  <div className={`w-10 h-10 rounded-lg bg-card/80 border border-primary/20 flex items-center justify-center shrink-0 ${hint.color}`}>
-                    <hint.icon className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h4 className={`font-semibold text-lg ${hint.color}`}>{hint.name}</h4>
-                    <p className="text-muted-foreground text-sm">{hint.info}</p>
-                  </div>
+        <div className="max-w-5xl mx-auto">
+          <h2 className="text-4xl md:text-5xl font-display text-foreground text-center mb-4">
+            {t('hintsTitle')}
+          </h2>
+          <p className="text-center text-muted-foreground mb-12">{t('hintsSubtitle')}</p>
+          
+          <div className="grid md:grid-cols-3 gap-6">
+            {hints.map((hint, index) => (
+              <div 
+                key={index}
+                className="group relative bg-gradient-to-br from-card/90 via-card/70 to-card/50 backdrop-blur-xl rounded-2xl p-6 border border-primary/30 text-center transition-all duration-300 hover:scale-105 hover:border-primary/60 hover:shadow-lg hover:shadow-primary/20"
+              >
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/10 via-transparent to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                
+                <div className={`w-16 h-16 rounded-full bg-card/80 border border-primary/30 flex items-center justify-center mx-auto mb-4 ${hint.color}`}>
+                  <hint.icon className="h-8 w-8" />
                 </div>
-              ))}
-            </div>
-            
-            {/* Bottom accent */}
-            <div className="absolute bottom-0 left-6 right-6 h-1 rounded-full bg-gradient-to-r from-primary via-primary/60 to-transparent opacity-60" />
+                
+                <h3 className="relative text-xl font-display text-foreground mb-2">{hint.title}</h3>
+                <p className="relative text-sm text-muted-foreground mb-4">{hint.description}</p>
+                <p className={`relative text-lg font-bold ${hint.color}`}>{hint.cost}</p>
+                
+                <div className="absolute bottom-0 left-4 right-4 h-[2px] rounded-full bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+              </div>
+            ))}
           </div>
         </div>
       </section>
