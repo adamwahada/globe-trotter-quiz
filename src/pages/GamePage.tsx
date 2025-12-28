@@ -57,6 +57,8 @@ const GamePage = () => {
   const currentTurnIndex = session?.currentTurn || 0;
   const currentTurnState = session?.currentTurnState;
   const guessedCountries = session?.guessedCountries || [];
+  const correctCountries = session?.correctCountries || [];
+  const wrongCountries = session?.wrongCountries || [];
   const currentCountry = currentTurnState?.country || null;
   const isSoloMode = session?.isSoloMode || false;
 
@@ -317,6 +319,14 @@ const GamePage = () => {
       ? guessedCountries
       : [...guessedCountries, countryToGuess];
 
+    // Track correct vs wrong countries
+    const nextCorrectCountries = result.correct && !correctCountries.includes(countryToGuess)
+      ? [...correctCountries, countryToGuess]
+      : correctCountries;
+    const nextWrongCountries = !result.correct && !wrongCountries.includes(countryToGuess)
+      ? [...wrongCountries, countryToGuess]
+      : wrongCountries;
+
     // Close modal immediately
     setGuessModalOpen(false);
 
@@ -357,6 +367,8 @@ const GamePage = () => {
       await updateGameState({
         players: updatedPlayers,
         guessedCountries: nextGuessedCountries,
+        correctCountries: nextCorrectCountries,
+        wrongCountries: nextWrongCountries,
       });
     }
 
@@ -380,7 +392,7 @@ const GamePage = () => {
       // In multiplayer, wait then move to next turn
       setTimeout(() => moveToNextTurn(), 2000);
     }
-  }, [currentPlayer, isMyTurn, currentTurnState, updateTurnState, guessedCountries, session, updateGameState, addToast, t, moveToNextTurn, playToastSound, isSoloMode, soloClickedCountry, currentCountry]);
+  }, [currentPlayer, isMyTurn, currentTurnState, updateTurnState, guessedCountries, correctCountries, wrongCountries, session, updateGameState, addToast, t, moveToNextTurn, playToastSound, isSoloMode, soloClickedCountry, currentCountry]);
 
   const handleSkip = useCallback(async () => {
     if (!isMyTurn || !currentPlayer || !session) return;
@@ -762,6 +774,8 @@ const GamePage = () => {
         <div className="flex-1 min-h-[500px] lg:min-h-[700px]">
           <WorldMap
             guessedCountries={guessedCountries}
+            correctCountries={correctCountries}
+            wrongCountries={wrongCountries}
             currentCountry={activeCountry || undefined}
             onCountryClick={handleCountryClick}
             disabled={!isMyTurn || (!activeCountry && !isSoloMode)}

@@ -25,6 +25,8 @@ const continentZoomPresets: Record<string, { coordinates: [number, number]; zoom
 
 interface WorldMapProps {
   guessedCountries: string[];
+  correctCountries: string[];
+  wrongCountries: string[];
   currentCountry?: string;
   onCountryClick: (countryName: string) => void;
   disabled?: boolean;
@@ -33,6 +35,8 @@ interface WorldMapProps {
 
 export const WorldMap: React.FC<WorldMapProps> = ({
   guessedCountries,
+  correctCountries,
+  wrongCountries,
   currentCountry,
   onCountryClick,
   disabled = false,
@@ -110,12 +114,18 @@ export const WorldMap: React.FC<WorldMapProps> = ({
 
   const normalizedCurrent = currentCountry ? getMapCountryName(currentCountry) : null;
   const normalizedGuessed = guessedCountries.map(getMapCountryName);
+  const normalizedCorrect = correctCountries.map(getMapCountryName);
+  const normalizedWrong = wrongCountries.map(getMapCountryName);
 
   const getCountryFill = (countryName: string) => {
     const normalizedName = getMapCountryName(countryName);
-    // Guessed countries - permanent green
-    if (normalizedGuessed.includes(normalizedName)) {
-      return 'hsl(142 76% 36%)'; // success color - bright green
+    // Correctly guessed countries - dark green
+    if (normalizedCorrect.includes(normalizedName)) {
+      return 'hsl(142 60% 25%)'; // Dark green
+    }
+    // Wrongly guessed countries - dark red
+    if (normalizedWrong.includes(normalizedName)) {
+      return 'hsl(0 60% 30%)'; // Dark red
     }
     // Current active country - flashing bright yellow until guessed
     if (normalizedCurrent === normalizedName) {
@@ -130,20 +140,34 @@ export const WorldMap: React.FC<WorldMapProps> = ({
     if (normalizedCurrent === normalizedName) {
       return 'hsl(60 100% 60%)';
     }
-    if (normalizedGuessed.includes(normalizedName)) {
-      return 'hsl(142 76% 45%)';
+    if (normalizedCorrect.includes(normalizedName)) {
+      return 'hsl(142 60% 35%)'; // Darker green stroke
+    }
+    if (normalizedWrong.includes(normalizedName)) {
+      return 'hsl(0 60% 40%)'; // Darker red stroke
     }
     return 'hsl(0 0% 20%)';
   };
 
   // Tooltip should NEVER reveal unplayed country names
   const getTooltipContent = (countryName: string) => {
-    const isPlayed = normalizedGuessed.includes(countryName);
-    const isCurrent = normalizedCurrent === countryName;
+    const normalizedName = getMapCountryName(countryName);
+    const isCorrect = normalizedCorrect.includes(normalizedName);
+    const isWrong = normalizedWrong.includes(normalizedName);
+    const isCurrent = normalizedCurrent === normalizedName;
 
-    if (isPlayed) return `✓ ${countryName}`;
+    if (isCorrect) return `✓ ${countryName}`;
+    if (isWrong) return `✗ ${countryName}`;
     if (isCurrent) return disabled ? '🎯 Highlighted' : '🎯 This is the country to guess!';
     return '???';
+  };
+
+  const getTooltipType = (countryName: string): 'correct' | 'wrong' | 'current' | 'default' => {
+    const normalizedName = getMapCountryName(countryName);
+    if (normalizedCorrect.includes(normalizedName)) return 'correct';
+    if (normalizedWrong.includes(normalizedName)) return 'wrong';
+    if (normalizedCurrent === normalizedName) return 'current';
+    return 'default';
   };
 
   return (
@@ -157,25 +181,32 @@ export const WorldMap: React.FC<WorldMapProps> = ({
         onMouseLeave={() => setHoveredCountry(null)}
       >
         {/* Country Tooltip - follows cursor inside map box */}
-        {tooltip && (
-          <div
-            className={`pointer-events-none absolute z-20 px-3 py-2 rounded-lg shadow-lg border backdrop-blur-sm ${normalizedGuessed.includes(tooltip.country)
-              ? 'bg-success/20 border-success text-success-foreground'
-              : normalizedCurrent === tooltip.country
-                ? 'bg-warning/20 border-warning text-warning-foreground'
-                : 'bg-popover/90 border-border text-foreground'
-              }`}
-            style={{ left: tooltip.x + 12, top: tooltip.y + 12 }}
-          >
-            <span className="text-sm font-semibold">{getTooltipContent(tooltip.country)}</span>
-            {normalizedGuessed.includes(tooltip.country) && (
-              <span className="text-xs block text-muted-foreground">Played</span>
-            )}
-            {normalizedCurrent === tooltip.country && !normalizedGuessed.includes(tooltip.country) && !disabled && (
-              <span className="text-xs block">Click to open guess modal</span>
-            )}
-          </div>
-        )}
+        {tooltip && (() => {
+          const tooltipType = getTooltipType(tooltip.country);
+          const tooltipClasses = {
+            correct: 'bg-[hsl(142,60%,25%)]/80 border-[hsl(142,60%,35%)] text-white',
+            wrong: 'bg-[hsl(0,60%,30%)]/80 border-[hsl(0,60%,40%)] text-white',
+            current: 'bg-warning/20 border-warning text-warning-foreground',
+            default: 'bg-popover/90 border-border text-foreground',
+          };
+          return (
+            <div
+              className={`pointer-events-none absolute z-20 px-3 py-2 rounded-lg shadow-lg border backdrop-blur-sm ${tooltipClasses[tooltipType]}`}
+              style={{ left: tooltip.x + 12, top: tooltip.y + 12 }}
+            >
+              <span className="text-sm font-semibold">{getTooltipContent(tooltip.country)}</span>
+              {tooltipType === 'correct' && (
+                <span className="text-xs block text-white/70">Correct!</span>
+              )}
+              {tooltipType === 'wrong' && (
+                <span className="text-xs block text-white/70">Wrong</span>
+              )}
+              {tooltipType === 'current' && !disabled && (
+                <span className="text-xs block">Click to open guess modal</span>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Current Country Indicator - DELETED - NEVER show the country name or selection */}
 
@@ -205,11 +236,21 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                 geographies.map((geo) => {
                   const countryName = geo.properties.name;
                   const normalizedGeoName = getMapCountryName(countryName);
-                      const isGuessed = normalizedGuessed.includes(normalizedGeoName);
-                      const isCurrent = normalizedCurrent === normalizedGeoName;
-                      // In solo mode without dice roll, any unguessed country is clickable
-                      const isSoloClickable = isSoloMode && !disabled && !isGuessed && !currentCountry;
-                      const isClickable = (!disabled && isCurrent && !isGuessed) || isSoloClickable;
+                  const isGuessed = normalizedGuessed.includes(normalizedGeoName);
+                  const isCorrect = normalizedCorrect.includes(normalizedGeoName);
+                  const isWrong = normalizedWrong.includes(normalizedGeoName);
+                  const isCurrent = normalizedCurrent === normalizedGeoName;
+                  // In solo mode without dice roll, any unguessed country is clickable
+                  const isSoloClickable = isSoloMode && !disabled && !isGuessed && !currentCountry;
+                  const isClickable = (!disabled && isCurrent && !isGuessed) || isSoloClickable;
+
+                  const getHoverFill = () => {
+                    if (isCurrent) return 'hsl(60 100% 60%)';
+                    if (isClickable) return 'hsl(38 92% 60%)';
+                    if (isCorrect) return 'hsl(142 60% 30%)'; // Slightly lighter dark green
+                    if (isWrong) return 'hsl(0 60% 35%)'; // Slightly lighter dark red
+                    return 'hsl(0 0% 40%)';
+                  };
 
                   return (
                     <Geography
@@ -228,13 +269,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                           animation: isCurrent ? 'pulse-country 1.5s ease-in-out infinite' : 'none',
                         },
                         hover: {
-                          fill: isCurrent
-                            ? 'hsl(60 100% 60%)'
-                            : isClickable
-                              ? 'hsl(38 92% 60%)'
-                              : isGuessed
-                                ? 'hsl(142 76% 40%)'
-                                : 'hsl(0 0% 40%)',
+                          fill: getHoverFill(),
                           stroke: isCurrent || isClickable ? 'hsl(0 0% 100%)' : getCountryStroke(countryName),
                           strokeWidth: isCurrent || isClickable ? 2 : 0.5,
                           outline: 'none',
