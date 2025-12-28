@@ -9,7 +9,7 @@ import { useGame } from '@/contexts/GameContext';
 import { useToastContext } from '@/contexts/ToastContext';
 import { GameTooltip } from '@/components/Tooltip/GameTooltip';
 import { useNavigate } from 'react-router-dom';
-import { Play, BookOpen, Trophy, Users, Target, Lightbulb, ChevronDown, Dice5, MapPin, ChevronLeft, ChevronRight, RotateCcw, User, Flag, Send, SkipForward, ZoomIn, Volume2, LogOut, BarChart3, Type } from 'lucide-react';
+import { Play, BookOpen, Trophy, Users, Target, Lightbulb, ChevronDown, Dice5, MapPin, ChevronLeft, ChevronRight, RotateCcw, User, Flag, Send, SkipForward, ZoomIn, Volume2, LogOut, BarChart3, Type, UserCircle } from 'lucide-react';
 import worldMapBg from '@/assets/world-map-bg.png';
 
 const Index = () => {
@@ -328,8 +328,16 @@ const Index = () => {
 
       {/* Features Section */}
       <section className="relative z-10 py-20 px-4">
-        <div className="max-w-4xl mx-auto">
-          <div className="grid md:grid-cols-3 gap-8 text-center">
+        <div className="max-w-5xl mx-auto">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 text-center">
+            <div className="space-y-4">
+              <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto">
+                <UserCircle className="h-8 w-8 text-primary" />
+              </div>
+              <h3 className="text-2xl font-display text-foreground">{t('featureSoloMode')}</h3>
+              <p className="text-muted-foreground">{t('featureSoloModeDesc')}</p>
+            </div>
+            
             <div className="space-y-4">
               <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto">
                 <Users className="h-8 w-8 text-primary" />
