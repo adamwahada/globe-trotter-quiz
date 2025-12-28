@@ -375,7 +375,10 @@ const GamePage = () => {
     if (!session.players[currentPlayerUid]) return '';
 
     const currentPlayerData = session.players[currentPlayerUid];
-    const newScore = Math.max(0, currentPlayerData.score - 1);
+    
+    // Famous person hint costs 0.5 points, others cost 1 point
+    const pointCost = type === 'famous' ? 0.5 : 1;
+    const newScore = Math.max(0, currentPlayerData.score - pointCost);
 
     const updatedPlayers: PlayersMap = {
       ...session.players,
@@ -394,13 +397,13 @@ const GamePage = () => {
 
     updateGameState({ players: updatedPlayers });
 
-    addToast('info', t('hintUsed') + ' (-1 point)');
-
-    if (type === 'letter') {
-      return currentCountry[0];
-    } else {
+    if (type === 'famous') {
+      addToast('info', t('hintUsed') + ' (-0.5 point)');
       return getFamousPerson(currentCountry) || 'No famous person data found';
     }
+
+    addToast('info', t('hintUsed') + ' (-1 point)');
+    return currentCountry[0];
   }, [currentCountry, currentPlayer, session, updateGameState, addToast, t]);
 
   const handleLeave = useCallback(async () => {
