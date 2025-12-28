@@ -92,15 +92,25 @@ export const translations = {
     buttonQuitDesc: 'Leave the current game session and return to home.',
 
     // Game Settings
+    // Game Settings
     createSession: 'Create Session',
     joinSession: 'Join Session',
+    soloMode: 'Solo Practice',
+    soloModeDesc: 'Practice and test your geography knowledge at your own pace',
+    multiplayerMode: 'Multiplayer',
+    multiplayerModeDesc: 'Challenge friends in real-time geography battles',
     sessionCode: 'Session Code',
     enterCode: 'Enter 6-digit code',
     participants: 'Number of Players',
     gameDuration: 'Game Duration',
+    maxDurationNote: 'Max 60 minutes',
     minutes: 'minutes',
     confirm: 'Confirm',
     cancel: 'Cancel',
+    startPractice: 'Start Practice',
+    soloPlayMode: 'Play Mode',
+    soloModeDice: 'Roll dice to get random countries',
+    soloModeClick: 'Click any country on the map to guess',
 
     // Waiting Room
     waitingRoom: 'Waiting Room',
@@ -199,6 +209,8 @@ export const translations = {
     // Features Section
     featureMultiplayer: 'Multiplayer',
     featureMultiplayerDesc: 'Challenge 2-4 friends in real-time geography battles',
+    featureSoloMode: 'Solo Practice',
+    featureSoloModeDesc: 'Practice at your own pace with dice or click-to-guess modes',
     featureInteractiveMap: 'Interactive Map',
     featureInteractiveMapDesc: 'Click, zoom, and explore the world map to find countries',
     featureLeaderboard: 'Leaderboard',
@@ -324,13 +336,22 @@ export const translations = {
     // Game Settings
     createSession: 'Créer une Session',
     joinSession: 'Rejoindre une Session',
+    soloMode: 'Mode Solo',
+    soloModeDesc: 'Entraînez-vous et testez vos connaissances en géographie à votre rythme',
+    multiplayerMode: 'Multijoueur',
+    multiplayerModeDesc: 'Défiez vos amis en batailles de géographie en temps réel',
     sessionCode: 'Code de Session',
     enterCode: 'Entrez le code à 6 chiffres',
     participants: 'Nombre de Joueurs',
     gameDuration: 'Durée de la Partie',
+    maxDurationNote: 'Max 60 minutes',
     minutes: 'minutes',
     confirm: 'Confirmer',
     cancel: 'Annuler',
+    startPractice: 'Commencer l\'Entraînement',
+    soloPlayMode: 'Mode de Jeu',
+    soloModeDice: 'Lancez le dé pour obtenir des pays aléatoires',
+    soloModeClick: 'Cliquez sur n\'importe quel pays sur la carte pour deviner',
 
     // Waiting Room
     waitingRoom: "Salle d'Attente",
@@ -429,6 +450,8 @@ export const translations = {
     // Features Section
     featureMultiplayer: 'Multijoueur',
     featureMultiplayerDesc: 'Défiez 2-4 amis en batailles de géographie en temps réel',
+    featureSoloMode: 'Mode Solo',
+    featureSoloModeDesc: 'Entraînez-vous à votre rythme avec le dé ou en cliquant pour deviner',
     featureInteractiveMap: 'Carte Interactive',
     featureInteractiveMapDesc: 'Cliquez, zoomez et explorez la carte du monde pour trouver les pays',
     featureLeaderboard: 'Classement',
@@ -554,13 +577,22 @@ export const translations = {
     // Game Settings
     createSession: 'إنشاء جلسة',
     joinSession: 'الانضمام لجلسة',
+    soloMode: 'وضع التدريب',
+    soloModeDesc: 'تدرب واختبر معرفتك الجغرافية بوتيرتك الخاصة',
+    multiplayerMode: 'متعدد اللاعبين',
+    multiplayerModeDesc: 'تحدى أصدقاءك في معارك جغرافية مباشرة',
     sessionCode: 'رمز الجلسة',
     enterCode: 'أدخل الرمز المكون من 6 أرقام',
     participants: 'عدد اللاعبين',
     gameDuration: 'مدة اللعبة',
+    maxDurationNote: 'بحد أقصى 60 دقيقة',
     minutes: 'دقائق',
     confirm: 'تأكيد',
     cancel: 'إلغاء',
+    startPractice: 'ابدأ التدريب',
+    soloPlayMode: 'طريقة اللعب',
+    soloModeDice: 'ارمِ النرد للحصول على دول عشوائية',
+    soloModeClick: 'انقر على أي دولة على الخريطة لتخمينها',
 
     // Waiting Room
     waitingRoom: 'غرفة الانتظار',
@@ -659,6 +691,8 @@ export const translations = {
     // Features Section
     featureMultiplayer: 'متعدد اللاعبين',
     featureMultiplayerDesc: 'تحدى 2-4 أصدقاء في معارك جغرافية مباشرة',
+    featureSoloMode: 'وضع التدريب',
+    featureSoloModeDesc: 'تدرب بوتيرتك الخاصة مع النرد أو بالنقر للتخمين',
     featureInteractiveMap: 'خريطة تفاعلية',
     featureInteractiveMapDesc: 'انقر وكبّر واستكشف خريطة العالم للعثور على الدول',
     featureLeaderboard: 'لوحة المتصدرين',

@@ -55,10 +55,17 @@ const GamePage = () => {
   const currentTurnState = session?.currentTurnState;
   const guessedCountries = session?.guessedCountries || [];
   const currentCountry = currentTurnState?.country || null;
+  const isSoloMode = session?.isSoloMode || false;
 
-  // Check if it's current player's turn
-  const isMyTurn = session ? players[currentTurnIndex]?.id === currentPlayer?.id : false;
+  // For solo mode, store the country clicked by the player for click-to-guess mode
+  const [soloClickedCountry, setSoloClickedCountry] = useState<string | null>(null);
+
+  // Check if it's current player's turn (always true in solo mode)
+  const isMyTurn = isSoloMode ? true : (session ? players[currentTurnIndex]?.id === currentPlayer?.id : false);
   const currentTurnPlayer = players[currentTurnIndex];
+
+  // The active country to guess - either from dice roll or solo click
+  const activeCountry = isSoloMode ? (currentCountry || soloClickedCountry) : currentCountry;
 
   // A turn is finished once an answer/skip/timeout has been recorded
   const isTurnFinished = !!currentTurnState?.submittedAnswer;
@@ -115,9 +122,11 @@ const GamePage = () => {
     }
   }, [currentTurnState?.modalOpen, isMyTurn]);
 
-  // Turn timer timeout
+  // Turn timer timeout (not used in solo mode for click-to-guess)
   useEffect(() => {
-    if (!isMyTurn || !session?.turnStartTime || !currentCountry) return;
+    if (!isMyTurn || !session?.turnStartTime || !activeCountry) return;
+    // In solo mode with click-to-guess (no dice roll), skip turn timer
+    if (isSoloMode && !currentTurnState?.diceRolled) return;
 
     const checkTimeout = () => {
       const elapsed = Math.floor((Date.now() - session.turnStartTime!) / 1000);
@@ -128,7 +137,7 @@ const GamePage = () => {
 
     const interval = setInterval(checkTimeout, 1000);
     return () => clearInterval(interval);
-  }, [isMyTurn, session?.turnStartTime, currentCountry]);
+  }, [isMyTurn, session?.turnStartTime, activeCountry, isSoloMode, currentTurnState?.diceRolled]);
 
   const handleRollDice = useCallback(async () => {
     if (!isMyTurn || isRolling || currentCountry) return;
@@ -181,8 +190,11 @@ const GamePage = () => {
     prevPlayersRef.current = players;
   }, [session?.players, currentPlayer?.id, addToast, playToastSound, t, players]);
 
-  // Auto-roll dice if not done in 3 seconds
+  // Auto-roll dice if not done in 3 seconds (disabled for solo mode)
   useEffect(() => {
+    // Skip auto-roll for solo mode - player can choose dice or click
+    if (isSoloMode) return;
+    
     if (isMyTurn && !currentCountry && !isRolling && session?.status === 'playing') {
       if (autoRollCountdown === null) {
         setAutoRollCountdown(3);
@@ -201,12 +213,25 @@ const GamePage = () => {
     } else {
       if (autoRollCountdown !== null) setAutoRollCountdown(null);
     }
-  }, [isMyTurn, currentCountry, isRolling, session?.status, autoRollCountdown, handleRollDice]);
+  }, [isMyTurn, currentCountry, isRolling, session?.status, autoRollCountdown, handleRollDice, isSoloMode]);
 
   const handleCountryClick = useCallback(async (countryName: string) => {
-    if (!isMyTurn || !currentCountry) return;
+    if (!isMyTurn) return;
+    
+    // Solo mode: click any unguessed country to guess it
+    if (isSoloMode && !activeCountry) {
+      // Check if country already guessed
+      if (guessedCountries.includes(countryName)) {
+        addToast('info', 'You already guessed this country!');
+        return;
+      }
+      setSoloClickedCountry(countryName);
+      setGuessModalOpen(true);
+      return;
+    }
 
-    if (countryName !== currentCountry) {
+    // Regular mode or dice-rolled solo: only click the highlighted country
+    if (countryName !== activeCountry) {
       return;
     }
 
@@ -218,7 +243,7 @@ const GamePage = () => {
         modalOpen: true,
       });
     }
-  }, [isMyTurn, currentCountry, currentTurnState, updateTurnState]);
+  }, [isMyTurn, activeCountry, currentTurnState, updateTurnState, isSoloMode, guessedCountries, addToast]);
 
   const moveToNextTurn = useCallback(async () => {
     const nextTurn = (currentTurnIndex + 1) % players.length;
@@ -255,13 +280,15 @@ const GamePage = () => {
   }, [isMyTurn, currentTurnState, currentCountry, guessedCountries, updateGameState, addToast, t, moveToNextTurn, playToastSound, updateTurnState]);
 
   const handleSubmitGuess = useCallback(async (guess: string) => {
-    if (!currentCountry || !currentPlayer || !isMyTurn) return;
+    // For solo click mode, use soloClickedCountry if no dice was rolled
+    const countryToGuess = isSoloMode && soloClickedCountry ? soloClickedCountry : currentCountry;
+    if (!countryToGuess || !currentPlayer || !isMyTurn) return;
 
-    const result = isCorrectGuess(guess, currentCountry);
+    const result = isCorrectGuess(guess, countryToGuess);
 
-    const nextGuessedCountries = guessedCountries.includes(currentCountry)
+    const nextGuessedCountries = guessedCountries.includes(countryToGuess)
       ? guessedCountries
-      : [...guessedCountries, currentCountry];
+      : [...guessedCountries, countryToGuess];
 
     if (currentTurnState) {
       await updateTurnState({
@@ -286,7 +313,7 @@ const GamePage = () => {
           ...currentPlayerData,
           score: currentPlayerData.score + result.points,
           countriesGuessed: result.correct
-            ? [...(currentPlayerData.countriesGuessed || []), currentCountry]
+            ? [...(currentPlayerData.countriesGuessed || []), countryToGuess]
             : currentPlayerData.countriesGuessed,
         }
       };
@@ -306,9 +333,17 @@ const GamePage = () => {
     }
 
     setGuessModalOpen(false);
+    
+    // Reset solo clicked country after submission
+    if (isSoloMode && soloClickedCountry) {
+      setSoloClickedCountry(null);
+    }
 
-    setTimeout(() => moveToNextTurn(), 2000);
-  }, [currentCountry, currentPlayer, isMyTurn, currentTurnState, updateTurnState, guessedCountries, session, playerUids, currentTurnIndex, updateGameState, addToast, t, moveToNextTurn, playToastSound]);
+    // In solo mode, don't move to next turn - player continues
+    if (!isSoloMode) {
+      setTimeout(() => moveToNextTurn(), 2000);
+    }
+  }, [activeCountry, currentPlayer, isMyTurn, currentTurnState, updateTurnState, guessedCountries, session, playerUids, currentTurnIndex, updateGameState, addToast, t, moveToNextTurn, playToastSound, isSoloMode, soloClickedCountry, currentCountry]);
 
   const handleSkip = useCallback(async () => {
     if (!isMyTurn) return;
@@ -654,9 +689,10 @@ const GamePage = () => {
         <div className="flex-1 min-h-[500px] lg:min-h-[700px]">
           <WorldMap
             guessedCountries={guessedCountries}
-            currentCountry={currentCountry || undefined}
+            currentCountry={activeCountry || undefined}
             onCountryClick={handleCountryClick}
-            disabled={!isMyTurn || !currentCountry}
+            disabled={!isMyTurn || (!activeCountry && !isSoloMode)}
+            isSoloMode={isSoloMode}
           />
         </div>
 
@@ -689,8 +725,8 @@ const GamePage = () => {
         onPlayAgain={handlePlayAgain}
       />
 
-      {/* Lone Player Overlay */}
-      {session && session.status !== 'finished' && players.length === 1 && (
+      {/* Lone Player Overlay - Not shown in solo mode */}
+      {session && session.status !== 'finished' && players.length === 1 && !isSoloMode && (
         <LonePlayerOverlay
           onQuit={handleLeave}
         />

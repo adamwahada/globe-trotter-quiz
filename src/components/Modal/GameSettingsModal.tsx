@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Users, Clock, Hash, Copy, Check } from 'lucide-react';
+import { X, Users, Clock, Hash, Copy, Check, User, Dice5, MousePointer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -20,7 +20,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
   const { addToast } = useToastContext();
   const navigate = useNavigate();
 
-  const [mode, setMode] = useState<'choose' | 'create' | 'join'>('choose');
+  const [mode, setMode] = useState<'choose' | 'solo' | 'create' | 'join'>('choose');
   const [players, setPlayers] = useState(2);
   const [duration, setDuration] = useState(30);
   const [sessionCode, setSessionCode] = useState('');
@@ -37,6 +37,18 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
       addToast('success', t('sessionCreated', { code }));
     } catch (err) {
       addToast('error', 'Failed to create session');
+    }
+  };
+
+  const handleCreateSolo = async () => {
+    try {
+      // Create solo session with 1 player and specified duration (max 60 min)
+      const code = await createSession(1, Math.min(duration, 60), true);
+      // Solo mode goes directly to game, no waiting room
+      navigate('/game');
+      onClose();
+    } catch (err) {
+      addToast('error', 'Failed to create solo session');
     }
   };
 
@@ -87,23 +99,100 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
                 {t('startGame')}
               </h2>
 
+              {/* Solo vs Multiplayer choice */}
               <div className="grid grid-cols-2 gap-4">
                 <Button
                   variant="game"
-                  className="h-32 flex-col gap-3"
-                  onClick={() => setMode('create')}
+                  className="h-36 flex-col gap-3 relative overflow-hidden group"
+                  onClick={() => setMode('solo')}
                 >
-                  <Users className="h-8 w-8" />
-                  <span className="text-lg">{t('createSession')}</span>
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <User className="h-8 w-8" />
+                  <span className="text-lg font-semibold">{t('soloMode')}</span>
+                  <span className="text-xs text-muted-foreground text-center px-2 line-clamp-2">
+                    {t('soloModeDesc')}
+                  </span>
                 </Button>
 
+                <div className="flex flex-col gap-2">
+                  <Button
+                    variant="game"
+                    className="flex-1 flex-col gap-2"
+                    onClick={() => setMode('create')}
+                  >
+                    <Users className="h-6 w-6" />
+                    <span className="text-sm">{t('createSession')}</span>
+                  </Button>
+                  <Button
+                    variant="game"
+                    className="flex-1 flex-col gap-2"
+                    onClick={() => setMode('join')}
+                  >
+                    <Hash className="h-6 w-6" />
+                    <span className="text-sm">{t('joinSession')}</span>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {mode === 'solo' && (
+            <div className="space-y-6">
+              <h2 className="text-3xl font-display text-foreground text-center">
+                {t('soloMode')}
+              </h2>
+
+              {/* Duration Selection */}
+              <div className="space-y-3">
+                <label className="flex items-center justify-between text-sm font-medium text-foreground">
+                  <span className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-primary" />
+                    {t('gameDuration')}
+                  </span>
+                  <span className="text-xs text-muted-foreground">{t('maxDurationNote')}</span>
+                </label>
+                <div className="flex gap-2">
+                  {[15, 30, 45, 60].map((mins) => (
+                    <button
+                      key={mins}
+                      onClick={() => setDuration(mins)}
+                      className={`
+                        flex-1 py-3 rounded-lg font-semibold transition-all
+                        ${duration === mins
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}
+                      `}
+                    >
+                      {mins}m
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Play mode info */}
+              <div className="bg-secondary/50 rounded-xl p-4 space-y-3">
+                <p className="text-sm font-medium text-foreground">{t('soloPlayMode')}:</p>
+                <div className="flex items-start gap-3 text-sm text-muted-foreground">
+                  <Dice5 className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                  <span>{t('soloModeDice')}</span>
+                </div>
+                <div className="flex items-start gap-3 text-sm text-muted-foreground">
+                  <MousePointer className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                  <span>{t('soloModeClick')}</span>
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <Button variant="outline" onClick={() => setMode('choose')} className="flex-1">
+                  {t('cancel')}
+                </Button>
                 <Button
-                  variant="game"
-                  className="h-32 flex-col gap-3"
-                  onClick={() => setMode('join')}
+                  variant="netflix"
+                  onClick={handleCreateSolo}
+                  className="flex-1"
+                  disabled={isLoading}
                 >
-                  <Hash className="h-8 w-8" />
-                  <span className="text-lg">{t('joinSession')}</span>
+                  {isLoading ? t('loading') : t('startPractice')}
                 </Button>
               </div>
             </div>
@@ -141,15 +230,18 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
 
               {/* Duration Selection */}
               <div className="space-y-3">
-                <label className="flex items-center gap-2 text-sm font-medium text-foreground">
-                  <Clock className="h-4 w-4 text-primary" />
-                  {t('gameDuration')}
+                <label className="flex items-center justify-between text-sm font-medium text-foreground">
+                  <span className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-primary" />
+                    {t('gameDuration')}
+                  </span>
+                  <span className="text-xs text-muted-foreground">{t('maxDurationNote')}</span>
                 </label>
                 <div className="flex gap-2">
-                  {[20, 30, 45].map((mins) => (
+                  {[20, 30, 45, 60].map((mins) => (
                     <button
                       key={mins}
-                      onClick={() => setDuration(mins)}
+                      onClick={() => setDuration(Math.min(mins, 60))}
                       className={`
                         flex-1 py-3 rounded-lg font-semibold transition-all
                         ${duration === mins
@@ -157,7 +249,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
                           : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}
                       `}
                     >
-                      {mins} {t('minutes')}
+                      {mins}m
                     </button>
                   ))}
                 </div>

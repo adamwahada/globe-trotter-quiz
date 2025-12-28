@@ -28,6 +28,7 @@ interface WorldMapProps {
   currentCountry?: string;
   onCountryClick: (countryName: string) => void;
   disabled?: boolean;
+  isSoloMode?: boolean;
 }
 
 export const WorldMap: React.FC<WorldMapProps> = ({
@@ -35,6 +36,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
   currentCountry,
   onCountryClick,
   disabled = false,
+  isSoloMode = false,
 }) => {
   const { t } = useLanguage();
   const [position, setPosition] = useState({ coordinates: [0, 20] as [number, number], zoom: 1 });
@@ -203,9 +205,11 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                 geographies.map((geo) => {
                   const countryName = geo.properties.name;
                   const normalizedGeoName = getMapCountryName(countryName);
-                  const isGuessed = normalizedGuessed.includes(normalizedGeoName);
-                  const isCurrent = normalizedCurrent === normalizedGeoName;
-                  const isClickable = !disabled && isCurrent && !isGuessed;
+                      const isGuessed = normalizedGuessed.includes(normalizedGeoName);
+                      const isCurrent = normalizedCurrent === normalizedGeoName;
+                      // In solo mode without dice roll, any unguessed country is clickable
+                      const isSoloClickable = isSoloMode && !disabled && !isGuessed && !currentCountry;
+                      const isClickable = (!disabled && isCurrent && !isGuessed) || isSoloClickable;
 
                   return (
                     <Geography
