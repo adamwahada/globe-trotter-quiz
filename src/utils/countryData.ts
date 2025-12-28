@@ -368,6 +368,31 @@ export const getMapCountryName = (name: string): string => {
   return countryMapping[name] || name;
 };
 
+// Reverse mapping: GeoJSON Name -> Game Name (for converting clicked country back to game name)
+const reverseCountryMapping: Record<string, string> = {
+  'United States of America': 'United States',
+  'Dominican Rep.': 'Dominican Republic',
+  'Dem. Rep. Congo': 'DR Congo',
+  'Central African Rep.': 'Central African Republic',
+  'S. Sudan': 'South Sudan',
+  'W. Sahara': 'Western Sahara',
+  'Eq. Guinea': 'Equatorial Guinea',
+  "Côte d'Ivoire": 'Ivory Coast',
+  'eSwatini': 'Eswatini',
+  'Bosnia and Herz.': 'Bosnia and Herzegovina',
+  'Macedonia': 'North Macedonia',
+  'Solomon Is.': 'Solomon Islands',
+  'Falkland Is.': 'Falkland Islands',
+};
+
+/**
+ * Convert a GeoJSON country name back to the game's country name.
+ * Used when clicking on a country in the map.
+ */
+export const getGameCountryName = (geoJsonName: string): string => {
+  return reverseCountryMapping[geoJsonName] || geoJsonName;
+};
+
 export const normalizeCountryName = getMapCountryName;
 
 // Get all countries

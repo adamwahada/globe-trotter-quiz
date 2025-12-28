@@ -9,7 +9,7 @@ import { GameTooltip } from '@/components/Tooltip/GameTooltip';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ZoomIn, ZoomOut, Maximize, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { getContinent, getMapCountryName } from '@/utils/countryData';
+import { getContinent, getMapCountryName, getGameCountryName } from '@/utils/countryData';
 
 const geoUrl = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
 
@@ -256,7 +256,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                     <Geography
                       key={geo.rsmKey}
                       geography={geo}
-                      onClick={() => isClickable && onCountryClick(countryName)}
+                      onClick={() => isClickable && onCountryClick(getGameCountryName(countryName))}
                       onMouseEnter={() => setHoveredCountry(countryName)}
                       onMouseLeave={() => setHoveredCountry(null)}
                       style={{
