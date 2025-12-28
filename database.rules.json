@@ -4,8 +4,8 @@
         ".write": false,
         "sessions": {
             "$sessionCode": {
-                ".read": "auth != null && (data.child('players').child(auth.uid).exists() || !data.exists())",
-                ".write": "auth != null && (!data.exists() && newData.child('creatorId').val() === auth.uid || data.child('players').child(auth.uid).exists())",
+                ".read": "auth != null && (data.child('players').child(auth.uid).exists() || !data.exists() || data.child('status').val() === 'waiting')",
+                ".write": "auth != null && (!data.exists() && newData.child('creatorId').val() === auth.uid || data.child('players').child(auth.uid).exists() || (data.child('status').val() === 'waiting' && newData.child('players').child(auth.uid).exists()))",
                 "creatorId": {
                     ".validate": "newData.isString() && newData.val().length > 0"
                 },
