@@ -378,9 +378,14 @@ export const clearUserPresence = async (uid: string): Promise<void> => {
  * Validate that the current client matches the registered session in the database.
  */
 export const validateUserPresence = async (uid: string, localSessionId: string): Promise<boolean> => {
-  if (!isFirebaseReady() || !database) return false;
+  if (!isFirebaseReady() || !database) return true; // Allow if Firebase not ready
   const userPresenceRef = ref(database, `activeSessions/${uid}`);
-  const snapshot = await get(userPresenceRef);
-  if (!snapshot.exists()) return true; // No session registered yet
-  return snapshot.val().sessionId === localSessionId;
+  try {
+    const snapshot = await get(userPresenceRef);
+    if (!snapshot.exists()) return true; // No session registered yet
+    return snapshot.val().sessionId === localSessionId;
+  } catch (error) {
+    console.error('[Presence] Validation error:', error);
+    return true; // Allow on error to avoid blocking users
+  }
 };
