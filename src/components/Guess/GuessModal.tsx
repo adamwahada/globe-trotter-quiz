@@ -123,8 +123,7 @@ export const GuessModal: React.FC<GuessModalProps> = ({
             <p className="text-xs text-muted-foreground">
               <span className="text-success font-semibold">+3</span> correct •
               <span className="text-warning font-semibold ml-2">+2</span> close •
-              <span className="text-destructive font-semibold ml-2">0</span> wrong/skip •
-              <span className="text-destructive font-semibold ml-2">-1</span> per hint
+              <span className="text-destructive font-semibold ml-2">0</span> wrong/skip
             </p>
           </div>
 
@@ -169,41 +168,53 @@ export const GuessModal: React.FC<GuessModalProps> = ({
               autoFocus
             />
 
-            {/* Hint buttons */}
-            <div className="grid grid-cols-3 gap-3">
+            {/* Hint buttons - compact icons with tooltips */}
+            <div className="flex justify-center gap-3">
               <GameTooltip content={t('tooltipHint')} position="top">
                 <Button
                   variant="outline"
+                  size="icon"
                   onClick={handleHint}
                   disabled={hintUsed}
-                  className="gap-2 py-3 text-sm font-medium hover:bg-primary/10 hover:border-primary"
+                  className={`h-12 w-12 ${hintUsed ? 'bg-warning/20 border-warning' : 'hover:bg-warning/10 hover:border-warning'}`}
                 >
-                  <Lightbulb className="h-5 w-5" />
-                  {t('useHint')} {hintUsed && '✓'}
+                  {hintUsed ? (
+                    <span className="text-warning font-bold">✓</span>
+                  ) : (
+                    <Lightbulb className="h-5 w-5 text-warning" />
+                  )}
                 </Button>
               </GameTooltip>
 
               <GameTooltip content={t('tooltipFamousPerson')} position="top">
                 <Button
                   variant="outline"
+                  size="icon"
                   onClick={handleFamousPerson}
                   disabled={famousPersonUsed}
-                  className="gap-2 py-3 text-sm font-medium hover:bg-primary/10 hover:border-primary"
+                  className={`h-12 w-12 ${famousPersonUsed ? 'bg-info/20 border-info' : 'hover:bg-info/10 hover:border-info'}`}
                 >
-                  <User className="h-5 w-5" />
-                  {t('famousPerson')} {famousPersonUsed && '✓'}
+                  {famousPersonUsed ? (
+                    <span className="text-info font-bold">✓</span>
+                  ) : (
+                    <User className="h-5 w-5 text-info" />
+                  )}
                 </Button>
               </GameTooltip>
 
-              <GameTooltip content="Show country flag" position="top">
+              <GameTooltip content={t('tooltipFlag')} position="top">
                 <Button
                   variant="outline"
+                  size="icon"
                   onClick={handleFlag}
                   disabled={flagUsed}
-                  className="gap-2 py-3 text-sm font-medium hover:bg-primary/10 hover:border-primary"
+                  className={`h-12 w-12 ${flagUsed ? 'bg-destructive/20 border-destructive' : 'hover:bg-destructive/10 hover:border-destructive'}`}
                 >
-                  <Flag className="h-5 w-5" />
-                  Flag {flagUsed && '✓'}
+                  {flagUsed ? (
+                    <span className="text-destructive font-bold">✓</span>
+                  ) : (
+                    <Flag className="h-5 w-5 text-destructive" />
+                  )}
                 </Button>
               </GameTooltip>
             </div>
