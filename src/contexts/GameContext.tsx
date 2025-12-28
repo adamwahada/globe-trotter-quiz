@@ -23,6 +23,8 @@ interface GameContextType {
     currentTurnState?: TurnState | null;
     players?: PlayersMap;
     guessedCountries?: string[];
+    correctCountries?: string[];
+    wrongCountries?: string[];
     turnStartTime?: number | null;
     isExtraTime?: boolean;
   }) => Promise<void>;

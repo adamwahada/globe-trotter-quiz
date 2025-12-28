@@ -189,8 +189,11 @@ export const updateGameState = async (
     currentTurnState?: TurnState | null;
     players?: PlayersMap;
     guessedCountries?: string[];
+    correctCountries?: string[];
+    wrongCountries?: string[];
     status?: 'waiting' | 'countdown' | 'playing' | 'finished';
     turnStartTime?: number | null;
+    isExtraTime?: boolean;
   }
 ): Promise<void> => {
   await updateSession(code, gameState);

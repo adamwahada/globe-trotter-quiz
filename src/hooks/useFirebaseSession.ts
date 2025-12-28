@@ -230,6 +230,8 @@ export const useFirebaseSession = () => {
         currentTurn: 0,
         currentTurnState: null,
         guessedCountries: [],
+        correctCountries: [],
+        wrongCountries: [],
         startTime: isSoloMode ? Date.now() : null, // Start immediately for solo
         waitingRoomStartTime: Date.now(),
         countdownStartTime: null,
@@ -414,6 +416,8 @@ export const useFirebaseSession = () => {
       currentTurnState?: TurnState | null;
       players?: PlayersMap;
       guessedCountries?: string[];
+      correctCountries?: string[];
+      wrongCountries?: string[];
       turnStartTime?: number | null;
       isExtraTime?: boolean;
     }

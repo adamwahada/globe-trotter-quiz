@@ -46,7 +46,9 @@ export interface GameSession {
   status: 'waiting' | 'countdown' | 'playing' | 'finished';
   currentTurn: number;
   currentTurnState: TurnState | null;
-  guessedCountries: string[];
+  guessedCountries: string[]; // All played countries
+  correctCountries: string[]; // Countries guessed correctly
+  wrongCountries: string[]; // Countries guessed incorrectly or skipped
   startTime: number | null;
   waitingRoomStartTime: number;
   countdownStartTime: number | null;
