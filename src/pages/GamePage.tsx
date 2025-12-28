@@ -14,6 +14,7 @@ import { CountdownOverlay } from '@/components/Countdown/CountdownOverlay';
 import { FloatingScore } from '@/components/Score/FloatingScore';
 import { LonePlayerOverlay } from '@/components/Modal/LonePlayerOverlay';
 import { InactivityWarning } from '@/components/Modal/InactivityWarning';
+import { ReconnectionBanner } from '@/components/Banner/ReconnectionBanner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useGame, TurnState, Player } from '@/contexts/GameContext';
 import { useToastContext } from '@/contexts/ToastContext';
@@ -499,6 +500,9 @@ const GamePage = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      {/* Reconnection Banner */}
+      <ReconnectionBanner />
+
       {/* Floating Score Animation */}
       {floatingScore.show && (
         <FloatingScore points={floatingScore.points} />
