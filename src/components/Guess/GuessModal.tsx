@@ -5,6 +5,11 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { GameTooltip } from '@/components/Tooltip/GameTooltip';
 import { TimerProgress } from '@/components/Timer/TimerProgress';
 
+// Hint costs
+const HINT_COST_LETTER = 1;
+const HINT_COST_FAMOUS = 0.5;
+const HINT_COST_FLAG = 1;
+
 interface GuessModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -13,6 +18,7 @@ interface GuessModalProps {
   onUseHint: (type: 'letter' | 'famous' | 'flag') => string;
   turnTimeSeconds?: number;
   turnStartTime?: number;
+  playerScore?: number;
 }
 
 export const GuessModal: React.FC<GuessModalProps> = ({
@@ -23,6 +29,7 @@ export const GuessModal: React.FC<GuessModalProps> = ({
   onUseHint,
   turnTimeSeconds = 35,
   turnStartTime,
+  playerScore = 0,
 }) => {
   const { t } = useLanguage();
   const [guess, setGuess] = useState('');
@@ -170,13 +177,13 @@ export const GuessModal: React.FC<GuessModalProps> = ({
 
             {/* Hint buttons - compact icons with tooltips */}
             <div className="flex justify-center gap-3">
-              <GameTooltip content={t('tooltipHint')} position="top">
+              <GameTooltip content={playerScore < HINT_COST_LETTER ? t('notEnoughPoints') : t('tooltipHint')} position="top">
                 <Button
                   variant="outline"
                   size="icon"
                   onClick={handleHint}
-                  disabled={hintUsed}
-                  className={`h-12 w-12 ${hintUsed ? 'bg-warning/20 border-warning' : 'hover:bg-warning/10 hover:border-warning'}`}
+                  disabled={hintUsed || playerScore < HINT_COST_LETTER}
+                  className={`h-12 w-12 ${hintUsed ? 'bg-warning/20 border-warning' : playerScore < HINT_COST_LETTER ? 'opacity-50 cursor-not-allowed' : 'hover:bg-warning/10 hover:border-warning'}`}
                 >
                   {hintUsed ? (
                     <span className="text-warning font-bold">✓</span>
@@ -186,13 +193,13 @@ export const GuessModal: React.FC<GuessModalProps> = ({
                 </Button>
               </GameTooltip>
 
-              <GameTooltip content={t('tooltipFamousPerson')} position="top">
+              <GameTooltip content={playerScore < HINT_COST_FAMOUS ? t('notEnoughPoints') : t('tooltipFamousPerson')} position="top">
                 <Button
                   variant="outline"
                   size="icon"
                   onClick={handleFamousPerson}
-                  disabled={famousPersonUsed}
-                  className={`h-12 w-12 ${famousPersonUsed ? 'bg-info/20 border-info' : 'hover:bg-info/10 hover:border-info'}`}
+                  disabled={famousPersonUsed || playerScore < HINT_COST_FAMOUS}
+                  className={`h-12 w-12 ${famousPersonUsed ? 'bg-info/20 border-info' : playerScore < HINT_COST_FAMOUS ? 'opacity-50 cursor-not-allowed' : 'hover:bg-info/10 hover:border-info'}`}
                 >
                   {famousPersonUsed ? (
                     <span className="text-info font-bold">✓</span>
@@ -202,13 +209,13 @@ export const GuessModal: React.FC<GuessModalProps> = ({
                 </Button>
               </GameTooltip>
 
-              <GameTooltip content={t('tooltipFlag')} position="top">
+              <GameTooltip content={playerScore < HINT_COST_FLAG ? t('notEnoughPoints') : t('tooltipFlag')} position="top">
                 <Button
                   variant="outline"
                   size="icon"
                   onClick={handleFlag}
-                  disabled={flagUsed}
-                  className={`h-12 w-12 ${flagUsed ? 'bg-destructive/20 border-destructive' : 'hover:bg-destructive/10 hover:border-destructive'}`}
+                  disabled={flagUsed || playerScore < HINT_COST_FLAG}
+                  className={`h-12 w-12 ${flagUsed ? 'bg-destructive/20 border-destructive' : playerScore < HINT_COST_FLAG ? 'opacity-50 cursor-not-allowed' : 'hover:bg-destructive/10 hover:border-destructive'}`}
                 >
                   {flagUsed ? (
                     <span className="text-destructive font-bold">✓</span>
