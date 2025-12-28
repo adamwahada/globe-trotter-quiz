@@ -14,6 +14,7 @@ import { useSound } from '@/contexts/SoundContext';
 import { COUNTDOWN_SECONDS, WAITING_ROOM_TIMEOUT, playersMapToArray } from '@/types/game';
 import { Player } from '@/types/game';
 import { Copy, Check, Users, Clock, Play, LogOut, Link } from 'lucide-react';
+import { kickUnreadyPlayers, clearRecoveryData } from '@/services/gameSessionService';
 
 const WaitingRoom = () => {
   const { t } = useLanguage();
@@ -83,6 +84,19 @@ const WaitingRoom = () => {
     prevPlayersRef.current = players;
   }, [session?.players, currentPlayer?.id, addToast, playToastSound, t, players]);
 
+  // Detect if current player was kicked (removed from session)
+  useEffect(() => {
+    if (session && currentPlayer?.id && session.players) {
+      const stillInSession = session.players[currentPlayer.id];
+      if (!stillInSession) {
+        // Player was removed from session (kicked)
+        addToast('error', 'You were removed from the session');
+        clearRecoveryData();
+        navigate('/');
+      }
+    }
+  }, [session?.players, currentPlayer?.id, navigate, addToast]);
+
   // Handle countdown completion
   useEffect(() => {
     if (session?.status === 'countdown' && session.countdownStartTime) {
@@ -117,6 +131,27 @@ const WaitingRoom = () => {
     await setReady(!currentPlayer?.isReady);
     if (!currentPlayer?.isReady) {
       addToast('success', 'You are ready!');
+    }
+  };
+
+  const handleTimerComplete = async () => {
+    // If current player is not ready, they get kicked
+    if (!currentPlayer?.isReady) {
+      addToast('error', 'You were removed from the session for not being ready');
+      clearRecoveryData();
+      navigate('/');
+      return;
+    }
+
+    // Host kicks unready players and starts the game
+    if (isHost && session) {
+      const kickedIds = await kickUnreadyPlayers(session.code);
+      if (kickedIds.length > 0) {
+        addToast('info', `${kickedIds.length} player(s) removed for not being ready`);
+      }
+      // Start the game with ready players
+      await startCountdown();
+      addToast('game', t('gameStarting'));
     }
   };
 
@@ -200,7 +235,7 @@ const WaitingRoom = () => {
           <TimerProgress
             totalSeconds={WAITING_ROOM_TIMEOUT}
             startTime={session.waitingRoomStartTime}
-            onComplete={handleStartGame}
+            onComplete={handleTimerComplete}
             label={t('timeRemaining')}
           />
         </div>
