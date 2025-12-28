@@ -10,6 +10,7 @@ import { useGame } from '@/contexts/GameContext';
 import { useToastContext } from '@/contexts/ToastContext';
 import { GameTooltip } from '@/components/Tooltip/GameTooltip';
 import { LonePlayerOverlay } from '@/components/Modal/LonePlayerOverlay';
+import { ReconnectionBanner } from '@/components/Banner/ReconnectionBanner';
 import { useSound } from '@/contexts/SoundContext';
 import { COUNTDOWN_SECONDS, WAITING_ROOM_TIMEOUT, playersMapToArray } from '@/types/game';
 import { Player } from '@/types/game';
@@ -188,6 +189,9 @@ const WaitingRoom = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Reconnection Banner */}
+      <ReconnectionBanner />
+
       {/* Header */}
       <Navbar
         rightContent={
