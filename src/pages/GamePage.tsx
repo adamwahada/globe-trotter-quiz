@@ -264,7 +264,10 @@ const GamePage = () => {
     if (!isMyTurn || !currentPlayer || !session) return;
 
     if (currentCountry && !guessedCountries.includes(currentCountry)) {
-      await updateGameState({ guessedCountries: [...guessedCountries, currentCountry] });
+      await updateGameState({
+        guessedCountries: [...guessedCountries, currentCountry],
+        wrongCountries: [...wrongCountries, currentCountry],
+      });
     }
 
     if (currentTurnState && currentCountry) {
@@ -306,7 +309,7 @@ const GamePage = () => {
     setGuessModalOpen(false);
 
     setTimeout(() => moveToNextTurn(), 2000);
-  }, [isMyTurn, currentTurnState, currentCountry, guessedCountries, updateGameState, addToast, t, moveToNextTurn, playToastSound, updateTurnState, session, currentPlayer, navigate]);
+  }, [isMyTurn, currentTurnState, currentCountry, guessedCountries, wrongCountries, updateGameState, addToast, t, moveToNextTurn, playToastSound, updateTurnState, session, currentPlayer, navigate]);
 
   const handleSubmitGuess = useCallback(async (guess: string) => {
     // For solo click mode, use soloClickedCountry if no dice was rolled
@@ -398,7 +401,10 @@ const GamePage = () => {
     if (!isMyTurn || !currentPlayer || !session) return;
 
     if (currentCountry && !guessedCountries.includes(currentCountry)) {
-      await updateGameState({ guessedCountries: [...guessedCountries, currentCountry] });
+      await updateGameState({
+        guessedCountries: [...guessedCountries, currentCountry],
+        wrongCountries: [...wrongCountries, currentCountry],
+      });
     }
 
     if (currentTurnState && currentCountry) {
@@ -439,7 +445,7 @@ const GamePage = () => {
     setGuessModalOpen(false);
 
     setTimeout(() => moveToNextTurn(), 2000);
-  }, [isMyTurn, currentTurnState, currentCountry, guessedCountries, updateGameState, addToast, t, moveToNextTurn, updateTurnState, session, currentPlayer, navigate, playToastSound]);
+  }, [isMyTurn, currentTurnState, currentCountry, guessedCountries, wrongCountries, updateGameState, addToast, t, moveToNextTurn, updateTurnState, session, currentPlayer, navigate, playToastSound]);
 
   const handleUseHint = useCallback((type: 'letter' | 'famous' | 'flag') => {
     // Use activeCountry which works for both dice mode and solo click mode
