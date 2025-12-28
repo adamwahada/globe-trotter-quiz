@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Lightbulb, User, Send, SkipForward, Flag } from 'lucide-react';
+import { X, Lightbulb, User, Send, SkipForward, Flag, MapPin, Music, Dribbble, Building } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { GameTooltip } from '@/components/Tooltip/GameTooltip';
@@ -9,6 +9,13 @@ import { TimerProgress } from '@/components/Timer/TimerProgress';
 const HINT_COST_LETTER = 1;
 const HINT_COST_FAMOUS = 0.5;
 const HINT_COST_FLAG = 1;
+const HINT_COST_GUIDED = 1; // Player or Singer hint
+const HINT_COST_CAPITAL = 0; // Capital costs time only
+const GUIDED_TIME_PENALTY = 5; // seconds
+const CAPITAL_TIME_PENALTY = 10; // seconds
+const MAX_GUIDED_HINTS = 2; // Maximum guided hints per round
+
+export type GuidedHintType = 'player' | 'singer' | 'capital';
 
 interface GuessModalProps {
   isOpen: boolean;
@@ -16,9 +23,11 @@ interface GuessModalProps {
   onSubmit: (guess: string) => void;
   onSkip: () => void;
   onUseHint: (type: 'letter' | 'famous' | 'flag') => string;
+  onUseGuidedHint?: (type: GuidedHintType) => { value: string; timePenalty: number } | null;
   turnTimeSeconds?: number;
   turnStartTime?: number;
   playerScore?: number;
+  hasExtendedHints?: boolean;
 }
 
 export const GuessModal: React.FC<GuessModalProps> = ({
@@ -27,9 +36,11 @@ export const GuessModal: React.FC<GuessModalProps> = ({
   onSubmit,
   onSkip,
   onUseHint,
+  onUseGuidedHint,
   turnTimeSeconds = 35,
   turnStartTime,
   playerScore = 0,
+  hasExtendedHints = false,
 }) => {
   const { t } = useLanguage();
   const [guess, setGuess] = useState('');
@@ -39,6 +50,14 @@ export const GuessModal: React.FC<GuessModalProps> = ({
   const [firstLetter, setFirstLetter] = useState('');
   const [famousPerson, setFamousPerson] = useState('');
   const [countryFlag, setCountryFlag] = useState('');
+  
+  // Guided hints state
+  const [guidedHintsUsed, setGuidedHintsUsed] = useState(0);
+  const [playerHint, setPlayerHint] = useState('');
+  const [singerHint, setSingerHint] = useState('');
+  const [capitalHint, setCapitalHint] = useState('');
+  const [timePenaltyApplied, setTimePenaltyApplied] = useState(0);
+  const [showGuidedMenu, setShowGuidedMenu] = useState(false);
 
   // Reset state when modal opens
   useEffect(() => {
@@ -50,6 +69,12 @@ export const GuessModal: React.FC<GuessModalProps> = ({
       setFirstLetter('');
       setFamousPerson('');
       setCountryFlag('');
+      setGuidedHintsUsed(0);
+      setPlayerHint('');
+      setSingerHint('');
+      setCapitalHint('');
+      setTimePenaltyApplied(0);
+      setShowGuidedMenu(false);
     }
   }, [isOpen]);
 
@@ -79,6 +104,40 @@ export const GuessModal: React.FC<GuessModalProps> = ({
     }
   };
 
+  const handleGuidedHint = (type: GuidedHintType) => {
+    if (!onUseGuidedHint || guidedHintsUsed >= MAX_GUIDED_HINTS) return;
+    
+    // Check if this specific hint was already used
+    if (type === 'player' && playerHint) return;
+    if (type === 'singer' && singerHint) return;
+    if (type === 'capital' && capitalHint) return;
+
+    const result = onUseGuidedHint(type);
+    if (result) {
+      setGuidedHintsUsed(prev => prev + 1);
+      setTimePenaltyApplied(prev => prev + result.timePenalty);
+      
+      if (type === 'player') {
+        setPlayerHint(result.value);
+      } else if (type === 'singer') {
+        setSingerHint(result.value);
+      } else if (type === 'capital') {
+        setCapitalHint(result.value);
+      }
+    }
+    setShowGuidedMenu(false);
+  };
+
+  const canUseGuidedHint = (type: GuidedHintType): boolean => {
+    if (guidedHintsUsed >= MAX_GUIDED_HINTS) return false;
+    if (type === 'player' && playerHint) return false;
+    if (type === 'singer' && singerHint) return false;
+    if (type === 'capital' && capitalHint) return false;
+    
+    const cost = type === 'capital' ? HINT_COST_CAPITAL : HINT_COST_GUIDED;
+    return playerScore >= cost;
+  };
+
   const handleSubmit = () => {
     if (guess.trim()) {
       onSubmit(guess.trim());
@@ -88,6 +147,9 @@ export const GuessModal: React.FC<GuessModalProps> = ({
   const handleSkip = () => {
     onSkip();
   };
+
+  // Calculate adjusted time for timer
+  const adjustedTurnTime = turnTimeSeconds - timePenaltyApplied;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -109,7 +171,7 @@ export const GuessModal: React.FC<GuessModalProps> = ({
           {/* Timer */}
           <div className="mb-6">
             <TimerProgress
-              totalSeconds={turnTimeSeconds}
+              totalSeconds={adjustedTurnTime}
               startTime={turnStartTime}
               onComplete={handleSkip}
               label={t('timeLeft')}
@@ -161,6 +223,31 @@ export const GuessModal: React.FC<GuessModalProps> = ({
                 />
               </div>
             )}
+
+            {/* Guided hints display */}
+            {capitalHint && (
+              <div className="bg-purple-500/20 border border-purple-500/30 rounded-lg p-3 text-center animate-fade-in">
+                <p className="text-sm text-purple-400">
+                  🏛️ {t('capital')}: <span className="font-bold">{capitalHint}</span>
+                </p>
+              </div>
+            )}
+
+            {playerHint && (
+              <div className="bg-green-500/20 border border-green-500/30 rounded-lg p-3 text-center animate-fade-in">
+                <p className="text-sm text-green-400">
+                  ⚽ {t('famousPlayer')}: <span className="font-bold">{playerHint}</span>
+                </p>
+              </div>
+            )}
+
+            {singerHint && (
+              <div className="bg-pink-500/20 border border-pink-500/30 rounded-lg p-3 text-center animate-fade-in">
+                <p className="text-sm text-pink-400">
+                  🎤 {t('famousSinger')}: <span className="font-bold">{singerHint}</span>
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Input */}
@@ -176,7 +263,7 @@ export const GuessModal: React.FC<GuessModalProps> = ({
             />
 
             {/* Hint buttons - compact icons with tooltips */}
-            <div className="flex justify-center gap-3">
+            <div className="flex justify-center gap-3 flex-wrap">
               <GameTooltip content={playerScore < HINT_COST_LETTER ? t('notEnoughPoints') : t('tooltipHint')} position="top">
                 <Button
                   variant="outline"
@@ -224,6 +311,74 @@ export const GuessModal: React.FC<GuessModalProps> = ({
                   )}
                 </Button>
               </GameTooltip>
+
+              {/* Guided Hints Button - Only show if country has extended hints */}
+              {hasExtendedHints && (
+                <div className="relative">
+                  <GameTooltip content={guidedHintsUsed >= MAX_GUIDED_HINTS ? t('maxHintsReached') : t('tooltipGuidedHints')} position="top">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setShowGuidedMenu(!showGuidedMenu)}
+                      disabled={guidedHintsUsed >= MAX_GUIDED_HINTS}
+                      className={`h-12 w-12 ${guidedHintsUsed >= MAX_GUIDED_HINTS ? 'opacity-50 cursor-not-allowed' : 'hover:bg-purple-500/10 hover:border-purple-500'}`}
+                    >
+                      <MapPin className="h-5 w-5 text-purple-400" />
+                    </Button>
+                  </GameTooltip>
+
+                  {/* Guided hints dropdown */}
+                  {showGuidedMenu && (
+                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 bg-card border border-border rounded-lg shadow-xl p-2 min-w-48 z-20 animate-fade-in">
+                      <p className="text-xs text-muted-foreground mb-2 px-2">
+                        {t('guidedHintsRemaining')}: {MAX_GUIDED_HINTS - guidedHintsUsed}
+                      </p>
+                      
+                      <button
+                        onClick={() => handleGuidedHint('capital')}
+                        disabled={!canUseGuidedHint('capital')}
+                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+                          canUseGuidedHint('capital') 
+                            ? 'hover:bg-purple-500/20 text-foreground' 
+                            : 'opacity-50 cursor-not-allowed text-muted-foreground'
+                        }`}
+                      >
+                        <Building className="h-4 w-4 text-purple-400" />
+                        <span>{t('hintCapital')}</span>
+                        <span className="ml-auto text-xs text-muted-foreground">-10s</span>
+                      </button>
+
+                      <button
+                        onClick={() => handleGuidedHint('player')}
+                        disabled={!canUseGuidedHint('player')}
+                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+                          canUseGuidedHint('player') 
+                            ? 'hover:bg-green-500/20 text-foreground' 
+                            : 'opacity-50 cursor-not-allowed text-muted-foreground'
+                        }`}
+                      >
+                        <Dribbble className="h-4 w-4 text-green-400" />
+                        <span>{t('hintPlayer')}</span>
+                        <span className="ml-auto text-xs text-muted-foreground">-1pt -5s</span>
+                      </button>
+
+                      <button
+                        onClick={() => handleGuidedHint('singer')}
+                        disabled={!canUseGuidedHint('singer')}
+                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+                          canUseGuidedHint('singer') 
+                            ? 'hover:bg-pink-500/20 text-foreground' 
+                            : 'opacity-50 cursor-not-allowed text-muted-foreground'
+                        }`}
+                      >
+                        <Music className="h-4 w-4 text-pink-400" />
+                        <span>{t('hintSinger')}</span>
+                        <span className="ml-auto text-xs text-muted-foreground">-1pt -5s</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Action buttons */}
