@@ -236,6 +236,29 @@ export const endGameSession = async (code: string): Promise<void> => {
   });
 };
 
+// Kick unready players from session (used when waiting room timer expires)
+export const kickUnreadyPlayers = async (code: string): Promise<string[]> => {
+  const session = await getSessionByCode(code);
+  if (!session || !session.players) return [];
+
+  const kickedPlayerIds: string[] = [];
+  const playerUids = Object.keys(session.players);
+
+  for (const uid of playerUids) {
+    const player = session.players[uid];
+    if (!player.isReady) {
+      kickedPlayerIds.push(uid);
+      // Remove player from session
+      if (isFirebaseReady() && database) {
+        const playerRef = ref(database, `${SESSIONS_PATH}/${code}/players/${uid}`);
+        await remove(playerRef);
+      }
+    }
+  }
+
+  return kickedPlayerIds;
+};
+
 // Update turn state (for realtime sync of turn actions)
 export const updateTurnState = async (
   code: string,
