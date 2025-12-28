@@ -367,8 +367,11 @@ const GamePage = () => {
       setSoloClickedCountry(null);
     }
 
-    // In solo mode, don't move to next turn - player continues
-    if (!isSoloMode) {
+    // In solo mode, clear turn state immediately so player can roll again
+    if (isSoloMode) {
+      await updateTurnState(null);
+    } else {
+      // In multiplayer, wait then move to next turn
       setTimeout(() => moveToNextTurn(), 2000);
     }
   }, [activeCountry, currentPlayer, isMyTurn, currentTurnState, updateTurnState, guessedCountries, session, playerUids, currentTurnIndex, updateGameState, addToast, t, moveToNextTurn, playToastSound, isSoloMode, soloClickedCountry, currentCountry]);
