@@ -9,7 +9,7 @@ import { useGame } from '@/contexts/GameContext';
 import { useToastContext } from '@/contexts/ToastContext';
 import { GameTooltip } from '@/components/Tooltip/GameTooltip';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Play, BookOpen, Trophy, Users, Target, Lightbulb, ChevronDown, Dice5, MapPin, ChevronLeft, ChevronRight, RotateCcw, User, Flag, Send, SkipForward, ZoomIn, Volume2, LogOut, BarChart3, Type, UserCircle } from 'lucide-react';
+import { Play, BookOpen, Trophy, Users, Target, Lightbulb, ChevronDown, Dice5, MapPin, ChevronLeft, ChevronRight, RotateCcw, User, Flag, Send, SkipForward, ZoomIn, Volume2, LogOut, BarChart3, Type, UserCircle, Building, Music2 } from 'lucide-react';
 import worldMapBg from '@/assets/world-map-bg.png';
 
 const Index = () => {
@@ -89,6 +89,9 @@ const Index = () => {
     { icon: Type, title: t('hintLetter'), description: t('hintLetterDesc'), cost: t('hintLetterCost'), color: 'text-warning' },
     { icon: User, title: t('hintPerson'), description: t('hintPersonDesc'), cost: t('hintPersonCost'), color: 'text-info' },
     { icon: Flag, title: t('hintFlag'), description: t('hintFlagDesc'), cost: t('hintFlagCost'), color: 'text-destructive' },
+    { icon: Building, title: t('hintCapitalTitle'), description: t('hintCapitalDesc'), cost: t('hintCapitalCost'), color: 'text-purple-400' },
+    { icon: Trophy, title: t('hintPlayerTitle'), description: t('hintPlayerDesc'), cost: t('hintPlayerCost'), color: 'text-green-400' },
+    { icon: Music2, title: t('hintSingerTitle'), description: t('hintSingerDesc'), cost: t('hintSingerCost'), color: 'text-pink-400' },
   ];
 
   const scoring = [

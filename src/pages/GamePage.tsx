@@ -508,7 +508,7 @@ const GamePage = () => {
     if (type === 'capital') {
       hintValue = getCountryCapital(countryForHint);
       timePenalty = 10; // 10 seconds penalty
-      pointCost = 0; // Capital costs only time
+      pointCost = 1; // 1 point cost
     } else if (type === 'player') {
       hintValue = getFamousPlayer(countryForHint);
       timePenalty = 5; // 5 seconds penalty
