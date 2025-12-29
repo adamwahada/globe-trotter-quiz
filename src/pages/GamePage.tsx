@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { WorldMap } from '@/components/Map/WorldMap';
 import { Dice } from '@/components/Dice/Dice';
 import { Leaderboard } from '@/components/Leaderboard/Leaderboard';
+import { RankingModal } from '@/components/Ranking/RankingModal';
 import { GuessModal } from '@/components/Guess/GuessModal';
 import { GameResults } from '@/components/Results/GameResults';
 import { TimerProgress } from '@/components/Timer/TimerProgress';
@@ -45,6 +46,7 @@ const GamePage = () => {
 
   const prevPlayersRef = useRef<Player[]>([]);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [showRankingModal, setShowRankingModal] = useState(false);
   const [guessModalOpen, setGuessModalOpen] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -650,7 +652,7 @@ const GamePage = () => {
               <Button
                 variant="icon"
                 size="icon"
-                onClick={() => setShowLeaderboard(!showLeaderboard)}
+                onClick={() => setShowRankingModal(true)}
               >
                 <Trophy className="h-5 w-5" />
               </Button>
@@ -873,6 +875,17 @@ const GamePage = () => {
         turnStartTime={session.turnStartTime || undefined}
         playerScore={currentPlayer?.score || 0}
         hasExtendedHints={hasExtendedHints(activeCountry || '')}
+        isSoloClickMode={isSoloMode && !currentTurnState?.diceRolled}
+      />
+
+      {/* Ranking Modal */}
+      <RankingModal
+        isOpen={showRankingModal}
+        onClose={() => setShowRankingModal(false)}
+        players={players}
+        currentPlayerId={currentPlayer?.id}
+        correctCountries={correctCountries}
+        wrongCountries={wrongCountries}
       />
 
       {/* Game Results */}

@@ -257,6 +257,17 @@ export const translations = {
     fairnessDesc: 'Time is up! To keep the game fair, remaining players have one last suggestion so everyone plays the same number of turns.',
     sessionConflictTitle: 'Session Conflict',
     sessionConflictDesc: 'You have been disconnected because your account is active in another tab or device.',
+    
+    // Player Stats
+    correct: 'Correct',
+    wrong: 'Wrong',
+    accuracy: 'Accuracy',
+    avgPoints: 'Avg Points',
+    countriesGuessedCorrectly: 'Countries Guessed Correctly',
+    totalTurns: 'Total Turns',
+    currentRankings: 'Current Rankings',
+    clickPlayerForStats: 'Click on a player to view their stats',
+    backToGame: 'Back to Game',
   },
 
   fr: {
@@ -515,6 +526,17 @@ export const translations = {
     fairnessDesc: 'Le temps est écoulé ! Pour garantir l\'équité, les autres joueurs ont une dernière suggestion afin que tout le monde joue le même nombre de tours.',
     sessionConflictTitle: 'Conflit de session',
     sessionConflictDesc: 'Vous avez été déconnecté car votre compte est actif dans un autre onglet ou appareil.',
+    
+    // Player Stats
+    correct: 'Correct',
+    wrong: 'Faux',
+    accuracy: 'Précision',
+    avgPoints: 'Pts Moyens',
+    countriesGuessedCorrectly: 'Pays Devinés Correctement',
+    totalTurns: 'Tours Totaux',
+    currentRankings: 'Classement Actuel',
+    clickPlayerForStats: 'Cliquez sur un joueur pour voir ses statistiques',
+    backToGame: 'Retour au Jeu',
   },
 
   ar: {
@@ -773,6 +795,17 @@ export const translations = {
     fairnessDesc: 'انتهى الوقت! لضمان عدالة اللعبة، لدى اللاعبين المتبقين اقتراح أخير حتى يلعب الجميع نفس عدد الأدوار.',
     sessionConflictTitle: 'تعارض في الجلسة',
     sessionConflictDesc: 'لقد تم فصلك لأن حسابك نشط في علامة تبويب أو جهاز آخر.',
+    
+    // Player Stats
+    correct: 'صحيح',
+    wrong: 'خطأ',
+    accuracy: 'الدقة',
+    avgPoints: 'متوسط النقاط',
+    countriesGuessedCorrectly: 'البلدان المخمنة بشكل صحيح',
+    totalTurns: 'مجموع الأدوار',
+    currentRankings: 'الترتيب الحالي',
+    clickPlayerForStats: 'انقر على لاعب لعرض إحصائياته',
+    backToGame: 'العودة للعبة',
   },
 };
 
