@@ -3,11 +3,13 @@ import { User, Settings, History, Trophy, LogOut, ChevronDown } from 'lucide-rea
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { GameTooltip } from '@/components/Tooltip/GameTooltip';
+import { GameHistoryModal } from '@/components/History/GameHistoryModal';
 
 export const UserMenu: React.FC = () => {
   const { t } = useLanguage();
   const { user, signOut } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
 
   if (!user) return null;
 
@@ -20,7 +22,7 @@ export const UserMenu: React.FC = () => {
 
   const menuItems = [
     { icon: Settings, label: t('editProfile'), action: () => {} },
-    { icon: History, label: t('gameHistory'), action: () => {} },
+    { icon: History, label: t('gameHistory'), action: () => setShowHistoryModal(true) },
     { icon: Trophy, label: t('achievements'), action: () => {} },
   ];
 
@@ -118,6 +120,11 @@ export const UserMenu: React.FC = () => {
           </div>
         </>
       )}
+
+      <GameHistoryModal 
+        isOpen={showHistoryModal} 
+        onClose={() => setShowHistoryModal(false)} 
+      />
     </div>
   );
 };

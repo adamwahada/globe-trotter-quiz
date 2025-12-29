@@ -10,10 +10,10 @@ const HINT_COST_LETTER = 1;
 const HINT_COST_FAMOUS = 0.5;
 const HINT_COST_FLAG = 1;
 const HINT_COST_GUIDED = 1; // Player or Singer hint
-const HINT_COST_CAPITAL = 0; // Capital costs time only
+const HINT_COST_CAPITAL = 1; // Capital costs 1 point + time
 const GUIDED_TIME_PENALTY = 5; // seconds
 const CAPITAL_TIME_PENALTY = 10; // seconds
-const MAX_GUIDED_HINTS = 2; // Maximum guided hints per round
+const MAX_TOTAL_HINTS = 2; // Maximum total hints per round (across ALL hint types)
 
 export type GuidedHintType = 'player' | 'singer' | 'capital';
 
@@ -54,12 +54,14 @@ export const GuessModal: React.FC<GuessModalProps> = ({
   const [countryFlag, setCountryFlag] = useState('');
   
   // Guided hints state
-  const [guidedHintsUsed, setGuidedHintsUsed] = useState(0);
   const [playerHint, setPlayerHint] = useState('');
   const [singerHint, setSingerHint] = useState('');
   const [capitalHint, setCapitalHint] = useState('');
   const [timePenaltyApplied, setTimePenaltyApplied] = useState(0);
   const [showGuidedMenu, setShowGuidedMenu] = useState(false);
+  
+  // Track total hints used across ALL types (max 2 per round)
+  const [totalHintsUsed, setTotalHintsUsed] = useState(0);
   
   // Local timer for solo click mode
   const [localStartTime, setLocalStartTime] = useState<number | null>(null);
@@ -74,7 +76,7 @@ export const GuessModal: React.FC<GuessModalProps> = ({
       setFirstLetter('');
       setFamousPerson('');
       setCountryFlag('');
-      setGuidedHintsUsed(0);
+      setTotalHintsUsed(0);
       setPlayerHint('');
       setSingerHint('');
       setCapitalHint('');
@@ -92,41 +94,62 @@ export const GuessModal: React.FC<GuessModalProps> = ({
 
   if (!isOpen) return null;
 
+  // Check if max hints reached (2 total per round)
+  const maxHintsReached = totalHintsUsed >= MAX_TOTAL_HINTS;
+
+  // Check if a specific hint can be used
+  const canUseHint = (type: 'letter' | 'famous' | 'flag' | GuidedHintType): boolean => {
+    if (maxHintsReached) return false;
+    
+    // Check if already used
+    if (type === 'letter' && hintUsed) return false;
+    if (type === 'famous' && famousPersonUsed) return false;
+    if (type === 'flag' && flagUsed) return false;
+    if (type === 'player' && playerHint) return false;
+    if (type === 'singer' && singerHint) return false;
+    if (type === 'capital' && capitalHint) return false;
+    
+    // Check cost
+    let cost = 0;
+    if (type === 'letter') cost = HINT_COST_LETTER;
+    else if (type === 'famous') cost = HINT_COST_FAMOUS;
+    else if (type === 'flag') cost = HINT_COST_FLAG;
+    else if (type === 'capital') cost = HINT_COST_CAPITAL;
+    else cost = HINT_COST_GUIDED;
+    
+    return playerScore >= cost;
+  };
+
   const handleHint = () => {
-    if (!hintUsed) {
-      const letter = onUseHint('letter');
-      setFirstLetter(letter);
-      setHintUsed(true);
-    }
+    if (!canUseHint('letter')) return;
+    const letter = onUseHint('letter');
+    setFirstLetter(letter);
+    setHintUsed(true);
+    setTotalHintsUsed(prev => prev + 1);
   };
 
   const handleFamousPerson = () => {
-    if (!famousPersonUsed) {
-      const name = onUseHint('famous');
-      setFamousPersonUsed(true);
-      setFamousPerson(name);
-    }
+    if (!canUseHint('famous')) return;
+    const name = onUseHint('famous');
+    setFamousPersonUsed(true);
+    setFamousPerson(name);
+    setTotalHintsUsed(prev => prev + 1);
   };
 
   const handleFlag = () => {
-    if (!flagUsed) {
-      const flag = onUseHint('flag');
-      setFlagUsed(true);
-      setCountryFlag(flag);
-    }
+    if (!canUseHint('flag')) return;
+    const flag = onUseHint('flag');
+    setFlagUsed(true);
+    setCountryFlag(flag);
+    setTotalHintsUsed(prev => prev + 1);
   };
 
   const handleGuidedHint = (type: GuidedHintType) => {
-    if (!onUseGuidedHint || guidedHintsUsed >= MAX_GUIDED_HINTS) return;
-    
-    // Check if this specific hint was already used
-    if (type === 'player' && playerHint) return;
-    if (type === 'singer' && singerHint) return;
-    if (type === 'capital' && capitalHint) return;
+    if (!onUseGuidedHint || !canUseHint(type)) return;
 
     const result = onUseGuidedHint(type);
     if (result) {
-      setGuidedHintsUsed(prev => prev + 1);
+      setTotalHintsUsed(prev => prev + 1);
       setTimePenaltyApplied(prev => prev + result.timePenalty);
       
       if (type === 'player') {
@@ -138,16 +161,6 @@ export const GuessModal: React.FC<GuessModalProps> = ({
       }
     }
     setShowGuidedMenu(false);
-  };
-
-  const canUseGuidedHint = (type: GuidedHintType): boolean => {
-    if (guidedHintsUsed >= MAX_GUIDED_HINTS) return false;
-    if (type === 'player' && playerHint) return false;
-    if (type === 'singer' && singerHint) return false;
-    if (type === 'capital' && capitalHint) return false;
-    
-    const cost = type === 'capital' ? HINT_COST_CAPITAL : HINT_COST_GUIDED;
-    return playerScore >= cost;
   };
 
   const handleSubmit = () => {
@@ -283,15 +296,22 @@ export const GuessModal: React.FC<GuessModalProps> = ({
               autoFocus
             />
 
+            {/* Hints remaining indicator */}
+            {totalHintsUsed > 0 && (
+              <p className="text-xs text-muted-foreground text-center">
+                {t('hintsRemaining')}: {MAX_TOTAL_HINTS - totalHintsUsed}/{MAX_TOTAL_HINTS}
+              </p>
+            )}
+
             {/* Hint buttons - compact icons with tooltips */}
             <div className="flex justify-center gap-3 flex-wrap">
-              <GameTooltip content={playerScore < HINT_COST_LETTER ? t('notEnoughPoints') : t('tooltipHint')} position="top">
+              <GameTooltip content={maxHintsReached ? t('maxHintsReached') : (!canUseHint('letter') ? t('notEnoughPoints') : t('tooltipHint'))} position="top">
                 <Button
                   variant="outline"
                   size="icon"
                   onClick={handleHint}
-                  disabled={hintUsed || playerScore < HINT_COST_LETTER}
-                  className={`h-12 w-12 ${hintUsed ? 'bg-warning/20 border-warning' : playerScore < HINT_COST_LETTER ? 'opacity-50 cursor-not-allowed' : 'hover:bg-warning/10 hover:border-warning'}`}
+                  disabled={!canUseHint('letter')}
+                  className={`h-12 w-12 ${hintUsed ? 'bg-warning/20 border-warning' : !canUseHint('letter') ? 'opacity-50 cursor-not-allowed' : 'hover:bg-warning/10 hover:border-warning'}`}
                 >
                   {hintUsed ? (
                     <span className="text-warning font-bold">✓</span>
@@ -301,13 +321,13 @@ export const GuessModal: React.FC<GuessModalProps> = ({
                 </Button>
               </GameTooltip>
 
-              <GameTooltip content={playerScore < HINT_COST_FAMOUS ? t('notEnoughPoints') : t('tooltipFamousPerson')} position="top">
+              <GameTooltip content={maxHintsReached ? t('maxHintsReached') : (!canUseHint('famous') ? t('notEnoughPoints') : t('tooltipFamousPerson'))} position="top">
                 <Button
                   variant="outline"
                   size="icon"
                   onClick={handleFamousPerson}
-                  disabled={famousPersonUsed || playerScore < HINT_COST_FAMOUS}
-                  className={`h-12 w-12 ${famousPersonUsed ? 'bg-info/20 border-info' : playerScore < HINT_COST_FAMOUS ? 'opacity-50 cursor-not-allowed' : 'hover:bg-info/10 hover:border-info'}`}
+                  disabled={!canUseHint('famous')}
+                  className={`h-12 w-12 ${famousPersonUsed ? 'bg-info/20 border-info' : !canUseHint('famous') ? 'opacity-50 cursor-not-allowed' : 'hover:bg-info/10 hover:border-info'}`}
                 >
                   {famousPersonUsed ? (
                     <span className="text-info font-bold">✓</span>
@@ -317,13 +337,13 @@ export const GuessModal: React.FC<GuessModalProps> = ({
                 </Button>
               </GameTooltip>
 
-              <GameTooltip content={playerScore < HINT_COST_FLAG ? t('notEnoughPoints') : t('tooltipFlag')} position="top">
+              <GameTooltip content={maxHintsReached ? t('maxHintsReached') : (!canUseHint('flag') ? t('notEnoughPoints') : t('tooltipFlag'))} position="top">
                 <Button
                   variant="outline"
                   size="icon"
                   onClick={handleFlag}
-                  disabled={flagUsed || playerScore < HINT_COST_FLAG}
-                  className={`h-12 w-12 ${flagUsed ? 'bg-destructive/20 border-destructive' : playerScore < HINT_COST_FLAG ? 'opacity-50 cursor-not-allowed' : 'hover:bg-destructive/10 hover:border-destructive'}`}
+                  disabled={!canUseHint('flag')}
+                  className={`h-12 w-12 ${flagUsed ? 'bg-destructive/20 border-destructive' : !canUseHint('flag') ? 'opacity-50 cursor-not-allowed' : 'hover:bg-destructive/10 hover:border-destructive'}`}
                 >
                   {flagUsed ? (
                     <span className="text-destructive font-bold">✓</span>
@@ -336,13 +356,13 @@ export const GuessModal: React.FC<GuessModalProps> = ({
               {/* Guided Hints Button - Only show if country has extended hints */}
               {hasExtendedHints && (
                 <div className="relative">
-                  <GameTooltip content={guidedHintsUsed >= MAX_GUIDED_HINTS ? t('maxHintsReached') : t('tooltipGuidedHints')} position="top">
+                  <GameTooltip content={maxHintsReached ? t('maxHintsReached') : t('tooltipGuidedHints')} position="top">
                     <Button
                       variant="outline"
                       size="icon"
                       onClick={() => setShowGuidedMenu(!showGuidedMenu)}
-                      disabled={guidedHintsUsed >= MAX_GUIDED_HINTS}
-                      className={`h-12 w-12 ${guidedHintsUsed >= MAX_GUIDED_HINTS ? 'opacity-50 cursor-not-allowed' : 'hover:bg-purple-500/10 hover:border-purple-500'}`}
+                      disabled={maxHintsReached}
+                      className={`h-12 w-12 ${maxHintsReached ? 'opacity-50 cursor-not-allowed' : 'hover:bg-purple-500/10 hover:border-purple-500'}`}
                     >
                       <MapPin className="h-5 w-5 text-purple-400" />
                     </Button>
@@ -352,28 +372,28 @@ export const GuessModal: React.FC<GuessModalProps> = ({
                   {showGuidedMenu && (
                     <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 bg-card border border-border rounded-lg shadow-xl p-2 min-w-48 z-20 animate-fade-in">
                       <p className="text-xs text-muted-foreground mb-2 px-2">
-                        {t('guidedHintsRemaining')}: {MAX_GUIDED_HINTS - guidedHintsUsed}
+                        {t('hintsRemaining')}: {MAX_TOTAL_HINTS - totalHintsUsed}
                       </p>
                       
                       <button
                         onClick={() => handleGuidedHint('capital')}
-                        disabled={!canUseGuidedHint('capital')}
+                        disabled={!canUseHint('capital')}
                         className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
-                          canUseGuidedHint('capital') 
+                          canUseHint('capital') 
                             ? 'hover:bg-purple-500/20 text-foreground' 
                             : 'opacity-50 cursor-not-allowed text-muted-foreground'
                         }`}
                       >
                         <Building className="h-4 w-4 text-purple-400" />
                         <span>{t('hintCapital')}</span>
-                        <span className="ml-auto text-xs text-muted-foreground">-10s</span>
+                        <span className="ml-auto text-xs text-muted-foreground">-1pt -10s</span>
                       </button>
 
                       <button
                         onClick={() => handleGuidedHint('player')}
-                        disabled={!canUseGuidedHint('player')}
+                        disabled={!canUseHint('player')}
                         className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
-                          canUseGuidedHint('player') 
+                          canUseHint('player') 
                             ? 'hover:bg-green-500/20 text-foreground' 
                             : 'opacity-50 cursor-not-allowed text-muted-foreground'
                         }`}
@@ -385,9 +405,9 @@ export const GuessModal: React.FC<GuessModalProps> = ({
 
                       <button
                         onClick={() => handleGuidedHint('singer')}
-                        disabled={!canUseGuidedHint('singer')}
+                        disabled={!canUseHint('singer')}
                         className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
-                          canUseGuidedHint('singer') 
+                          canUseHint('singer') 
                             ? 'hover:bg-pink-500/20 text-foreground' 
                             : 'opacity-50 cursor-not-allowed text-muted-foreground'
                         }`}

@@ -268,6 +268,27 @@ export const translations = {
     currentRankings: 'Current Rankings',
     clickPlayerForStats: 'Click on a player to view their stats',
     backToGame: 'Back to Game',
+    
+    // Game History
+    noGamesYet: 'No games played yet',
+    startPlayingToSeeHistory: 'Start playing to see your game history',
+    playersCount: 'players',
+    turnsCount: 'Turns',
+    minutesShort: 'min',
+    soloModeShort: 'Solo',
+    hintsRemaining: 'Hints remaining',
+    
+    // New Hints
+    hintCapitalTitle: 'Capital City',
+    hintCapitalDesc: 'Reveals the capital city of the country',
+    hintCapitalCost: '-1 point & -10 seconds',
+    hintPlayerTitle: 'Famous Player',
+    hintPlayerDesc: 'Shows a famous athlete from this country',
+    hintPlayerCost: '-1 point & -5 seconds',
+    hintSingerTitle: 'Famous Singer',
+    hintSingerDesc: 'Shows a famous singer/artist from this country',
+    hintSingerCost: '-1 point & -5 seconds',
+    maxHintsPerTurn: 'Max 2 hints per turn',
   },
 
   fr: {
@@ -537,6 +558,27 @@ export const translations = {
     currentRankings: 'Classement Actuel',
     clickPlayerForStats: 'Cliquez sur un joueur pour voir ses statistiques',
     backToGame: 'Retour au Jeu',
+    
+    // Game History
+    noGamesYet: 'Aucune partie jouée',
+    startPlayingToSeeHistory: 'Commencez à jouer pour voir votre historique',
+    playersCount: 'joueurs',
+    turnsCount: 'Tours',
+    minutesShort: 'min',
+    soloModeShort: 'Solo',
+    hintsRemaining: 'Indices restants',
+    
+    // New Hints
+    hintCapitalTitle: 'Capitale',
+    hintCapitalDesc: 'Révèle la capitale du pays',
+    hintCapitalCost: '-1 point & -10 secondes',
+    hintPlayerTitle: 'Joueur Célèbre',
+    hintPlayerDesc: 'Montre un athlète célèbre de ce pays',
+    hintPlayerCost: '-1 point & -5 secondes',
+    hintSingerTitle: 'Chanteur Célèbre',
+    hintSingerDesc: 'Montre un chanteur/artiste célèbre de ce pays',
+    hintSingerCost: '-1 point & -5 secondes',
+    maxHintsPerTurn: 'Max 2 indices par tour',
   },
 
   ar: {
@@ -806,6 +848,27 @@ export const translations = {
     currentRankings: 'الترتيب الحالي',
     clickPlayerForStats: 'انقر على لاعب لعرض إحصائياته',
     backToGame: 'العودة للعبة',
+    
+    // Game History
+    noGamesYet: 'لم تُلعب أي مباريات بعد',
+    startPlayingToSeeHistory: 'ابدأ اللعب لرؤية سجل المباريات',
+    playersCount: 'لاعبين',
+    turnsCount: 'أدوار',
+    minutesShort: 'دقيقة',
+    soloModeShort: 'فردي',
+    hintsRemaining: 'التلميحات المتبقية',
+    
+    // New Hints
+    hintCapitalTitle: 'العاصمة',
+    hintCapitalDesc: 'يكشف عاصمة الدولة',
+    hintCapitalCost: '-1 نقطة & -10 ثوانٍ',
+    hintPlayerTitle: 'لاعب مشهور',
+    hintPlayerDesc: 'يُظهر رياضياً مشهوراً من هذه الدولة',
+    hintPlayerCost: '-1 نقطة & -5 ثوانٍ',
+    hintSingerTitle: 'مغني مشهور',
+    hintSingerDesc: 'يُظهر مغنياً/فناناً مشهوراً من هذه الدولة',
+    hintSingerCost: '-1 نقطة & -5 ثوانٍ',
+    maxHintsPerTurn: 'حد أقصى 2 تلميحات لكل دور',
   },
 };
 

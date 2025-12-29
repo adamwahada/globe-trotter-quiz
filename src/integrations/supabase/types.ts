@@ -14,7 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      game_history: {
+        Row: {
+          countries_correct: number
+          countries_wrong: number
+          created_at: string
+          game_duration_minutes: number
+          id: string
+          is_solo_mode: boolean
+          is_winner: boolean
+          player_count: number
+          score: number
+          session_code: string
+          total_turns: number
+          user_id: string
+        }
+        Insert: {
+          countries_correct?: number
+          countries_wrong?: number
+          created_at?: string
+          game_duration_minutes?: number
+          id?: string
+          is_solo_mode?: boolean
+          is_winner?: boolean
+          player_count?: number
+          score?: number
+          session_code: string
+          total_turns?: number
+          user_id: string
+        }
+        Update: {
+          countries_correct?: number
+          countries_wrong?: number
+          created_at?: string
+          game_duration_minutes?: number
+          id?: string
+          is_solo_mode?: boolean
+          is_winner?: boolean
+          player_count?: number
+          score?: number
+          session_code?: string
+          total_turns?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
