@@ -28,6 +28,7 @@ interface GuessModalProps {
   turnStartTime?: number;
   playerScore?: number;
   hasExtendedHints?: boolean;
+  isSoloClickMode?: boolean; // For solo mode without dice roll
 }
 
 export const GuessModal: React.FC<GuessModalProps> = ({
@@ -41,6 +42,7 @@ export const GuessModal: React.FC<GuessModalProps> = ({
   turnStartTime,
   playerScore = 0,
   hasExtendedHints = false,
+  isSoloClickMode = false,
 }) => {
   const { t } = useLanguage();
   const [guess, setGuess] = useState('');
@@ -58,8 +60,11 @@ export const GuessModal: React.FC<GuessModalProps> = ({
   const [capitalHint, setCapitalHint] = useState('');
   const [timePenaltyApplied, setTimePenaltyApplied] = useState(0);
   const [showGuidedMenu, setShowGuidedMenu] = useState(false);
+  
+  // Local timer for solo click mode
+  const [localStartTime, setLocalStartTime] = useState<number | null>(null);
 
-  // Reset state when modal opens
+  // Reset state when modal opens and set local start time for solo click mode
   useEffect(() => {
     if (isOpen) {
       setGuess('');
@@ -75,8 +80,15 @@ export const GuessModal: React.FC<GuessModalProps> = ({
       setCapitalHint('');
       setTimePenaltyApplied(0);
       setShowGuidedMenu(false);
+      
+      // Set local start time for solo click mode (when no turnStartTime is provided)
+      if (isSoloClickMode && !turnStartTime) {
+        setLocalStartTime(Date.now());
+      } else {
+        setLocalStartTime(null);
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, isSoloClickMode, turnStartTime]);
 
   if (!isOpen) return null;
 
@@ -150,6 +162,14 @@ export const GuessModal: React.FC<GuessModalProps> = ({
 
   // Calculate adjusted time for timer
   const adjustedTurnTime = turnTimeSeconds - timePenaltyApplied;
+  
+  // Use local start time for solo click mode if no turnStartTime provided
+  const effectiveStartTime = isSoloClickMode && localStartTime ? localStartTime : turnStartTime;
+  
+  // Adjust local start time when time penalty is applied
+  const adjustedStartTime = effectiveStartTime 
+    ? effectiveStartTime - (timePenaltyApplied * 1000) 
+    : undefined;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -171,11 +191,12 @@ export const GuessModal: React.FC<GuessModalProps> = ({
           {/* Timer */}
           <div className="mb-6">
             <TimerProgress
-              totalSeconds={adjustedTurnTime}
-              startTime={turnStartTime}
+              totalSeconds={turnTimeSeconds}
+              startTime={adjustedStartTime}
               onComplete={handleSkip}
               label={t('timeLeft')}
               enableWarningSound={true}
+              isActive={isOpen}
             />
           </div>
 
