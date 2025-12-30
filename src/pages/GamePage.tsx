@@ -27,6 +27,7 @@ import { GuidedHintType } from '@/components/Guess/GuessModal';
 import { TURN_TIME_SECONDS, COUNTDOWN_SECONDS, playersMapToArray, PlayersMap } from '@/types/game';
 import { Trophy, LogOut, Volume2, VolumeX, Users, Clock } from 'lucide-react';
 import { removePlayerFromSession, clearRecoveryData } from '@/services/gameSessionService';
+import { supabase } from '@/integrations/supabase/client';
 
 const GamePage = () => {
   const { t } = useLanguage();
@@ -569,8 +570,44 @@ const GamePage = () => {
     }
 
     await endGame();
+
+    // Save game results to Supabase for each player
+    try {
+      const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
+      const winnerScore = sortedPlayers[0]?.score || 0;
+      
+      // Get correct and wrong counts for each player based on their countriesGuessed
+      const savePromises = players.map(async (player) => {
+        // Count how many of this player's guessed countries are in correctCountries vs wrongCountries
+        const playerCorrect = player.countriesGuessed.filter(c => correctCountries.includes(c)).length;
+        const playerWrong = player.countriesGuessed.filter(c => wrongCountries.includes(c)).length;
+        
+        const { error } = await supabase.from('game_history').insert({
+          user_id: player.id,
+          session_code: session.code,
+          score: player.score,
+          countries_correct: playerCorrect,
+          countries_wrong: playerWrong,
+          total_turns: player.turnsPlayed,
+          is_winner: player.score === winnerScore && winnerScore > 0,
+          player_count: players.length,
+          game_duration_minutes: session.duration,
+          is_solo_mode: session.isSoloMode || false,
+        });
+        
+        if (error) {
+          console.error('Failed to save game history for player:', player.id, error);
+        }
+      });
+      
+      await Promise.all(savePromises);
+      console.log('Game history saved successfully');
+    } catch (err) {
+      console.error('Error saving game history:', err);
+    }
+
     setShowResults(true);
-  }, [session, players, endGame, updateGameState, addToast, t, playToastSound]);
+  }, [session, players, endGame, updateGameState, addToast, t, playToastSound, correctCountries, wrongCountries]);
 
   const handlePlayAgain = useCallback(async () => {
     setShowResults(false);
