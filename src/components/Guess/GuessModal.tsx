@@ -250,11 +250,22 @@ export const GuessModal: React.FC<GuessModalProps> = ({
 
             {countryFlag && (
               <div className="bg-warning/20 border border-warning/30 rounded-lg p-4 text-center animate-fade-in">
-                <img
-                  src={countryFlag}
-                  alt="Country Flag"
-                  className="w-32 h-auto mx-auto rounded shadow-lg"
-                />
+                {countryFlag.startsWith('http') ? (
+                  <img
+                    src={countryFlag}
+                    alt="Country flag"
+                    className="w-32 h-auto mx-auto rounded shadow-lg"
+                    onError={() => setCountryFlag('🏳️')}
+                  />
+                ) : (
+                  <div
+                    className="text-6xl leading-none"
+                    aria-label="Country flag"
+                    role="img"
+                  >
+                    {countryFlag}
+                  </div>
+                )}
               </div>
             )}
 
