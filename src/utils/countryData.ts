@@ -213,16 +213,42 @@ export const countryIsoCodes: Record<string, string> = {
   'Vatican City': 'VA', 'Venezuela': 'VE', 'Vietnam': 'VN', 'Yemen': 'YE', 'Zambia': 'ZM', 'Zimbabwe': 'ZW',
 };
 
-// Get flag image URL for a country (uses flagcdn.com for reliable display)
-export const getCountryFlagUrl = (country: string): string => {
-  const isoCode = countryIsoCodes[country];
-  if (!isoCode) return '';
-  return `https://flagcdn.com/w160/${isoCode.toLowerCase()}.png`;
+// Normalize country names for flag lookup (handles GeoJSON aliases and common variants)
+export const normalizeCountryNameForFlag = (name: string): string => {
+  const trimmed = name.trim();
+
+  // If we receive a GeoJSON map name, convert it back to the game's country name
+  const fromGeo = reverseCountryMapping[trimmed];
+  if (fromGeo) return fromGeo;
+
+  // Common variants used in other datasets
+  const variants: Record<string, string> = {
+    "Côte d'Ivoire": 'Ivory Coast',
+    "Cote d'Ivoire": 'Ivory Coast',
+    'eSwatini': 'Eswatini',
+    'Democratic Republic of Congo': 'DR Congo',
+    'Republic of the Congo': 'Congo',
+    'Congo Republic': 'Congo',
+    'Congo, Republic of the': 'Congo',
+    'Congo, Democratic Republic of the': 'DR Congo',
+  };
+
+  return variants[trimmed] || trimmed;
 };
 
-// Get flag for a country - returns the URL for image display
+const isoToFlagEmoji = (isoCode: string): string => {
+  const iso = isoCode.trim().toUpperCase();
+  if (!/^[A-Z]{2}$/.test(iso)) return '🏳️';
+  const [a, b] = iso;
+  return String.fromCodePoint(127397 + a.charCodeAt(0), 127397 + b.charCodeAt(0));
+};
+
+// Get flag for a country.
+// We return an emoji flag instead of a remote image URL to guarantee it always renders.
 export const getCountryFlag = (country: string): string => {
-  return getCountryFlagUrl(country);
+  const normalized = normalizeCountryNameForFlag(country);
+  const isoCode = countryIsoCodes[normalized] || countryIsoCodes[country];
+  return isoCode ? isoToFlagEmoji(isoCode) : '🏳️';
 };
 
 export const countryContinent: Record<string, string> = {
