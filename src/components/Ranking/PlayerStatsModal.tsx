@@ -23,14 +23,18 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
 
   if (!isOpen || !player) return null;
 
-  // Filter countries guessed by this player
-  const playerCorrectCountries = player.countriesGuessed || [];
+  // Get all countries this player guessed
+  const allPlayerGuesses = player.countriesGuessed || [];
   const playerTotalGuesses = player.turnsPlayed || 0;
-  const playerWrongGuesses = playerTotalGuesses - playerCorrectCountries.length;
   
-  // Calculate accuracy
-  const accuracy = playerTotalGuesses > 0 
-    ? Math.round((playerCorrectCountries.length / playerTotalGuesses) * 100) 
+  // Filter to get correct and wrong guesses by cross-referencing with session data
+  const playerCorrectCountries = allPlayerGuesses.filter(c => correctCountries.includes(c));
+  const playerWrongCountries = allPlayerGuesses.filter(c => wrongCountries.includes(c));
+  
+  // Calculate accuracy based on countries guessed correctly vs total guesses
+  const totalAnswered = playerCorrectCountries.length + playerWrongCountries.length;
+  const accuracy = totalAnswered > 0 
+    ? Math.round((playerCorrectCountries.length / totalAnswered) * 100) 
     : 0;
 
   // Average points per turn
@@ -69,7 +73,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
             </div>
             <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 text-center">
               <XCircle className="h-5 w-5 text-destructive mx-auto mb-1" />
-              <p className="text-2xl font-display text-destructive">{playerWrongGuesses}</p>
+              <p className="text-2xl font-display text-destructive">{playerWrongCountries.length}</p>
               <p className="text-xs text-muted-foreground">{t('wrong')}</p>
             </div>
             <div className="bg-primary/10 border border-primary/30 rounded-lg p-3 text-center">
