@@ -513,6 +513,12 @@ export const getCountryHintData = (country: string): CountryHint | null => {
   return countryHintsMap[country] || null;
 };
 
+// Get ISO code for a country (used for flag rendering)
+export const getCountryIsoCode = (country: string): string | null => {
+  const hint = countryHintsMap[country];
+  return hint ? hint.iso_code : null;
+};
+
 // Get capital for a country
 export const getCountryCapital = (country: string): string | null => {
   const hint = countryHintsMap[country];

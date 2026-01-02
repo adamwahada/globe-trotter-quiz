@@ -236,19 +236,24 @@ export const normalizeCountryNameForFlag = (name: string): string => {
   return variants[trimmed] || trimmed;
 };
 
-const isoToFlagEmoji = (isoCode: string): string => {
-  const iso = isoCode.trim().toUpperCase();
-  if (!/^[A-Z]{2}$/.test(iso)) return '🏳️';
-  const [a, b] = iso;
-  return String.fromCodePoint(127397 + a.charCodeAt(0), 127397 + b.charCodeAt(0));
-};
-
-// Get flag for a country.
-// We return an emoji flag instead of a remote image URL to guarantee it always renders.
+// Get flag image URL for a country (uses flagcdn.com)
 export const getCountryFlag = (country: string): string => {
   const normalized = normalizeCountryNameForFlag(country);
-  const isoCode = countryIsoCodes[normalized] || countryIsoCodes[country];
-  return isoCode ? isoToFlagEmoji(isoCode) : '🏳️';
+
+  // Prefer this file's ISO map, then fall back to the hints ISO map (more complete).
+  // (Imported lazily to avoid circular deps issues in the future.)
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { getCountryIsoCode } = require('./countryHints') as typeof import('./countryHints');
+
+  const isoCode =
+    countryIsoCodes[normalized] ||
+    countryIsoCodes[country] ||
+    getCountryIsoCode(normalized) ||
+    getCountryIsoCode(country);
+
+  // If we still can't resolve, show UN flag rather than a letter.
+  const iso = (isoCode || 'UN').trim().toLowerCase();
+  return `https://flagcdn.com/w160/${iso}.png`;
 };
 
 export const countryContinent: Record<string, string> = {
