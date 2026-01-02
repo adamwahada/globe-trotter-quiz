@@ -21,7 +21,7 @@ import { useGame, TurnState, Player } from '@/contexts/GameContext';
 import { useToastContext } from '@/contexts/ToastContext';
 import { useSound } from '@/contexts/SoundContext';
 import { isCorrectGuess } from '@/utils/scoring';
-import { getRandomUnplayedCountry, getFamousPerson, getMapCountryName, getCountryFlag, preloadCountryFlag } from '@/utils/countryData';
+import { getRandomUnplayedCountry, getFamousPerson, getMapCountryName, getCountryFlag, preloadCountryFlag, preloadAllCountryFlags } from '@/utils/countryData';
 import { hasExtendedHints, getFamousPlayer, getFamousSinger, getCountryCapital } from '@/utils/countryHints';
 import { GuidedHintType } from '@/components/Guess/GuessModal';
 import { TURN_TIME_SECONDS, COUNTDOWN_SECONDS, playersMapToArray, PlayersMap } from '@/types/game';
@@ -114,6 +114,13 @@ const GamePage = () => {
       }
     }
   }, [session, currentPlayer, startGame]);
+
+  // Preload all country flags when game starts
+  useEffect(() => {
+    if (session?.status === 'playing') {
+      preloadAllCountryFlags();
+    }
+  }, [session?.status]);
 
   // Show toast notifications for turn changes
   useEffect(() => {

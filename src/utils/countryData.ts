@@ -252,6 +252,17 @@ export const preloadCountryFlag = (country: string): void => {
   flagCache.add(url);
 };
 
+/**
+ * Preload all country flags for zero latency during the entire game.
+ * Call this when the game starts.
+ */
+export const preloadAllCountryFlags = (): void => {
+  const allCountries = Object.keys(countryIsoCodes);
+  allCountries.forEach((country) => {
+    preloadCountryFlag(country);
+  });
+};
+
 // Get flag image URL for a country (uses flagcdn.com)
 export const getCountryFlag = (country: string): string => {
   const normalized = normalizeCountryNameForFlag(country);
