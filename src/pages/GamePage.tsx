@@ -461,7 +461,7 @@ const GamePage = () => {
     if (!session.players[currentPlayerUid]) return '';
 
     const currentPlayerData = session.players[currentPlayerUid];
-    
+
     // Famous person hint costs 0.5 points, others cost 1 point
     const pointCost = type === 'famous' ? 0.5 : 1;
     const newScore = Math.max(0, currentPlayerData.score - pointCost);
@@ -474,10 +474,17 @@ const GamePage = () => {
       }
     };
 
-    if (type === 'flag' && session.turnStartTime) {
-      const newTurnStartTime = session.turnStartTime - 10000;
-      updateGameState({ players: updatedPlayers, turnStartTime: newTurnStartTime });
-      addToast('info', t('hintUsed') + ' (-1 point, -10 seconds)');
+    // Apply flag time penalty when we have a shared turnStartTime; otherwise just charge points.
+    if (type === 'flag') {
+      if (session.turnStartTime) {
+        const newTurnStartTime = session.turnStartTime - 10000;
+        updateGameState({ players: updatedPlayers, turnStartTime: newTurnStartTime });
+        addToast('info', t('hintUsed') + ' (-1 point, -10 seconds)');
+      } else {
+        updateGameState({ players: updatedPlayers });
+        addToast('info', t('hintUsed') + ' (-1 point)');
+      }
+
       return getCountryFlag(countryForHint);
     }
 
@@ -488,8 +495,9 @@ const GamePage = () => {
       return getFamousPerson(countryForHint) || 'No famous person data found';
     }
 
+    // Letter hint
     addToast('info', t('hintUsed') + ' (-1 point)');
-    return countryForHint[0];
+    return countryForHint[0] || '';
   }, [currentCountry, currentPlayer, session, updateGameState, addToast, t, isSoloMode, soloClickedCountry]);
 
   // Handle guided hints (player, singer, capital)
