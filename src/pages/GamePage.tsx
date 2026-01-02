@@ -214,7 +214,7 @@ const GamePage = () => {
   useEffect(() => {
     // Skip auto-roll for solo mode - player can choose dice or click
     if (isSoloMode) return;
-    
+
     if (isMyTurn && !currentCountry && !isRolling && session?.status === 'playing') {
       if (autoRollCountdown === null) {
         setAutoRollCountdown(3);
@@ -237,7 +237,7 @@ const GamePage = () => {
 
   const handleCountryClick = useCallback(async (countryName: string) => {
     if (!isMyTurn) return;
-    
+
     // Solo mode: click any unguessed country to guess it
     if (isSoloMode && !activeCountry) {
       // Check if country already guessed
@@ -375,7 +375,7 @@ const GamePage = () => {
       const newCountriesGuessed = result.correct
         ? [...existingCountriesGuessed, countryToGuess]
         : existingCountriesGuessed;
-      
+
       const updatedPlayers: PlayersMap = {
         ...session.players,
         [currentPlayerUid]: {
@@ -401,7 +401,7 @@ const GamePage = () => {
       addToast('error', t('wrongGuess', { player: '' }));
       playToastSound('error');
     }
-    
+
     // Reset solo clicked country after submission
     if (isSoloMode && soloClickedCountry) {
       setSoloClickedCountry(null);
@@ -467,9 +467,22 @@ const GamePage = () => {
   }, [isMyTurn, currentTurnState, currentCountry, guessedCountries, wrongCountries, updateGameState, addToast, t, moveToNextTurn, updateTurnState, session, currentPlayer, navigate, playToastSound]);
 
   const handleUseHint = useCallback((type: 'letter' | 'famous' | 'flag') => {
-    // Use activeCountry which works for both dice mode and solo click mode
     const countryForHint = isSoloMode && soloClickedCountry ? soloClickedCountry : currentCountry;
     if (!countryForHint || !currentPlayer || !session) return '';
+
+    // Check if hint already used
+    const usedHints = currentTurnState?.usedHints || {};
+    if (usedHints[type]) {
+      addToast('info', t('hintAlreadyUsed'));
+      return usedHints[type]!;
+    }
+
+    // Check total hints limit (max 2)
+    const totalHintsUsed = Object.keys(usedHints).length;
+    if (totalHintsUsed >= 2) {
+      addToast('warning', t('maxHintsReached'));
+      return '';
+    }
 
     const currentPlayerUid = currentPlayer.id;
     if (!session.players[currentPlayerUid]) return '';
@@ -480,6 +493,22 @@ const GamePage = () => {
     const pointCost = type === 'famous' ? 0.5 : 1;
     const newScore = Math.max(0, currentPlayerData.score - pointCost);
 
+    let hintValue = '';
+    let costMessage = '';
+    let timePenalty = 0;
+
+    if (type === 'flag') {
+      costMessage = session.turnStartTime ? ' (-1 point, -10 seconds)' : ' (-1 point)';
+      hintValue = getCountryFlag(countryForHint);
+      if (session.turnStartTime) timePenalty = 10000;
+    } else if (type === 'famous') {
+      costMessage = ' (-0.5 point)';
+      hintValue = getFamousPerson(countryForHint) || 'No famous person data found';
+    } else { // letter
+      costMessage = ' (-1 point)';
+      hintValue = countryForHint[0];
+    }
+
     const updatedPlayers: PlayersMap = {
       ...session.players,
       [currentPlayerUid]: {
@@ -488,17 +517,10 @@ const GamePage = () => {
       }
     };
 
-    // Apply flag time penalty when we have a shared turnStartTime; otherwise just charge points.
-    if (type === 'flag') {
-      if (session.turnStartTime) {
-        const newTurnStartTime = session.turnStartTime - 10000;
-        updateGameState({ players: updatedPlayers, turnStartTime: newTurnStartTime });
-        addToast('info', t('hintUsed') + ' (-1 point, -10 seconds)');
-      } else {
-        updateGameState({ players: updatedPlayers });
-        addToast('info', t('hintUsed') + ' (-1 point)');
-      }
-
+    if (type === 'flag' && session.turnStartTime) {
+      const newTurnStartTime = session.turnStartTime - 10000;
+      updateGameState({ players: updatedPlayers, turnStartTime: newTurnStartTime });
+      addToast('info', t('hintUsed') + ' (-1 point, -10 seconds)');
       return getCountryFlag(countryForHint);
     }
 
@@ -509,9 +531,8 @@ const GamePage = () => {
       return getFamousPerson(countryForHint) || 'No famous person data found';
     }
 
-    // Letter hint
     addToast('info', t('hintUsed') + ' (-1 point)');
-    return countryForHint[0] || '';
+    return countryForHint[0];
   }, [currentCountry, currentPlayer, session, updateGameState, addToast, t, isSoloMode, soloClickedCountry]);
 
   // Handle guided hints (player, singer, capital)
@@ -519,11 +540,25 @@ const GamePage = () => {
     const countryForHint = isSoloMode && soloClickedCountry ? soloClickedCountry : currentCountry;
     if (!countryForHint || !currentPlayer || !session) return null;
 
+    // Check if hint already used
+    const usedHints = currentTurnState?.usedHints || {};
+    if (usedHints[type]) {
+      addToast('info', t('hintAlreadyUsed'));
+      return { value: usedHints[type]!, timePenalty: 0 };
+    }
+
+    // Check total hints limit
+    const totalHintsUsed = Object.keys(usedHints).length;
+    if (totalHintsUsed >= 2) {
+      addToast('warning', t('maxHintsReached'));
+      return null;
+    }
+
     const currentPlayerUid = currentPlayer.id;
     if (!session.players[currentPlayerUid]) return null;
 
     const currentPlayerData = session.players[currentPlayerUid];
-    
+
     let hintValue: string | null = null;
     let timePenalty = 0;
     let pointCost = 0;
@@ -547,6 +582,14 @@ const GamePage = () => {
     // Deduct points if applicable
     const newScore = Math.max(0, currentPlayerData.score - pointCost);
 
+    const newTurnState = {
+      ...currentTurnState!, // Safety check needed?
+      usedHints: {
+        ...usedHints,
+        [type]: hintValue
+      }
+    };
+
     const updatedPlayers: PlayersMap = {
       ...session.players,
       [currentPlayerUid]: {
@@ -555,21 +598,28 @@ const GamePage = () => {
       }
     };
 
-    // Apply time penalty
+    // Apply updates
+    const updates: any = { players: updatedPlayers };
     if (session.turnStartTime) {
-      const newTurnStartTime = session.turnStartTime - (timePenalty * 1000);
-      updateGameState({ players: updatedPlayers, turnStartTime: newTurnStartTime });
-    } else {
-      updateGameState({ players: updatedPlayers });
+      updates.turnStartTime = session.turnStartTime - (timePenalty * 1000);
     }
 
-    const costMessage = type === 'capital' 
-      ? `(-${timePenalty}s)` 
+    if (currentTurnState) {
+      updates.currentTurnState = newTurnState;
+      updateGameState(updates).then(() => {
+        updateTurnState(newTurnState);
+      });
+    } else {
+      updateGameState(updates);
+    }
+
+    const costMessage = type === 'capital'
+      ? `(-${timePenalty}s)`
       : `(-${pointCost}pt, -${timePenalty}s)`;
     addToast('info', `${t('hintUsed')} ${costMessage}`);
 
     return { value: hintValue, timePenalty };
-  }, [currentCountry, currentPlayer, session, updateGameState, addToast, t, isSoloMode, soloClickedCountry]);
+  }, [currentCountry, currentPlayer, session, updateGameState, addToast, t, isSoloMode, soloClickedCountry, currentTurnState, updateTurnState]);
 
   const handleLeave = useCallback(async () => {
     await leaveSession();
@@ -597,13 +647,13 @@ const GamePage = () => {
     try {
       const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
       const winnerScore = sortedPlayers[0]?.score || 0;
-      
+
       // Get correct and wrong counts for each player based on their countriesGuessed
       const savePromises = players.map(async (player) => {
         // Count how many of this player's guessed countries are in correctCountries vs wrongCountries
         const playerCorrect = player.countriesGuessed.filter(c => correctCountries.includes(c)).length;
         const playerWrong = player.countriesGuessed.filter(c => wrongCountries.includes(c)).length;
-        
+
         const { error } = await supabase.from('game_history').insert({
           user_id: player.id,
           session_code: session.code,
@@ -616,12 +666,12 @@ const GamePage = () => {
           game_duration_minutes: session.duration,
           is_solo_mode: session.isSoloMode || false,
         });
-        
+
         if (error) {
           console.error('Failed to save game history for player:', player.id, error);
         }
       });
-      
+
       await Promise.all(savePromises);
       console.log('Game history saved successfully');
     } catch (err) {
@@ -935,6 +985,7 @@ const GamePage = () => {
         playerScore={currentPlayer?.score || 0}
         hasExtendedHints={hasExtendedHints(activeCountry || '')}
         isSoloClickMode={isSoloMode && !currentTurnState?.diceRolled}
+        usedHints={currentTurnState?.usedHints}
       />
 
       {/* Ranking Modal */}

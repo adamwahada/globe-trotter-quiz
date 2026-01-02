@@ -111,13 +111,18 @@ export const WorldMap: React.FC<WorldMapProps> = ({
   const handleLocateCountry = useCallback(() => {
     if (currentCountry) {
       const countryPos = getCountryCoordinates(currentCountry);
-      if (countryPos) {
+      if (countryPos && !Number.isNaN(countryPos.coordinates[0]) && !Number.isNaN(countryPos.coordinates[1])) {
         setPosition(countryPos);
       }
     }
   }, [currentCountry]);
 
   const handleMoveEnd = useCallback((pos: { coordinates: [number, number]; zoom: number }) => {
+    // Guard against NaNs which can crash the SVG renderer
+    if (Number.isNaN(pos.coordinates[0]) || Number.isNaN(pos.coordinates[1]) || Number.isNaN(pos.zoom)) {
+      console.warn('WorldMap: Ignored invalid position update', pos);
+      return;
+    }
     setPosition(pos);
   }, []);
 

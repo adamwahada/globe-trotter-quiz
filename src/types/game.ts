@@ -33,6 +33,14 @@ export interface TurnState {
   submittedAnswer: string | null;
   pointsEarned: number | null;
   isCorrect: boolean | null;
+  usedHints?: {
+    letter?: string;
+    famous?: string;
+    flag?: string;
+    player?: string;
+    singer?: string;
+    capital?: string;
+  };
 }
 
 export interface GameSession {

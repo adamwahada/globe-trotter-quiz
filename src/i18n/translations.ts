@@ -214,6 +214,7 @@ export const translations = {
     tooltipQuit: 'Leave the current game',
     tooltipGuidedHints: 'Choose a specific hint type (max 2 per round)',
     maxHintsReached: 'Maximum hints reached for this round',
+    hintAlreadyUsed: 'You have already used this hint',
     guidedHintsRemaining: 'Hints remaining',
     hintCapital: 'Capital City',
     hintPlayer: 'Famous Player',
@@ -257,7 +258,7 @@ export const translations = {
     fairnessDesc: 'Time is up! To keep the game fair, remaining players have one last suggestion so everyone plays the same number of turns.',
     sessionConflictTitle: 'Session Conflict',
     sessionConflictDesc: 'You have been disconnected because your account is active in another tab or device.',
-    
+
     // Player Stats
     correct: 'Correct',
     wrong: 'Wrong',
@@ -268,7 +269,7 @@ export const translations = {
     currentRankings: 'Current Rankings',
     clickPlayerForStats: 'Click on a player to view their stats',
     backToGame: 'Back to Game',
-    
+
     // Game History
     noGamesYet: 'No games played yet',
     startPlayingToSeeHistory: 'Start playing to see your game history',
@@ -277,7 +278,7 @@ export const translations = {
     minutesShort: 'min',
     soloModeShort: 'Solo',
     hintsRemaining: 'Hints remaining',
-    
+
     // New Hints
     hintCapitalTitle: 'Capital City',
     hintCapitalDesc: 'Reveals the capital city of the country',
@@ -547,7 +548,7 @@ export const translations = {
     fairnessDesc: 'Le temps est écoulé ! Pour garantir l\'équité, les autres joueurs ont une dernière suggestion afin que tout le monde joue le même nombre de tours.',
     sessionConflictTitle: 'Conflit de session',
     sessionConflictDesc: 'Vous avez été déconnecté car votre compte est actif dans un autre onglet ou appareil.',
-    
+
     // Player Stats
     correct: 'Correct',
     wrong: 'Faux',
@@ -558,7 +559,7 @@ export const translations = {
     currentRankings: 'Classement Actuel',
     clickPlayerForStats: 'Cliquez sur un joueur pour voir ses statistiques',
     backToGame: 'Retour au Jeu',
-    
+
     // Game History
     noGamesYet: 'Aucune partie jouée',
     startPlayingToSeeHistory: 'Commencez à jouer pour voir votre historique',
@@ -567,7 +568,7 @@ export const translations = {
     minutesShort: 'min',
     soloModeShort: 'Solo',
     hintsRemaining: 'Indices restants',
-    
+
     // New Hints
     hintCapitalTitle: 'Capitale',
     hintCapitalDesc: 'Révèle la capitale du pays',
@@ -837,7 +838,7 @@ export const translations = {
     fairnessDesc: 'انتهى الوقت! لضمان عدالة اللعبة، لدى اللاعبين المتبقين اقتراح أخير حتى يلعب الجميع نفس عدد الأدوار.',
     sessionConflictTitle: 'تعارض في الجلسة',
     sessionConflictDesc: 'لقد تم فصلك لأن حسابك نشط في علامة تبويب أو جهاز آخر.',
-    
+
     // Player Stats
     correct: 'صحيح',
     wrong: 'خطأ',
@@ -848,7 +849,7 @@ export const translations = {
     currentRankings: 'الترتيب الحالي',
     clickPlayerForStats: 'انقر على لاعب لعرض إحصائياته',
     backToGame: 'العودة للعبة',
-    
+
     // Game History
     noGamesYet: 'لم تُلعب أي مباريات بعد',
     startPlayingToSeeHistory: 'ابدأ اللعب لرؤية سجل المباريات',
@@ -857,7 +858,7 @@ export const translations = {
     minutesShort: 'دقيقة',
     soloModeShort: 'فردي',
     hintsRemaining: 'التلميحات المتبقية',
-    
+
     // New Hints
     hintCapitalTitle: 'العاصمة',
     hintCapitalDesc: 'يكشف عاصمة الدولة',

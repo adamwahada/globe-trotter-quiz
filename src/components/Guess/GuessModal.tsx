@@ -29,6 +29,14 @@ interface GuessModalProps {
   playerScore?: number;
   hasExtendedHints?: boolean;
   isSoloClickMode?: boolean; // For solo mode without dice roll
+  usedHints?: { // New prop for persistence
+    letter?: string;
+    famous?: string;
+    flag?: string;
+    player?: string;
+    singer?: string;
+    capital?: string;
+  };
 }
 
 export const GuessModal: React.FC<GuessModalProps> = ({
@@ -43,46 +51,59 @@ export const GuessModal: React.FC<GuessModalProps> = ({
   playerScore = 0,
   hasExtendedHints = false,
   isSoloClickMode = false,
+  usedHints: usedHintsProp = {}, // Renamed prop to usedHintsProp
 }) => {
   const { t } = useLanguage();
+  // State derived from props to manage UI
   const [guess, setGuess] = useState('');
-  const [hintUsed, setHintUsed] = useState(false);
-  const [famousPersonUsed, setFamousPersonUsed] = useState(false);
-  const [flagUsed, setFlagUsed] = useState(false);
-  const [firstLetter, setFirstLetter] = useState('');
-  const [famousPerson, setFamousPerson] = useState('');
-  const [countryFlag, setCountryFlag] = useState('');
-  
-  // Guided hints state
-  const [playerHint, setPlayerHint] = useState('');
-  const [singerHint, setSingerHint] = useState('');
-  const [capitalHint, setCapitalHint] = useState('');
-  const [timePenaltyApplied, setTimePenaltyApplied] = useState(0);
   const [showGuidedMenu, setShowGuidedMenu] = useState(false);
-  
-  // Track total hints used across ALL types (max 2 per round)
-  const [totalHintsUsed, setTotalHintsUsed] = useState(0);
-  
+
+  // Hints state from props (or empty default)
+  // const usedHints = usedHintsProp || {}; // This line is removed as usedHintsProp is already defaulted
+
+  // Local state for immediate feedback (optimistic UI)
+  const [localFirstLetter, setLocalFirstLetter] = useState('');
+  const [localFamousPerson, setLocalFamousPerson] = useState('');
+  const [localCountryFlag, setLocalCountryFlag] = useState('');
+
+  // Derived state (combines props and local state)
+  const hintUsed = !!usedHintsProp.letter || !!localFirstLetter;
+  const famousPersonUsed = !!usedHintsProp.famous || !!localFamousPerson;
+  const flagUsed = !!usedHintsProp.flag || !!localCountryFlag;
+
+  const playerHint = usedHintsProp.player || '';
+  const singerHint = usedHintsProp.singer || '';
+  const capitalHint = usedHintsProp.capital || '';
+
+  const firstLetter = usedHintsProp.letter || localFirstLetter;
+  const famousPerson = usedHintsProp.famous || localFamousPerson;
+  const countryFlag = usedHintsProp.flag || localCountryFlag;
+
+  // Calculate total hints used, considering both persisted and locally revealed hints
+  const totalHintsUsed = Object.keys(usedHintsProp).length +
+    (localFirstLetter && !usedHintsProp.letter ? 1 : 0) +
+    (localFamousPerson && !usedHintsProp.famous ? 1 : 0) +
+    (localCountryFlag && !usedHintsProp.flag ? 1 : 0);
+
   // Local timer for solo click mode
   const [localStartTime, setLocalStartTime] = useState<number | null>(null);
 
-  // Reset state when modal opens and set local start time for solo click mode
+  // Image error state
+  const [imageError, setImageError] = useState(false);
+
+  // Maintain local time penalty state for smoother UI updates if needed
+  const timePenaltyApplied = 0;
+
+  // Reset guess when modal opens
   useEffect(() => {
     if (isOpen) {
       setGuess('');
-      setHintUsed(false);
-      setFamousPersonUsed(false);
-      setFlagUsed(false);
-      setFirstLetter('');
-      setFamousPerson('');
-      setCountryFlag('');
-      setTotalHintsUsed(0);
-      setPlayerHint('');
-      setSingerHint('');
-      setCapitalHint('');
-      setTimePenaltyApplied(0);
       setShowGuidedMenu(false);
-      
+      setImageError(false);
+      setLocalFirstLetter('');
+      setLocalFamousPerson('');
+      setLocalCountryFlag('');
+
       // Set local start time for solo click mode (when no turnStartTime is provided)
       if (isSoloClickMode && !turnStartTime) {
         setLocalStartTime(Date.now());
@@ -99,16 +120,16 @@ export const GuessModal: React.FC<GuessModalProps> = ({
 
   // Check if a specific hint can be used
   const canUseHint = (type: 'letter' | 'famous' | 'flag' | GuidedHintType): boolean => {
-    if (maxHintsReached) return false;
-    
-    // Check if already used
+    // If already used, return false
     if (type === 'letter' && hintUsed) return false;
     if (type === 'famous' && famousPersonUsed) return false;
     if (type === 'flag' && flagUsed) return false;
     if (type === 'player' && playerHint) return false;
     if (type === 'singer' && singerHint) return false;
     if (type === 'capital' && capitalHint) return false;
-    
+
+    if (maxHintsReached) return false;
+
     // Check cost
     let cost = 0;
     if (type === 'letter') cost = HINT_COST_LETTER;
@@ -116,50 +137,31 @@ export const GuessModal: React.FC<GuessModalProps> = ({
     else if (type === 'flag') cost = HINT_COST_FLAG;
     else if (type === 'capital') cost = HINT_COST_CAPITAL;
     else cost = HINT_COST_GUIDED;
-    
+
     return playerScore >= cost;
   };
 
   const handleHint = () => {
     if (!canUseHint('letter')) return;
-    const letter = onUseHint('letter');
-    setFirstLetter(letter);
-    setHintUsed(true);
-    setTotalHintsUsed(prev => prev + 1);
+    const res = onUseHint('letter');
+    if (res) setLocalFirstLetter(res);
   };
 
   const handleFamousPerson = () => {
     if (!canUseHint('famous')) return;
-    const name = onUseHint('famous');
-    setFamousPersonUsed(true);
-    setFamousPerson(name);
-    setTotalHintsUsed(prev => prev + 1);
+    const res = onUseHint('famous');
+    if (res) setLocalFamousPerson(res);
   };
 
   const handleFlag = () => {
     if (!canUseHint('flag')) return;
-    const flag = onUseHint('flag');
-    setFlagUsed(true);
-    setCountryFlag(flag);
-    setTotalHintsUsed(prev => prev + 1);
+    const res = onUseHint('flag');
+    if (res) setLocalCountryFlag(res);
   };
 
   const handleGuidedHint = (type: GuidedHintType) => {
     if (!onUseGuidedHint || !canUseHint(type)) return;
-
-    const result = onUseGuidedHint(type);
-    if (result) {
-      setTotalHintsUsed(prev => prev + 1);
-      setTimePenaltyApplied(prev => prev + result.timePenalty);
-      
-      if (type === 'player') {
-        setPlayerHint(result.value);
-      } else if (type === 'singer') {
-        setSingerHint(result.value);
-      } else if (type === 'capital') {
-        setCapitalHint(result.value);
-      }
-    }
+    onUseGuidedHint(type);
     setShowGuidedMenu(false);
   };
 
@@ -175,13 +177,13 @@ export const GuessModal: React.FC<GuessModalProps> = ({
 
   // Calculate adjusted time for timer
   const adjustedTurnTime = turnTimeSeconds - timePenaltyApplied;
-  
+
   // Use local start time for solo click mode if no turnStartTime provided
   const effectiveStartTime = isSoloClickMode && localStartTime ? localStartTime : turnStartTime;
-  
+
   // Adjust local start time when time penalty is applied
-  const adjustedStartTime = effectiveStartTime 
-    ? effectiveStartTime - (timePenaltyApplied * 1000) 
+  const adjustedStartTime = effectiveStartTime
+    ? effectiveStartTime - (timePenaltyApplied * 1000)
     : undefined;
 
   return (
@@ -248,22 +250,26 @@ export const GuessModal: React.FC<GuessModalProps> = ({
               </div>
             )}
 
+
             {countryFlag && (
-              <div className="bg-warning/20 border border-warning/30 rounded-lg p-4 text-center animate-fade-in">
-                {countryFlag.startsWith('http') ? (
-                  <img
-                    src={countryFlag}
-                    alt="Country flag"
-                    className="w-32 h-auto mx-auto rounded shadow-lg"
-                    onError={() => setCountryFlag('🏳️')}
-                  />
+              <div className="bg-muted/30 border border-border rounded-xl p-6 text-center animate-fade-in shadow-inner">
+                {countryFlag.startsWith('http') && !imageError ? (
+                  <div className="relative group">
+                    <img
+                      src={countryFlag}
+                      alt="Country flag"
+                      className="w-48 h-auto mx-auto rounded-md shadow-2xl border-4 border-white/10 transition-transform duration-300 group-hover:scale-105"
+                      onError={() => setImageError(true)}
+                    />
+                    <div className="absolute inset-0 rounded-md shadow-[inset_0_0_20px_rgba(0,0,0,0.2)] pointer-events-none" />
+                  </div>
                 ) : (
                   <div
-                    className="text-6xl leading-none"
+                    className="text-7xl drop-shadow-lg"
                     aria-label="Country flag"
                     role="img"
                   >
-                    {countryFlag}
+                    {imageError ? '🏳️' : countryFlag}
                   </div>
                 )}
               </div>
@@ -385,15 +391,14 @@ export const GuessModal: React.FC<GuessModalProps> = ({
                       <p className="text-xs text-muted-foreground mb-2 px-2">
                         {t('hintsRemaining')}: {MAX_TOTAL_HINTS - totalHintsUsed}
                       </p>
-                      
+
                       <button
                         onClick={() => handleGuidedHint('capital')}
                         disabled={!canUseHint('capital')}
-                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
-                          canUseHint('capital') 
-                            ? 'hover:bg-purple-500/20 text-foreground' 
-                            : 'opacity-50 cursor-not-allowed text-muted-foreground'
-                        }`}
+                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${canUseHint('capital')
+                          ? 'hover:bg-purple-500/20 text-foreground'
+                          : 'opacity-50 cursor-not-allowed text-muted-foreground'
+                          }`}
                       >
                         <Building className="h-4 w-4 text-purple-400" />
                         <span>{t('hintCapital')}</span>
@@ -403,11 +408,10 @@ export const GuessModal: React.FC<GuessModalProps> = ({
                       <button
                         onClick={() => handleGuidedHint('player')}
                         disabled={!canUseHint('player')}
-                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
-                          canUseHint('player') 
-                            ? 'hover:bg-green-500/20 text-foreground' 
-                            : 'opacity-50 cursor-not-allowed text-muted-foreground'
-                        }`}
+                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${canUseHint('player')
+                          ? 'hover:bg-green-500/20 text-foreground'
+                          : 'opacity-50 cursor-not-allowed text-muted-foreground'
+                          }`}
                       >
                         <Dribbble className="h-4 w-4 text-green-400" />
                         <span>{t('hintPlayer')}</span>
@@ -417,11 +421,10 @@ export const GuessModal: React.FC<GuessModalProps> = ({
                       <button
                         onClick={() => handleGuidedHint('singer')}
                         disabled={!canUseHint('singer')}
-                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
-                          canUseHint('singer') 
-                            ? 'hover:bg-pink-500/20 text-foreground' 
-                            : 'opacity-50 cursor-not-allowed text-muted-foreground'
-                        }`}
+                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${canUseHint('singer')
+                          ? 'hover:bg-pink-500/20 text-foreground'
+                          : 'opacity-50 cursor-not-allowed text-muted-foreground'
+                          }`}
                       >
                         <Music className="h-4 w-4 text-pink-400" />
                         <span>{t('hintSinger')}</span>

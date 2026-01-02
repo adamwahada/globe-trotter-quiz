@@ -236,45 +236,19 @@ export const normalizeCountryNameForFlag = (name: string): string => {
   return variants[trimmed] || trimmed;
 };
 
-// ========== Flag preloading cache ==========
-const flagCache = new Set<string>();
-
-/**
- * Preload a country's flag image into the browser cache.
- * Call this when the country is selected so the hint appears instantly.
- */
-export const preloadCountryFlag = (country: string): void => {
-  const url = getCountryFlag(country);
-  if (flagCache.has(url)) return;
-
-  const img = new Image();
-  img.src = url;
-  flagCache.add(url);
+const isoToFlagEmoji = (isoCode: string): string => {
+  const iso = isoCode.trim().toUpperCase();
+  if (!/^[A-Z]{2}$/.test(iso)) return '🏳️';
+  const [a, b] = iso;
+  return String.fromCodePoint(127397 + a.charCodeAt(0), 127397 + b.charCodeAt(0));
 };
 
-/**
- * Preload all country flags for zero latency during the entire game.
- * Call this when the game starts.
- */
-export const preloadAllCountryFlags = (): void => {
-  const allCountries = Object.keys(countryIsoCodes);
-  allCountries.forEach((country) => {
-    preloadCountryFlag(country);
-  });
-};
-
-// Get flag image URL for a country (uses flagcdn.com)
+// Get flag for a country.
+// We return an emoji flag instead of a remote image URL to guarantee it always renders.
 export const getCountryFlag = (country: string): string => {
   const normalized = normalizeCountryNameForFlag(country);
-
-  // Prefer this file's ISO map
-  const isoCode =
-    countryIsoCodes[normalized] ||
-    countryIsoCodes[country];
-
-  // If we still can't resolve, show UN flag rather than a letter.
-  const iso = (isoCode || 'UN').trim().toLowerCase();
-  return `https://flagcdn.com/w160/${iso}.png`;
+  const isoCode = countryIsoCodes[normalized] || countryIsoCodes[country];
+  return isoCode ? isoToFlagEmoji(isoCode) : '🏳️';
 };
 
 export const countryContinent: Record<string, string> = {
