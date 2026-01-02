@@ -21,7 +21,7 @@ import { useGame, TurnState, Player } from '@/contexts/GameContext';
 import { useToastContext } from '@/contexts/ToastContext';
 import { useSound } from '@/contexts/SoundContext';
 import { isCorrectGuess } from '@/utils/scoring';
-import { getRandomUnplayedCountry, getFamousPerson, getMapCountryName, getCountryFlag } from '@/utils/countryData';
+import { getRandomUnplayedCountry, getFamousPerson, getMapCountryName, getCountryFlag, preloadCountryFlag } from '@/utils/countryData';
 import { hasExtendedHints, getFamousPlayer, getFamousSinger, getCountryCapital } from '@/utils/countryHints';
 import { GuidedHintType } from '@/components/Guess/GuessModal';
 import { TURN_TIME_SECONDS, COUNTDOWN_SECONDS, playersMapToArray, PlayersMap } from '@/types/game';
@@ -163,6 +163,9 @@ const GamePage = () => {
         return;
       }
 
+      // Preload flag so hint appears instantly
+      preloadCountryFlag(country);
+
       const turnState: TurnState = {
         playerId: currentPlayer!.id,
         startTime: Date.now(),
@@ -235,6 +238,8 @@ const GamePage = () => {
         addToast('info', 'You already guessed this country!');
         return;
       }
+      // Preload flag so hint appears instantly
+      preloadCountryFlag(countryName);
       setSoloClickedCountry(countryName);
       setGuessModalOpen(true);
       return;
@@ -245,6 +250,8 @@ const GamePage = () => {
       return;
     }
 
+    // Preload flag before opening modal
+    preloadCountryFlag(countryName);
     setGuessModalOpen(true);
 
     if (currentTurnState) {
