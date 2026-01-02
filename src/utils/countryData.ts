@@ -236,6 +236,22 @@ export const normalizeCountryNameForFlag = (name: string): string => {
   return variants[trimmed] || trimmed;
 };
 
+// ========== Flag preloading cache ==========
+const flagCache = new Set<string>();
+
+/**
+ * Preload a country's flag image into the browser cache.
+ * Call this when the country is selected so the hint appears instantly.
+ */
+export const preloadCountryFlag = (country: string): void => {
+  const url = getCountryFlag(country);
+  if (flagCache.has(url)) return;
+
+  const img = new Image();
+  img.src = url;
+  flagCache.add(url);
+};
+
 // Get flag image URL for a country (uses flagcdn.com)
 export const getCountryFlag = (country: string): string => {
   const normalized = normalizeCountryNameForFlag(country);
