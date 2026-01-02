@@ -371,10 +371,11 @@ const GamePage = () => {
     if (currentPlayerUid && session.players[currentPlayerUid]) {
       const currentPlayerData = session.players[currentPlayerUid];
       // Ensure countriesGuessed is always an array, never undefined
+      // Track ALL countries the player attempted (both correct and wrong)
       const existingCountriesGuessed = currentPlayerData.countriesGuessed || [];
-      const newCountriesGuessed = result.correct
-        ? [...existingCountriesGuessed, countryToGuess]
-        : existingCountriesGuessed;
+      const newCountriesGuessed = existingCountriesGuessed.includes(countryToGuess)
+        ? existingCountriesGuessed
+        : [...existingCountriesGuessed, countryToGuess];
       
       const updatedPlayers: PlayersMap = {
         ...session.players,
