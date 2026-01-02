@@ -108,6 +108,26 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
             </div>
           )}
 
+          {/* Countries Guessed Wrong */}
+          {playerWrongCountries.length > 0 && (
+            <div>
+              <h3 className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
+                <XCircle className="h-4 w-4 text-destructive" />
+                {t('countriesGuessedWrong')} ({playerWrongCountries.length})
+              </h3>
+              <div className="flex flex-wrap gap-1.5">
+                {playerWrongCountries.map((country) => (
+                  <span 
+                    key={country} 
+                    className="px-2 py-1 bg-destructive/20 text-destructive text-xs rounded-full border border-destructive/30"
+                  >
+                    {country}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Total Turns Info */}
           <div className="bg-secondary/50 rounded-lg p-3 text-center">
             <p className="text-sm text-muted-foreground">
