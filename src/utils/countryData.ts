@@ -256,16 +256,10 @@ export const preloadCountryFlag = (country: string): void => {
 export const getCountryFlag = (country: string): string => {
   const normalized = normalizeCountryNameForFlag(country);
 
-  // Prefer this file's ISO map, then fall back to the hints ISO map (more complete).
-  // (Imported lazily to avoid circular deps issues in the future.)
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { getCountryIsoCode } = require('./countryHints') as typeof import('./countryHints');
-
+  // Prefer this file's ISO map
   const isoCode =
     countryIsoCodes[normalized] ||
-    countryIsoCodes[country] ||
-    getCountryIsoCode(normalized) ||
-    getCountryIsoCode(country);
+    countryIsoCodes[country];
 
   // If we still can't resolve, show UN flag rather than a letter.
   const iso = (isoCode || 'UN').trim().toLowerCase();
