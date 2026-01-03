@@ -76,13 +76,13 @@ export const WorldMap: React.FC<WorldMapProps> = ({
   }, [currentCountry]);
 
   const handleZoomIn = useCallback(() => {
-    if (position.zoom >= 4) return;
-    setPosition(pos => ({ ...pos, zoom: pos.zoom * 1.5 }));
+    if (position.zoom >= 6) return;
+    setPosition(pos => ({ ...pos, zoom: Math.min(pos.zoom * 1.5, 6) }));
   }, [position.zoom]);
 
   const handleZoomOut = useCallback(() => {
-    if (position.zoom <= 1) return;
-    setPosition(pos => ({ ...pos, zoom: pos.zoom / 1.5 }));
+    if (position.zoom <= 0.8) return;
+    setPosition(pos => ({ ...pos, zoom: Math.max(pos.zoom / 1.5, 0.8) }));
   }, [position.zoom]);
 
   const handleRecenter = useCallback(() => {
@@ -185,7 +185,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
       <div
         ref={mapContainerRef}
         className="relative flex-1 h-[450px] md:h-[550px] lg:h-[600px] bg-card rounded-xl overflow-hidden border-2 border-border shadow-lg"
-        style={{ touchAction: 'none' }}
+        style={{ touchAction: 'pan-x pan-y pinch-zoom' }}
         onMouseMove={handleMouseMove}
         onMouseLeave={() => setHoveredCountry(null)}
       >
@@ -237,7 +237,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
             zoom={position.zoom}
             center={position.coordinates}
             onMoveEnd={handleMoveEnd}
-            minZoom={1}
+            minZoom={0.8}
             maxZoom={6}
           >
             <Geographies geography={geoUrl}>
