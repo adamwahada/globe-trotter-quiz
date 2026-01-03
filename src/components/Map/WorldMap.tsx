@@ -46,24 +46,25 @@ export const WorldMap: React.FC<WorldMapProps> = ({
   const [position, setPosition] = useState({ coordinates: [0, 20] as [number, number], zoom: 1 });
   const [tooltip, setTooltip] = useState<{ country: string; x: number; y: number } | null>(null);
   const [hoveredCountry, setHoveredCountry] = useState<string | null>(null);
-  const [mousePos, setMousePos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [isInteracting, setIsInteracting] = useState(false);
   const mapContainerRef = useRef<HTMLDivElement>(null);
 
-  // Track mouse position relative to container
-  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+  const updateTooltipPosition = useCallback((country: string, e: React.MouseEvent) => {
+    if (isInteracting) return;
     const rect = mapContainerRef.current?.getBoundingClientRect();
     if (!rect) return;
-    setMousePos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
-  }, []);
 
-  // Update tooltip when hovered country or mouse position changes
-  useEffect(() => {
-    if (hoveredCountry) {
-      setTooltip({ country: hoveredCountry, x: mousePos.x, y: mousePos.y });
-    } else {
-      setTooltip(null);
-    }
-  }, [hoveredCountry, mousePos]);
+    setTooltip({
+      country,
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+    });
+  }, [isInteracting]);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (!hoveredCountry || isInteracting) return;
+    updateTooltipPosition(hoveredCountry, e);
+  }, [hoveredCountry, isInteracting, updateTooltipPosition]);
 
   // Auto-zoom to current country's continent when it changes
   useEffect(() => {
@@ -187,7 +188,14 @@ export const WorldMap: React.FC<WorldMapProps> = ({
         className="relative flex-1 h-[450px] md:h-[550px] lg:h-[600px] bg-card rounded-xl overflow-hidden border-2 border-border shadow-lg"
         style={{ touchAction: 'pan-x pan-y pinch-zoom' }}
         onMouseMove={handleMouseMove}
-        onMouseLeave={() => setHoveredCountry(null)}
+        onPointerDown={() => setIsInteracting(true)}
+        onPointerUp={() => setIsInteracting(false)}
+        onPointerCancel={() => setIsInteracting(false)}
+        onPointerLeave={() => {
+          setHoveredCountry(null);
+          setTooltip(null);
+          setIsInteracting(false);
+        }}
       >
         {/* Country Tooltip - follows cursor inside map box */}
         {tooltip && (() => {
@@ -266,8 +274,14 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                       key={geo.rsmKey}
                       geography={geo}
                       onClick={() => isClickable && onCountryClick(getGameCountryName(countryName))}
-                      onMouseEnter={() => setHoveredCountry(countryName)}
-                      onMouseLeave={() => setHoveredCountry(null)}
+                      onMouseEnter={() => {
+                        if (isInteracting) return;
+                        setHoveredCountry(countryName);
+                      }}
+                      onMouseLeave={() => {
+                        setHoveredCountry(null);
+                        setTooltip(null);
+                      }}
                       style={{
                         default: {
                           fill: getCountryFill(countryName),
