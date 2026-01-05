@@ -35,7 +35,9 @@ import {
   Building,
   Music2,
 } from "lucide-react";
-import worldMapBg from "../public/world-map-bg.webp";
+
+// Use public path for preloaded image - matches index.html preload
+const worldMapBg = "/world-map-bg.webp";
 
 const Index = () => {
   const { t } = useLanguage();
@@ -241,10 +243,10 @@ const Index = () => {
       {/* Navigation */}
       <Navbar />
 
-      {/* Hero Section */}
+      {/* Hero Section - No animation delay for instant first paint */}
       <section className="relative z-10 flex flex-col items-center justify-center min-h-[70vh] px-4 text-center">
-        <div className="animate-fade-in">
-          <h1 className="text-5xl md:text-7xl lg:text-8xl font-display text-foreground mb-4 tracking-wider">
+        <div>
+          <h1 className="text-5xl md:text-7xl lg:text-8xl font-display text-foreground mb-4 tracking-wider animate-fade-in" style={{ animationDelay: '0.05s', animationFillMode: 'backwards' }}>
             {t("heroTitle")}
           </h1>
           <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-2xl mx-auto">{t("heroSubtitle")}</p>
