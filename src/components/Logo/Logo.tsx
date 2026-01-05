@@ -1,6 +1,8 @@
 import React from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import worldQuizLogo from "../public/worldquiz-logo.webp";
+
+// Use public path for preloaded image - matches index.html preload
+const worldQuizLogo = "/world-quiz-logo.webp";
 
 interface LogoProps {
   size?: "sm" | "md" | "lg";
