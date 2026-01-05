@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import worldMapBg from "../public/world-map-bg.webp";
+import worldQuizLogo from "../public/worldquiz-logo.webp";
 
 interface LogoProps {
   size?: "sm" | "md" | "lg";
