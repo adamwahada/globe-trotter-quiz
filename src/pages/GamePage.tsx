@@ -69,6 +69,8 @@ const GamePage = () => {
 
   // For solo mode, store the country clicked by the player for click-to-guess mode
   const [soloClickedCountry, setSoloClickedCountry] = useState<string | null>(null);
+  // Track solo click turn start time (independent of modal)
+  const [soloClickStartTime, setSoloClickStartTime] = useState<number | null>(null);
 
   // Check if it's current player's turn (always true in solo mode)
   const isMyTurn = isSoloMode ? true : (session ? players[currentTurnIndex]?.id === currentPlayer?.id : false);
@@ -139,22 +141,55 @@ const GamePage = () => {
     }
   }, [currentTurnState?.modalOpen, isMyTurn]);
 
-  // Turn timer timeout (not used in solo mode for click-to-guess)
+  // Handle solo click mode timeout (when timer expires without answer)
+  const handleSoloClickTimeout = useCallback(async () => {
+    if (!soloClickedCountry || !currentPlayer || !session) return;
+
+    // Mark country as wrong
+    const nextGuessedCountries = guessedCountries.includes(soloClickedCountry)
+      ? guessedCountries
+      : [...guessedCountries, soloClickedCountry];
+    const nextWrongCountries = wrongCountries.includes(soloClickedCountry)
+      ? wrongCountries
+      : [...wrongCountries, soloClickedCountry];
+
+    await updateGameState({
+      guessedCountries: nextGuessedCountries,
+      wrongCountries: nextWrongCountries,
+    });
+
+    addToast('error', t('timeUp'));
+    playToastSound('error');
+    setGuessModalOpen(false);
+    setSoloClickedCountry(null);
+    setSoloClickStartTime(null);
+  }, [soloClickedCountry, currentPlayer, session, guessedCountries, wrongCountries, updateGameState, addToast, t, playToastSound]);
+
+  // Turn timer timeout - handles both dice mode and solo click mode
   useEffect(() => {
-    if (!isMyTurn || !session?.turnStartTime || !activeCountry) return;
-    // In solo mode with click-to-guess (no dice roll), skip turn timer
-    if (isSoloMode && !currentTurnState?.diceRolled) return;
+    if (!isMyTurn) return;
+    
+    // Get the effective start time - either from session (dice) or solo click
+    const effectiveStartTime = session?.turnStartTime || soloClickStartTime;
+    const effectiveCountry = activeCountry || soloClickedCountry;
+    
+    if (!effectiveStartTime || !effectiveCountry) return;
 
     const checkTimeout = () => {
-      const elapsed = Math.floor((Date.now() - session.turnStartTime!) / 1000);
+      const elapsed = Math.floor((Date.now() - effectiveStartTime) / 1000);
       if (elapsed >= TURN_TIME_SECONDS) {
-        handleTurnTimeout();
+        // For solo click mode, handle timeout locally
+        if (isSoloMode && soloClickedCountry && !currentTurnState?.diceRolled) {
+          handleSoloClickTimeout();
+        } else {
+          handleTurnTimeout();
+        }
       }
     };
 
     const interval = setInterval(checkTimeout, 1000);
     return () => clearInterval(interval);
-  }, [isMyTurn, session?.turnStartTime, activeCountry, isSoloMode, currentTurnState?.diceRolled]);
+  }, [isMyTurn, session?.turnStartTime, soloClickStartTime, activeCountry, soloClickedCountry, isSoloMode, currentTurnState?.diceRolled, handleSoloClickTimeout]);
 
   const handleRollDice = useCallback(async () => {
     if (!isMyTurn || isRolling || currentCountry) return;
@@ -248,6 +283,9 @@ const GamePage = () => {
       // Preload flag so hint appears instantly
       preloadCountryFlag(countryName);
       setSoloClickedCountry(countryName);
+      // Start timer immediately when country is selected
+      const startTime = Date.now();
+      setSoloClickStartTime(startTime);
       setGuessModalOpen(true);
       return;
     }
@@ -403,9 +441,10 @@ const GamePage = () => {
       playToastSound('error');
     }
     
-    // Reset solo clicked country after submission
+    // Reset solo clicked country and timer after submission
     if (isSoloMode && soloClickedCountry) {
       setSoloClickedCountry(null);
+      setSoloClickStartTime(null);
     }
 
     // In solo mode, clear turn state immediately so player can play again
@@ -932,7 +971,7 @@ const GamePage = () => {
         onUseHint={handleUseHint}
         onUseGuidedHint={handleUseGuidedHint}
         turnTimeSeconds={TURN_TIME_SECONDS}
-        turnStartTime={session.turnStartTime || undefined}
+        turnStartTime={session.turnStartTime || soloClickStartTime || undefined}
         playerScore={currentPlayer?.score || 0}
         hasExtendedHints={hasExtendedHints(activeCountry || '')}
         isSoloClickMode={isSoloMode && !currentTurnState?.diceRolled}
