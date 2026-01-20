@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   ComposableMap,
   Geographies,
@@ -64,31 +64,29 @@ export const WorldMap: React.FC<WorldMapProps> = ({
     updateTooltipPosition(hoveredCountry, e);
   }, [hoveredCountry, updateTooltipPosition]);
 
-  // Auto-zoom to current country's continent when it changes
-  useEffect(() => {
-    if (currentCountry) {
-      const continent = getContinent(currentCountry);
-      if (continent && continentZoomPresets[continent]) {
-        setPosition(continentZoomPresets[continent]);
-      }
-    }
-  }, [currentCountry]);
+  // IMPORTANT: Map zoom/position must NEVER be auto-overridden.
+  // Only user actions (buttons/gestures) should change it.
 
   const handleZoomIn = useCallback(() => {
-    if (position.zoom >= 6) return;
-    setPosition(pos => ({ ...pos, zoom: Math.min(pos.zoom * 1.5, 6) }));
-  }, [position.zoom]);
+    setPosition((pos) => {
+      const nextZoom = Math.min(pos.zoom * 1.5, 6);
+      return nextZoom === pos.zoom ? pos : { ...pos, zoom: nextZoom };
+    });
+  }, []);
 
   const handleZoomOut = useCallback(() => {
-    if (position.zoom <= 0.8) return;
-    setPosition(pos => ({ ...pos, zoom: Math.max(pos.zoom / 1.5, 0.8) }));
-  }, [position.zoom]);
+    setPosition((pos) => {
+      const nextZoom = Math.max(pos.zoom / 1.5, 0.8);
+      return nextZoom === pos.zoom ? pos : { ...pos, zoom: nextZoom };
+    });
+  }, []);
 
   const handleRecenter = useCallback(() => {
     setPosition({ coordinates: [0, 20], zoom: 1 });
   }, []);
 
   const handleZoomToContinent = useCallback(() => {
+    // Manual action only: zoom to the active country's continent (if available)
     if (currentCountry) {
       const continent = getContinent(currentCountry);
       if (continent && continentZoomPresets[continent]) {
@@ -96,16 +94,21 @@ export const WorldMap: React.FC<WorldMapProps> = ({
         return;
       }
     }
-    // Cycle through continents if no current country
-    const continents = Object.keys(continentZoomPresets);
-    const currentIdx = continents.findIndex(c => {
-      const preset = continentZoomPresets[c];
-      return preset.coordinates[0] === position.coordinates[0] &&
-        preset.coordinates[1] === position.coordinates[1];
+
+    // Otherwise: cycle through continent presets
+    setPosition((pos) => {
+      const continents = Object.keys(continentZoomPresets);
+      const currentIdx = continents.findIndex((c) => {
+        const preset = continentZoomPresets[c];
+        return (
+          preset.coordinates[0] === pos.coordinates[0] &&
+          preset.coordinates[1] === pos.coordinates[1]
+        );
+      });
+      const nextIdx = (currentIdx + 1) % continents.length;
+      return continentZoomPresets[continents[nextIdx]];
     });
-    const nextIdx = (currentIdx + 1) % continents.length;
-    setPosition(continentZoomPresets[continents[nextIdx]]);
-  }, [currentCountry, position.coordinates]);
+  }, [currentCountry]);
 
   const handleLocateCountry = useCallback(() => {
     if (currentCountry) {
