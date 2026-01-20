@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   ComposableMap,
   Geographies,
@@ -48,14 +48,33 @@ export const WorldMap: React.FC<WorldMapProps> = ({
   const [hoveredCountry, setHoveredCountry] = useState<string | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
 
+  // Prevent tooltip re-renders from interfering with pan/zoom gestures.
+  const isMovingRef = useRef(false);
+  const tooltipRafRef = useRef<number | null>(null);
+
+  // Some versions of react-simple-maps/d3-zoom can emit a stray onMoveEnd shortly
+  // after programmatic zoom changes; ignore that small window.
+  const ignoreMoveEndUntilRef = useRef(0);
+
+  const positionRef = useRef(position);
+  useEffect(() => {
+    positionRef.current = position;
+  }, [position]);
+
   const updateTooltipPosition = useCallback((country: string, e: React.MouseEvent) => {
+    if (isMovingRef.current) return;
+
     const rect = mapContainerRef.current?.getBoundingClientRect();
     if (!rect) return;
 
-    setTooltip({
-      country,
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
+    if (tooltipRafRef.current) {
+      cancelAnimationFrame(tooltipRafRef.current);
+    }
+
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    tooltipRafRef.current = requestAnimationFrame(() => {
+      setTooltip({ country, x, y });
     });
   }, []);
 
@@ -68,6 +87,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
   // Only user actions (buttons/gestures) should change it.
 
   const handleZoomIn = useCallback(() => {
+    ignoreMoveEndUntilRef.current = Date.now() + 200;
     setPosition((pos) => {
       const nextZoom = Math.min(pos.zoom * 1.5, 6);
       return nextZoom === pos.zoom ? pos : { ...pos, zoom: nextZoom };
@@ -75,6 +95,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
   }, []);
 
   const handleZoomOut = useCallback(() => {
+    ignoreMoveEndUntilRef.current = Date.now() + 200;
     setPosition((pos) => {
       const nextZoom = Math.max(pos.zoom / 1.5, 0.8);
       return nextZoom === pos.zoom ? pos : { ...pos, zoom: nextZoom };
@@ -82,10 +103,12 @@ export const WorldMap: React.FC<WorldMapProps> = ({
   }, []);
 
   const handleRecenter = useCallback(() => {
+    ignoreMoveEndUntilRef.current = Date.now() + 200;
     setPosition({ coordinates: [0, 20], zoom: 1 });
   }, []);
 
   const handleZoomToContinent = useCallback(() => {
+    ignoreMoveEndUntilRef.current = Date.now() + 200;
     // Manual action only: zoom to the active country's continent (if available)
     if (currentCountry) {
       const continent = getContinent(currentCountry);
@@ -114,12 +137,28 @@ export const WorldMap: React.FC<WorldMapProps> = ({
     if (currentCountry) {
       const countryPos = getCountryCoordinates(currentCountry);
       if (countryPos) {
+        ignoreMoveEndUntilRef.current = Date.now() + 200;
         setPosition(countryPos);
       }
     }
   }, [currentCountry]);
 
   const handleMoveEnd = useCallback((pos: { coordinates: [number, number]; zoom: number }) => {
+    isMovingRef.current = false;
+
+    // Ignore any stray move-end caused by our own zoom buttons.
+    if (Date.now() < ignoreMoveEndUntilRef.current) return;
+
+    // Avoid pointless state churn.
+    const prev = positionRef.current;
+    if (
+      prev.zoom === pos.zoom &&
+      prev.coordinates[0] === pos.coordinates[0] &&
+      prev.coordinates[1] === pos.coordinates[1]
+    ) {
+      return;
+    }
+
     setPosition(pos);
   }, []);
 
@@ -189,6 +228,25 @@ export const WorldMap: React.FC<WorldMapProps> = ({
         className="relative flex-1 h-[450px] md:h-[550px] lg:h-[600px] bg-card rounded-xl overflow-hidden border-2 border-border shadow-lg"
         style={{ touchAction: 'pan-x pan-y pinch-zoom' }}
         onMouseMove={handleMouseMove}
+        onWheelCapture={(e) => {
+          // Allow the page to scroll normally while preventing d3-zoom from treating
+          // wheel/touchpad scroll as map zoom (which feels like "auto de-zooming").
+          e.stopPropagation();
+        }}
+        onPointerDownCapture={(e) => {
+          // Only treat pointer interactions inside the map box as panning/zooming.
+          // (Controls are outside this container.)
+          if ((e.target as HTMLElement)?.closest?.('svg')) {
+            isMovingRef.current = true;
+            setTooltip(null);
+          }
+        }}
+        onPointerUpCapture={() => {
+          isMovingRef.current = false;
+        }}
+        onPointerCancelCapture={() => {
+          isMovingRef.current = false;
+        }}
         onPointerLeave={() => {
           setHoveredCountry(null);
           setTooltip(null);
