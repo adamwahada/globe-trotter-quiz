@@ -221,6 +221,7 @@ export const translations = {
     capital: 'Capital',
     famousPlayer: 'Famous Player',
     famousSinger: 'Famous Singer',
+    chooseFamousPerson: 'Choose a Famous Person',
 
     // Features Section
     featureMultiplayer: 'Multiplayer',
@@ -512,6 +513,7 @@ export const translations = {
     capital: 'Capitale',
     famousPlayer: 'Joueur Célèbre',
     famousSinger: 'Chanteur Célèbre',
+    chooseFamousPerson: 'Choisir une Personnalité',
 
     // Features Section
     featureMultiplayer: 'Multijoueur',
@@ -803,6 +805,7 @@ export const translations = {
     capital: 'العاصمة',
     famousPlayer: 'لاعب مشهور',
     famousSinger: 'مغني مشهور',
+    chooseFamousPerson: 'اختر شخصية مشهورة',
 
     // Features Section
     featureMultiplayer: 'متعدد اللاعبين',

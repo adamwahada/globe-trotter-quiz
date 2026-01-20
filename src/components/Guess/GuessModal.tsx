@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Lightbulb, User, Send, SkipForward, Flag, MapPin, Music, Dribbble, Building } from 'lucide-react';
+import { X, Lightbulb, User, Send, SkipForward, Flag, Music, Dribbble, Building } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { GameTooltip } from '@/components/Tooltip/GameTooltip';
@@ -63,34 +63,48 @@ export const GuessModal: React.FC<GuessModalProps> = ({
   // Track total hints used across ALL types (max 2 per round)
   const [totalHintsUsed, setTotalHintsUsed] = useState(0);
   
-  // Local timer for solo click mode
+  // Local timer for solo click mode - persisted across modal open/close
   const [localStartTime, setLocalStartTime] = useState<number | null>(null);
+  
+  // Track if this is a fresh turn (to reset hints) vs just reopening modal
+  const [lastTurnStartTime, setLastTurnStartTime] = useState<number | undefined>(undefined);
 
-  // Reset state when modal opens and set local start time for solo click mode
+  // Reset state only when a NEW turn starts, not when modal reopens
   useEffect(() => {
     if (isOpen) {
-      setGuess('');
-      setHintUsed(false);
-      setFamousPersonUsed(false);
-      setFlagUsed(false);
-      setFirstLetter('');
-      setFamousPerson('');
-      setCountryFlag('');
-      setTotalHintsUsed(0);
-      setPlayerHint('');
-      setSingerHint('');
-      setCapitalHint('');
-      setTimePenaltyApplied(0);
-      setShowGuidedMenu(false);
+      // Check if this is a new turn (turnStartTime changed) or just reopening
+      const isNewTurn = turnStartTime !== lastTurnStartTime;
       
-      // Set local start time for solo click mode (when no turnStartTime is provided)
-      if (isSoloClickMode && !turnStartTime) {
-        setLocalStartTime(Date.now());
+      if (isNewTurn) {
+        // New turn - reset everything
+        setGuess('');
+        setHintUsed(false);
+        setFamousPersonUsed(false);
+        setFlagUsed(false);
+        setFirstLetter('');
+        setFamousPerson('');
+        setCountryFlag('');
+        setTotalHintsUsed(0);
+        setPlayerHint('');
+        setSingerHint('');
+        setCapitalHint('');
+        setTimePenaltyApplied(0);
+        setShowGuidedMenu(false);
+        setLastTurnStartTime(turnStartTime);
+        
+        // Set local start time for solo click mode (when no turnStartTime is provided)
+        if (isSoloClickMode && !turnStartTime) {
+          setLocalStartTime(Date.now());
+        } else {
+          setLocalStartTime(null);
+        }
       } else {
-        setLocalStartTime(null);
+        // Just reopening - only reset the guess input
+        setGuess('');
+        setShowGuidedMenu(false);
       }
     }
-  }, [isOpen, isSoloClickMode, turnStartTime]);
+  }, [isOpen, isSoloClickMode, turnStartTime, lastTurnStartTime]);
 
   if (!isOpen) return null;
 
@@ -332,22 +346,6 @@ export const GuessModal: React.FC<GuessModalProps> = ({
                 </Button>
               </GameTooltip>
 
-              <GameTooltip content={maxHintsReached ? t('maxHintsReached') : (!canUseHint('famous') ? t('notEnoughPoints') : t('tooltipFamousPerson'))} position="top">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={handleFamousPerson}
-                  disabled={!canUseHint('famous')}
-                  className={`h-12 w-12 ${famousPersonUsed ? 'bg-info/20 border-info' : !canUseHint('famous') ? 'opacity-50 cursor-not-allowed' : 'hover:bg-info/10 hover:border-info'}`}
-                >
-                  {famousPersonUsed ? (
-                    <span className="text-info font-bold">✓</span>
-                  ) : (
-                    <User className="h-5 w-5 text-info" />
-                  )}
-                </Button>
-              </GameTooltip>
-
               <GameTooltip content={maxHintsReached ? t('maxHintsReached') : (!canUseHint('flag') ? t('notEnoughPoints') : t('tooltipFlag'))} position="top">
                 <Button
                   variant="outline"
@@ -364,7 +362,26 @@ export const GuessModal: React.FC<GuessModalProps> = ({
                 </Button>
               </GameTooltip>
 
-              {/* Guided Hints Button - Only show if country has extended hints */}
+              {/* Capital hint - standalone button (available for countries with extended hints) */}
+              {hasExtendedHints && (
+                <GameTooltip content={maxHintsReached ? t('maxHintsReached') : (!canUseHint('capital') ? t('notEnoughPoints') : `${t('hintCapital')} (-1pt -10s)`)} position="top">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => handleGuidedHint('capital')}
+                    disabled={!canUseHint('capital')}
+                    className={`h-12 w-12 ${capitalHint ? 'bg-purple-500/20 border-purple-500' : !canUseHint('capital') ? 'opacity-50 cursor-not-allowed' : 'hover:bg-purple-500/10 hover:border-purple-500'}`}
+                  >
+                    {capitalHint ? (
+                      <span className="text-purple-400 font-bold">✓</span>
+                    ) : (
+                      <Building className="h-5 w-5 text-purple-400" />
+                    )}
+                  </Button>
+                </GameTooltip>
+              )}
+
+              {/* Famous Persons Menu - Only show if country has extended hints */}
               {hasExtendedHints && (
                 <div className="relative">
                   <GameTooltip content={maxHintsReached ? t('maxHintsReached') : t('tooltipGuidedHints')} position="top">
@@ -373,31 +390,31 @@ export const GuessModal: React.FC<GuessModalProps> = ({
                       size="icon"
                       onClick={() => setShowGuidedMenu(!showGuidedMenu)}
                       disabled={maxHintsReached}
-                      className={`h-12 w-12 ${maxHintsReached ? 'opacity-50 cursor-not-allowed' : 'hover:bg-purple-500/10 hover:border-purple-500'}`}
+                      className={`h-12 w-12 ${maxHintsReached ? 'opacity-50 cursor-not-allowed' : 'hover:bg-info/10 hover:border-info'}`}
                     >
-                      <MapPin className="h-5 w-5 text-purple-400" />
+                      <User className="h-5 w-5 text-info" />
                     </Button>
                   </GameTooltip>
 
-                  {/* Guided hints dropdown */}
+                  {/* Famous persons dropdown */}
                   {showGuidedMenu && (
-                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 bg-card border border-border rounded-lg shadow-xl p-2 min-w-48 z-20 animate-fade-in">
+                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 bg-card border border-border rounded-lg shadow-xl p-2 min-w-52 z-20 animate-fade-in">
                       <p className="text-xs text-muted-foreground mb-2 px-2">
-                        {t('hintsRemaining')}: {MAX_TOTAL_HINTS - totalHintsUsed}
+                        {t('chooseFamousPerson')} ({t('hintsRemaining')}: {MAX_TOTAL_HINTS - totalHintsUsed})
                       </p>
                       
                       <button
-                        onClick={() => handleGuidedHint('capital')}
-                        disabled={!canUseHint('capital')}
+                        onClick={handleFamousPerson}
+                        disabled={!canUseHint('famous')}
                         className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
-                          canUseHint('capital') 
-                            ? 'hover:bg-purple-500/20 text-foreground' 
+                          canUseHint('famous') 
+                            ? 'hover:bg-info/20 text-foreground' 
                             : 'opacity-50 cursor-not-allowed text-muted-foreground'
                         }`}
                       >
-                        <Building className="h-4 w-4 text-purple-400" />
-                        <span>{t('hintCapital')}</span>
-                        <span className="ml-auto text-xs text-muted-foreground">-1pt -10s</span>
+                        <User className="h-4 w-4 text-info" />
+                        <span>{t('famousPerson')}</span>
+                        <span className="ml-auto text-xs text-muted-foreground">-0.5pt</span>
                       </button>
 
                       <button
@@ -430,6 +447,25 @@ export const GuessModal: React.FC<GuessModalProps> = ({
                     </div>
                   )}
                 </div>
+              )}
+
+              {/* Simple Famous Person hint for countries without extended hints */}
+              {!hasExtendedHints && (
+                <GameTooltip content={maxHintsReached ? t('maxHintsReached') : (!canUseHint('famous') ? t('notEnoughPoints') : t('tooltipFamousPerson'))} position="top">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={handleFamousPerson}
+                    disabled={!canUseHint('famous')}
+                    className={`h-12 w-12 ${famousPersonUsed ? 'bg-info/20 border-info' : !canUseHint('famous') ? 'opacity-50 cursor-not-allowed' : 'hover:bg-info/10 hover:border-info'}`}
+                  >
+                    {famousPersonUsed ? (
+                      <span className="text-info font-bold">✓</span>
+                    ) : (
+                      <User className="h-5 w-5 text-info" />
+                    )}
+                  </Button>
+                </GameTooltip>
               )}
             </div>
 
