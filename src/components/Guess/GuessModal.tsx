@@ -66,16 +66,20 @@ export const GuessModal: React.FC<GuessModalProps> = ({
   // Local timer for solo click mode - persisted across modal open/close
   const [localStartTime, setLocalStartTime] = useState<number | null>(null);
   
-  // Track if this is a fresh turn (to reset hints) vs just reopening modal
-  const [lastTurnStartTime, setLastTurnStartTime] = useState<number | undefined>(undefined);
+  // Track if we've initialized for this turn (to prevent re-init on modal reopen)
+  const [turnInitialized, setTurnInitialized] = useState(false);
+  
+  // Track modal open state to detect fresh opens vs reopens
+  const [wasOpen, setWasOpen] = useState(false);
 
   // Reset state only when a NEW turn starts, not when modal reopens
   useEffect(() => {
-    if (isOpen) {
-      // Check if this is a new turn (turnStartTime changed) or just reopening
-      const isNewTurn = turnStartTime !== lastTurnStartTime;
+    if (isOpen && !wasOpen) {
+      // Modal just opened - check if this is a new turn or reopening same turn
+      const isSameLocalTurn = turnInitialized && !turnStartTime && localStartTime;
+      const isSameTurn = turnInitialized && turnStartTime;
       
-      if (isNewTurn) {
+      if (!isSameLocalTurn && !isSameTurn) {
         // New turn - reset everything
         setGuess('');
         setHintUsed(false);
@@ -90,7 +94,7 @@ export const GuessModal: React.FC<GuessModalProps> = ({
         setCapitalHint('');
         setTimePenaltyApplied(0);
         setShowGuidedMenu(false);
-        setLastTurnStartTime(turnStartTime);
+        setTurnInitialized(true);
         
         // Set local start time for solo click mode (when no turnStartTime is provided)
         if (isSoloClickMode && !turnStartTime) {
@@ -99,12 +103,20 @@ export const GuessModal: React.FC<GuessModalProps> = ({
           setLocalStartTime(null);
         }
       } else {
-        // Just reopening - only reset the guess input
+        // Just reopening same turn - only reset the guess input
         setGuess('');
         setShowGuidedMenu(false);
       }
     }
-  }, [isOpen, isSoloClickMode, turnStartTime, lastTurnStartTime]);
+    setWasOpen(isOpen);
+  }, [isOpen]);
+
+  // Reset turnInitialized when turnStartTime changes (new turn from game)
+  useEffect(() => {
+    if (turnStartTime) {
+      setTurnInitialized(false);
+    }
+  }, [turnStartTime]);
 
   if (!isOpen) return null;
 
