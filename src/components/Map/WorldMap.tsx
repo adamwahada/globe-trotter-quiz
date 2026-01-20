@@ -46,11 +46,9 @@ export const WorldMap: React.FC<WorldMapProps> = ({
   const [position, setPosition] = useState({ coordinates: [0, 20] as [number, number], zoom: 1 });
   const [tooltip, setTooltip] = useState<{ country: string; x: number; y: number } | null>(null);
   const [hoveredCountry, setHoveredCountry] = useState<string | null>(null);
-  const [isInteracting, setIsInteracting] = useState(false);
   const mapContainerRef = useRef<HTMLDivElement>(null);
 
   const updateTooltipPosition = useCallback((country: string, e: React.MouseEvent) => {
-    if (isInteracting) return;
     const rect = mapContainerRef.current?.getBoundingClientRect();
     if (!rect) return;
 
@@ -59,12 +57,12 @@ export const WorldMap: React.FC<WorldMapProps> = ({
       x: e.clientX - rect.left,
       y: e.clientY - rect.top,
     });
-  }, [isInteracting]);
+  }, []);
 
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (!hoveredCountry || isInteracting) return;
+    if (!hoveredCountry) return;
     updateTooltipPosition(hoveredCountry, e);
-  }, [hoveredCountry, isInteracting, updateTooltipPosition]);
+  }, [hoveredCountry, updateTooltipPosition]);
 
   // Auto-zoom to current country's continent when it changes
   useEffect(() => {
@@ -188,13 +186,9 @@ export const WorldMap: React.FC<WorldMapProps> = ({
         className="relative flex-1 h-[450px] md:h-[550px] lg:h-[600px] bg-card rounded-xl overflow-hidden border-2 border-border shadow-lg"
         style={{ touchAction: 'pan-x pan-y pinch-zoom' }}
         onMouseMove={handleMouseMove}
-        onPointerDown={() => setIsInteracting(true)}
-        onPointerUp={() => setIsInteracting(false)}
-        onPointerCancel={() => setIsInteracting(false)}
         onPointerLeave={() => {
           setHoveredCountry(null);
           setTooltip(null);
-          setIsInteracting(false);
         }}
       >
         {/* Country Tooltip - follows cursor inside map box */}
@@ -275,7 +269,6 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                       geography={geo}
                       onClick={() => isClickable && onCountryClick(getGameCountryName(countryName))}
                       onMouseEnter={() => {
-                        if (isInteracting) return;
                         setHoveredCountry(countryName);
                       }}
                       onMouseLeave={() => {
