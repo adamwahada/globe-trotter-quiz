@@ -63,60 +63,33 @@ export const GuessModal: React.FC<GuessModalProps> = ({
   // Track total hints used across ALL types (max 2 per round)
   const [totalHintsUsed, setTotalHintsUsed] = useState(0);
   
-  // Local timer for solo click mode - persisted across modal open/close
-  const [localStartTime, setLocalStartTime] = useState<number | null>(null);
-  
   // Track if we've initialized for this turn (to prevent re-init on modal reopen)
-  const [turnInitialized, setTurnInitialized] = useState(false);
-  
-  // Track modal open state to detect fresh opens vs reopens
-  const [wasOpen, setWasOpen] = useState(false);
+  const [lastTurnStartTime, setLastTurnStartTime] = useState<number | undefined>(undefined);
 
-  // Reset state only when a NEW turn starts, not when modal reopens
+  // Reset state only when a NEW turn starts (turnStartTime changes), not when modal reopens
   useEffect(() => {
-    if (isOpen && !wasOpen) {
-      // Modal just opened - check if this is a new turn or reopening same turn
-      const isSameLocalTurn = turnInitialized && !turnStartTime && localStartTime;
-      const isSameTurn = turnInitialized && turnStartTime;
-      
-      if (!isSameLocalTurn && !isSameTurn) {
-        // New turn - reset everything
-        setGuess('');
-        setHintUsed(false);
-        setFamousPersonUsed(false);
-        setFlagUsed(false);
-        setFirstLetter('');
-        setFamousPerson('');
-        setCountryFlag('');
-        setTotalHintsUsed(0);
-        setPlayerHint('');
-        setSingerHint('');
-        setCapitalHint('');
-        setTimePenaltyApplied(0);
-        setShowGuidedMenu(false);
-        setTurnInitialized(true);
-        
-        // Set local start time for solo click mode (when no turnStartTime is provided)
-        if (isSoloClickMode && !turnStartTime) {
-          setLocalStartTime(Date.now());
-        } else {
-          setLocalStartTime(null);
-        }
-      } else {
-        // Just reopening same turn - only reset the guess input
-        setGuess('');
-        setShowGuidedMenu(false);
-      }
+    if (isOpen && turnStartTime !== lastTurnStartTime) {
+      // New turn - reset everything
+      setGuess('');
+      setHintUsed(false);
+      setFamousPersonUsed(false);
+      setFlagUsed(false);
+      setFirstLetter('');
+      setFamousPerson('');
+      setCountryFlag('');
+      setTotalHintsUsed(0);
+      setPlayerHint('');
+      setSingerHint('');
+      setCapitalHint('');
+      setTimePenaltyApplied(0);
+      setShowGuidedMenu(false);
+      setLastTurnStartTime(turnStartTime);
+    } else if (isOpen) {
+      // Just reopening same turn - only reset the guess input
+      setGuess('');
+      setShowGuidedMenu(false);
     }
-    setWasOpen(isOpen);
-  }, [isOpen]);
-
-  // Reset turnInitialized when turnStartTime changes (new turn from game)
-  useEffect(() => {
-    if (turnStartTime) {
-      setTurnInitialized(false);
-    }
-  }, [turnStartTime]);
+  }, [isOpen, turnStartTime, lastTurnStartTime]);
 
   if (!isOpen) return null;
 
@@ -199,15 +172,12 @@ export const GuessModal: React.FC<GuessModalProps> = ({
     onSkip();
   };
 
-  // Calculate adjusted time for timer
+  // Calculate adjusted time for timer - turnStartTime is now always provided by GamePage
   const adjustedTurnTime = turnTimeSeconds - timePenaltyApplied;
   
-  // Use local start time for solo click mode if no turnStartTime provided
-  const effectiveStartTime = isSoloClickMode && localStartTime ? localStartTime : turnStartTime;
-  
-  // Adjust local start time when time penalty is applied
-  const adjustedStartTime = effectiveStartTime 
-    ? effectiveStartTime - (timePenaltyApplied * 1000) 
+  // Adjust start time when time penalty is applied
+  const adjustedStartTime = turnStartTime 
+    ? turnStartTime - (timePenaltyApplied * 1000) 
     : undefined;
 
   return (
