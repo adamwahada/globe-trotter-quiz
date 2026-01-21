@@ -143,23 +143,40 @@ export const WorldMap: React.FC<WorldMapProps> = ({
     }
   }, [currentCountry]);
 
-  const handleMoveEnd = useCallback((pos: { coordinates: [number, number]; zoom: number }) => {
+  const handleMoveEnd = useCallback((raw: any) => {
     isMovingRef.current = false;
 
     // Ignore any stray move-end caused by our own zoom buttons.
     if (Date.now() < ignoreMoveEndUntilRef.current) return;
 
+    // react-simple-maps can provide different shapes depending on version:
+    // - { coordinates: [lng, lat], zoom }
+    // - { center: [lng, lat], zoom }
+    const coordsRaw =
+      raw && Array.isArray(raw.coordinates) && raw.coordinates.length >= 2
+        ? raw.coordinates
+        : raw && Array.isArray(raw.center) && raw.center.length >= 2
+          ? raw.center
+          : null;
+    const zoomRaw = raw && typeof raw.zoom === 'number' ? raw.zoom : null;
+    if (!coordsRaw || zoomRaw === null) return;
+
+    const next = {
+      coordinates: [coordsRaw[0], coordsRaw[1]] as [number, number],
+      zoom: zoomRaw,
+    };
+
     // Avoid pointless state churn.
     const prev = positionRef.current;
     if (
-      prev.zoom === pos.zoom &&
-      prev.coordinates[0] === pos.coordinates[0] &&
-      prev.coordinates[1] === pos.coordinates[1]
+      prev.zoom === next.zoom &&
+      prev.coordinates[0] === next.coordinates[0] &&
+      prev.coordinates[1] === next.coordinates[1]
     ) {
       return;
     }
 
-    setPosition(pos);
+    setPosition(next);
   }, []);
 
   const normalizedCurrent = currentCountry ? getMapCountryName(currentCountry) : null;
