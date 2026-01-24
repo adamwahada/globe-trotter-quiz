@@ -124,15 +124,15 @@ const GamePage = () => {
     }
   }, [session?.status]);
 
-  // Show toast notifications for turn changes
+  // Show toast notifications for turn changes (skip in solo mode)
   useEffect(() => {
-    if (session?.status === 'playing' && currentTurnPlayer) {
+    if (session?.status === 'playing' && currentTurnPlayer && !isSoloMode) {
       if (isMyTurn) {
         addToast('game', `🎯 ${t('yourTurn')}! ${t('rollDice')} 🎲`);
         playToastSound('game');
       }
     }
-  }, [currentTurnIndex, session?.status]);
+  }, [currentTurnIndex, session?.status, isSoloMode]);
 
   // Sync modal state with session
   useEffect(() => {
@@ -790,7 +790,8 @@ const GamePage = () => {
       <div className="flex-1 flex flex-col lg:flex-row p-4 gap-4 max-w-7xl mx-auto w-full">
         {/* Left side - Game info and controls */}
         <div className="lg:w-80 flex flex-col gap-4 shrink-0">
-          {/* Turn Indicator Card */}
+          {/* Turn Indicator Card - Hide in solo mode */}
+          {!isSoloMode && (
           <div className={`rounded-xl p-4 border-2 transition-all ${isMyTurn
             ? 'bg-primary/10 border-primary shadow-lg shadow-primary/20 animate-pulse-glow'
             : 'bg-card border-border'
@@ -882,6 +883,7 @@ const GamePage = () => {
               </div>
             )}
           </div>
+          )}
 
           {/* Spectator View - Answer Display */}
           {currentTurnState?.submittedAnswer && (

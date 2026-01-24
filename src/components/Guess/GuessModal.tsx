@@ -312,7 +312,7 @@ export const GuessModal: React.FC<GuessModalProps> = ({
 
             {/* Hint buttons - compact icons with tooltips */}
             <div className="flex justify-center gap-3 flex-wrap">
-              <GameTooltip content={maxHintsReached ? t('maxHintsReached') : (!canUseHint('letter') ? t('notEnoughPoints') : t('tooltipHint'))} position="top">
+              <GameTooltip content={hintUsed ? t('alreadyUsed') : (maxHintsReached ? t('maxHintsReached') : (!canUseHint('letter') ? t('notEnoughPoints') : t('tooltipHint')))} position="top">
                 <Button
                   variant="outline"
                   size="icon"
@@ -328,7 +328,7 @@ export const GuessModal: React.FC<GuessModalProps> = ({
                 </Button>
               </GameTooltip>
 
-              <GameTooltip content={maxHintsReached ? t('maxHintsReached') : (!canUseHint('flag') ? t('notEnoughPoints') : t('tooltipFlag'))} position="top">
+              <GameTooltip content={flagUsed ? t('alreadyUsed') : (maxHintsReached ? t('maxHintsReached') : (!canUseHint('flag') ? t('notEnoughPoints') : t('tooltipFlag')))} position="top">
                 <Button
                   variant="outline"
                   size="icon"
@@ -346,7 +346,7 @@ export const GuessModal: React.FC<GuessModalProps> = ({
 
               {/* Capital hint - standalone button (available for countries with extended hints) */}
               {hasExtendedHints && (
-                <GameTooltip content={maxHintsReached ? t('maxHintsReached') : (!canUseHint('capital') ? t('notEnoughPoints') : `${t('hintCapital')} (-1pt -10s)`)} position="top">
+                <GameTooltip content={capitalHint ? t('alreadyUsed') : (maxHintsReached ? t('maxHintsReached') : (!canUseHint('capital') ? t('notEnoughPoints') : `${t('hintCapital')} (-1pt -10s)`))} position="top">
                   <Button
                     variant="outline"
                     size="icon"
@@ -433,7 +433,7 @@ export const GuessModal: React.FC<GuessModalProps> = ({
 
               {/* Simple Famous Person hint for countries without extended hints */}
               {!hasExtendedHints && (
-                <GameTooltip content={maxHintsReached ? t('maxHintsReached') : (!canUseHint('famous') ? t('notEnoughPoints') : t('tooltipFamousPerson'))} position="top">
+                <GameTooltip content={famousPersonUsed ? t('alreadyUsed') : (maxHintsReached ? t('maxHintsReached') : (!canUseHint('famous') ? t('notEnoughPoints') : t('tooltipFamousPerson')))} position="top">
                   <Button
                     variant="outline"
                     size="icon"
