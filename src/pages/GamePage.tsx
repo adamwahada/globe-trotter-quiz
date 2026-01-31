@@ -464,13 +464,23 @@ const GamePage = () => {
     
     if (!countryToSkip) return; // No country to skip
 
-    // Mark country as wrong
-    if (!guessedCountries.includes(countryToSkip)) {
-      await updateGameState({
-        guessedCountries: [...guessedCountries, countryToSkip],
-        wrongCountries: [...wrongCountries, countryToSkip],
-      });
-    }
+    const currentPlayerUid = currentPlayer.id;
+    const currentPlayerData = session.players[currentPlayerUid];
+    if (!currentPlayerData) return;
+
+    // Track skipped country in player's countriesGuessed (for stats)
+    const existingCountriesGuessed = currentPlayerData.countriesGuessed || [];
+    const newCountriesGuessed = existingCountriesGuessed.includes(countryToSkip)
+      ? existingCountriesGuessed
+      : [...existingCountriesGuessed, countryToSkip];
+
+    // Mark country as wrong in global lists
+    const nextGuessedCountries = guessedCountries.includes(countryToSkip)
+      ? guessedCountries
+      : [...guessedCountries, countryToSkip];
+    const nextWrongCountries = wrongCountries.includes(countryToSkip)
+      ? wrongCountries
+      : [...wrongCountries, countryToSkip];
 
     // Update turn state if it exists (dice mode)
     if (currentTurnState && currentCountry) {
@@ -486,18 +496,29 @@ const GamePage = () => {
     addToast('info', t('turnSkipped'));
     setGuessModalOpen(false);
 
-    // Reset solo click state
-    if (isSoloMode && soloClickedCountry) {
+    // Handle solo mode - update player stats and reset for next country
+    if (isSoloMode) {
+      const updatedPlayers: PlayersMap = {
+        ...session.players,
+        [currentPlayerUid]: {
+          ...currentPlayerData,
+          countriesGuessed: newCountriesGuessed,
+        }
+      };
+      await updateGameState({
+        players: updatedPlayers,
+        guessedCountries: nextGuessedCountries,
+        wrongCountries: nextWrongCountries,
+      });
+
       setSoloClickedCountry(null);
       setSoloClickStartTime(null);
-      // In solo mode, clear turn state so player can play again immediately
       await updateTurnState(null);
       return; // Don't move to next turn in solo mode
     }
 
-    // Track inactivity only in multiplayer (skip counts as inactive)
-    const currentPlayerData = session.players[currentPlayer.id];
-    const newInactiveTurns = (currentPlayerData?.inactiveTurns || 0) + 1;
+    // Multiplayer: Track inactivity (skip counts as inactive)
+    const newInactiveTurns = (currentPlayerData.inactiveTurns || 0) + 1;
 
     if (newInactiveTurns >= 3) {
       // Kick player after 3 inactive turns
@@ -509,15 +530,20 @@ const GamePage = () => {
       return;
     }
 
-    // Update inactivity count
+    // Update player with inactivity count and countriesGuessed
     const updatedPlayers: PlayersMap = {
       ...session.players,
-      [currentPlayer.id]: {
+      [currentPlayerUid]: {
         ...currentPlayerData,
+        countriesGuessed: newCountriesGuessed,
         inactiveTurns: newInactiveTurns,
       }
     };
-    await updateGameState({ players: updatedPlayers });
+    await updateGameState({
+      players: updatedPlayers,
+      guessedCountries: nextGuessedCountries,
+      wrongCountries: nextWrongCountries,
+    });
 
     setTimeout(() => moveToNextTurn(), 2000);
   }, [isMyTurn, currentTurnState, currentCountry, guessedCountries, wrongCountries, updateGameState, addToast, t, moveToNextTurn, updateTurnState, session, currentPlayer, navigate, playToastSound, isSoloMode, soloClickedCountry]);
@@ -660,13 +686,19 @@ const GamePage = () => {
         const playerCorrect = player.countriesGuessed.filter(c => correctCountries.includes(c)).length;
         const playerWrong = player.countriesGuessed.filter(c => wrongCountries.includes(c)).length;
         
+        // In solo mode, total turns = all countries attempted (countriesGuessed.length)
+        // In multiplayer, use turnsPlayed for backward compatibility
+        const totalTurns = session.isSoloMode 
+          ? player.countriesGuessed.length 
+          : player.turnsPlayed;
+        
         const { error } = await supabase.from('game_history').insert({
           user_id: player.id,
           session_code: session.code,
           score: player.score,
           countries_correct: playerCorrect,
           countries_wrong: playerWrong,
-          total_turns: player.turnsPlayed,
+          total_turns: totalTurns,
           is_winner: player.score === winnerScore && winnerScore > 0,
           player_count: players.length,
           game_duration_minutes: session.duration,
