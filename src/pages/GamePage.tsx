@@ -686,11 +686,8 @@ const GamePage = () => {
         const playerCorrect = player.countriesGuessed.filter(c => correctCountries.includes(c)).length;
         const playerWrong = player.countriesGuessed.filter(c => wrongCountries.includes(c)).length;
         
-        // In solo mode, total turns = all countries attempted (countriesGuessed.length)
-        // In multiplayer, use turnsPlayed for backward compatibility
-        const totalTurns = session.isSoloMode 
-          ? player.countriesGuessed.length 
-          : player.turnsPlayed;
+        // Total turns = all countries attempted (countriesGuessed.length) for both modes
+        const totalTurns = player.countriesGuessed.length;
         
         const { error } = await supabase.from('game_history').insert({
           user_id: player.id,
