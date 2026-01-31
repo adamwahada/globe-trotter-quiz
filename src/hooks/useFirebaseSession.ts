@@ -37,6 +37,19 @@ export const useFirebaseSession = () => {
   const { user, tabSessionId } = useAuth();
   const { addToast } = useToastContext();
 
+  // If the user gets logged out (e.g. session conflict from another device),
+  // immediately clear any in-progress game state so the UI can't be used in a
+  // half-authenticated state.
+  useEffect(() => {
+    if (user) return;
+
+    setSession(null);
+    setCurrentPlayer(null);
+    setHasActiveSession(false);
+    setError(null);
+    clearRecoveryData();
+  }, [user?.id]);
+
   // Subscribe to session updates - use ref to avoid stale closure
   const currentPlayerIdRef = useRef<string | null>(null);
 
