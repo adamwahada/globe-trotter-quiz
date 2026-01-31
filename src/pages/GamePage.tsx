@@ -351,11 +351,12 @@ const GamePage = () => {
       return;
     }
 
-    // Update inactivity count
+    // Update inactivity count and turnsPlayed (timeout counts as a turn)
     const updatedPlayers: PlayersMap = {
       ...session.players,
       [currentPlayer.id]: {
         ...currentPlayerData,
+        turnsPlayed: (currentPlayerData.turnsPlayed || 0) + 1,
         inactiveTurns: newInactiveTurns,
       }
     };
@@ -421,6 +422,7 @@ const GamePage = () => {
           ...currentPlayerData,
           score: currentPlayerData.score + result.points,
           countriesGuessed: newCountriesGuessed,
+          turnsPlayed: (currentPlayerData.turnsPlayed || 0) + 1,
           inactiveTurns: 0, // Reset inactivity on active participation
         }
       };
@@ -503,6 +505,7 @@ const GamePage = () => {
         [currentPlayerUid]: {
           ...currentPlayerData,
           countriesGuessed: newCountriesGuessed,
+          turnsPlayed: (currentPlayerData.turnsPlayed || 0) + 1,
         }
       };
       await updateGameState({
@@ -530,12 +533,13 @@ const GamePage = () => {
       return;
     }
 
-    // Update player with inactivity count and countriesGuessed
+    // Update player with inactivity count, countriesGuessed, and turnsPlayed
     const updatedPlayers: PlayersMap = {
       ...session.players,
       [currentPlayerUid]: {
         ...currentPlayerData,
         countriesGuessed: newCountriesGuessed,
+        turnsPlayed: (currentPlayerData.turnsPlayed || 0) + 1,
         inactiveTurns: newInactiveTurns,
       }
     };
