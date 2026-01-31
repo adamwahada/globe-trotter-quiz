@@ -70,6 +70,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Unique ID for this specific tab/session instance
   const tabSessionIdRef = useRef<string>(Math.random().toString(36).substring(2, 15) + Date.now().toString(36));
   const presenceUnsubscribeRef = useRef<(() => void) | null>(null);
+  // Track if we've registered our presence - only log out on conflicts AFTER we've registered
+  const presenceRegisteredRef = useRef<boolean>(false);
 
   // Listen for auth state changes
   useEffect(() => {
@@ -84,20 +86,32 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const mappedUser = mapFirebaseUser(firebaseUser);
         setUser(mappedUser);
 
-        // Register this tab's presence immediately
-        await trackUserPresence(firebaseUser.uid, tabSessionIdRef.current);
+        // Reset presence flag before registering
+        presenceRegisteredRef.current = false;
 
-        // Start watching for session conflicts
+        // Register this tab's presence - this will kick out other sessions
+        await trackUserPresence(firebaseUser.uid, tabSessionIdRef.current);
+        
+        // Mark that we've successfully registered our presence
+        presenceRegisteredRef.current = true;
+
+        // Start watching for session conflicts (from OTHER devices logging in later)
         if (presenceUnsubscribeRef.current) presenceUnsubscribeRef.current();
         presenceUnsubscribeRef.current = subscribeToUserPresence(firebaseUser.uid, (presence) => {
+          // Only act on conflicts AFTER we've registered our presence
+          // This prevents the new session from being kicked by its own registration
+          if (!presenceRegisteredRef.current) {
+            return; // Ignore updates until we're registered
+          }
+
           if (presence && presence.sessionId !== tabSessionIdRef.current) {
-            console.warn('[Security] Account active in another session. Logging out...');
+            console.warn('[Security] Another device logged in. Logging out this session...');
 
             // Get current language for toast
             const lang = (localStorage.getItem('worldquiz_language') || 'en') as 'en' | 'fr' | 'ar';
             addToast('error', translations[lang].sessionConflictDesc, 10000);
 
-            // Force logout
+            // Force logout this (old) session
             signOut();
           }
         });
@@ -111,6 +125,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }));
       } else {
         setUser(null);
+        presenceRegisteredRef.current = false;
         if (presenceUnsubscribeRef.current) {
           presenceUnsubscribeRef.current();
           presenceUnsubscribeRef.current = null;
