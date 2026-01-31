@@ -459,13 +459,20 @@ const GamePage = () => {
   const handleSkip = useCallback(async () => {
     if (!isMyTurn || !currentPlayer || !session) return;
 
-    if (currentCountry && !guessedCountries.includes(currentCountry)) {
+    // Use the active country - either from dice roll or solo click
+    const countryToSkip = isSoloMode && soloClickedCountry ? soloClickedCountry : currentCountry;
+    
+    if (!countryToSkip) return; // No country to skip
+
+    // Mark country as wrong
+    if (!guessedCountries.includes(countryToSkip)) {
       await updateGameState({
-        guessedCountries: [...guessedCountries, currentCountry],
-        wrongCountries: [...wrongCountries, currentCountry],
+        guessedCountries: [...guessedCountries, countryToSkip],
+        wrongCountries: [...wrongCountries, countryToSkip],
       });
     }
 
+    // Update turn state if it exists (dice mode)
     if (currentTurnState && currentCountry) {
       await updateTurnState({
         ...currentTurnState,
@@ -476,7 +483,19 @@ const GamePage = () => {
       });
     }
 
-    // Track inactivity (skip counts as inactive)
+    addToast('info', t('turnSkipped'));
+    setGuessModalOpen(false);
+
+    // Reset solo click state
+    if (isSoloMode && soloClickedCountry) {
+      setSoloClickedCountry(null);
+      setSoloClickStartTime(null);
+      // In solo mode, clear turn state so player can play again immediately
+      await updateTurnState(null);
+      return; // Don't move to next turn in solo mode
+    }
+
+    // Track inactivity only in multiplayer (skip counts as inactive)
     const currentPlayerData = session.players[currentPlayer.id];
     const newInactiveTurns = (currentPlayerData?.inactiveTurns || 0) + 1;
 
@@ -500,11 +519,8 @@ const GamePage = () => {
     };
     await updateGameState({ players: updatedPlayers });
 
-    addToast('info', t('turnSkipped'));
-    setGuessModalOpen(false);
-
     setTimeout(() => moveToNextTurn(), 2000);
-  }, [isMyTurn, currentTurnState, currentCountry, guessedCountries, wrongCountries, updateGameState, addToast, t, moveToNextTurn, updateTurnState, session, currentPlayer, navigate, playToastSound]);
+  }, [isMyTurn, currentTurnState, currentCountry, guessedCountries, wrongCountries, updateGameState, addToast, t, moveToNextTurn, updateTurnState, session, currentPlayer, navigate, playToastSound, isSoloMode, soloClickedCountry]);
 
   const handleUseHint = useCallback((type: 'letter' | 'famous' | 'flag') => {
     // Use activeCountry which works for both dice mode and solo click mode
