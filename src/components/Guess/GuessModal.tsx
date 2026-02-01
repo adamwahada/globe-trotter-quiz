@@ -214,15 +214,15 @@ export const GuessModal: React.FC<GuessModalProps> = ({
           </h2>
 
           <p className="text-sm text-muted-foreground text-center mb-6">
-            What is the name of the highlighted country?
+            {t('guessModalQuestion')}
           </p>
 
           {/* Scoring info */}
           <div className="bg-secondary/50 rounded-lg p-3 mb-6 text-center">
             <p className="text-xs text-muted-foreground">
-              <span className="text-success font-semibold">+3</span> correct •
-              <span className="text-warning font-semibold ml-2">+2</span> close •
-              <span className="text-destructive font-semibold ml-2">0</span> wrong/skip
+              <span className="text-success font-semibold">{t('scoringCorrect')}</span> {t('scoringLabelCorrect')} •
+              <span className="text-warning font-semibold ml-2">{t('scoringClose')}</span> {t('scoringLabelClose')} •
+              <span className="text-destructive font-semibold ml-2">{t('scoringWrongSkip')}</span> {t('scoringLabelWrongSkip')}
             </p>
           </div>
 

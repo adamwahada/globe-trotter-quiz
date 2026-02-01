@@ -225,7 +225,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
 
     if (isCorrect) return `✓ ${countryName}`;
     if (isWrong) return `✗ ${countryName}`;
-    if (isCurrent) return disabled ? '🎯 Highlighted' : '🎯 This is the country to guess!';
+    if (isCurrent) return disabled ? `🎯 ${t('mapTooltipHighlighted')}` : `🎯 ${t('mapTooltipCountryToGuess')}`;
     return '???';
   };
 
