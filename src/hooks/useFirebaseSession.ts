@@ -248,7 +248,8 @@ export const useFirebaseSession = () => {
         startTime: isSoloMode ? Date.now() : null, // Start immediately for solo
         waitingRoomStartTime: Date.now(),
         countdownStartTime: null,
-        turnStartTime: null,
+        // For solo mode, start turn timer immediately so player has limited time per country
+        turnStartTime: isSoloMode ? null : null, // Solo mode uses different timing (click-based)
         isSoloMode: isSoloMode || false,
       };
 
