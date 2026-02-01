@@ -317,8 +317,10 @@ const GamePage = () => {
     }
 
     // Track inactivity (timeout counts as inactive)
-    const currentPlayerData = session.players[currentPlayer.id];
-    const newInactiveTurns = (currentPlayerData?.inactiveTurns || 0) + 1;
+    const currentPlayerData = session.players?.[currentPlayer.id];
+    if (!currentPlayerData) return; // Guard against missing player data
+    
+    const newInactiveTurns = (currentPlayerData.inactiveTurns || 0) + 1;
 
     if (newInactiveTurns >= 3) {
       // Kick player after 3 inactive turns
@@ -400,8 +402,8 @@ const GamePage = () => {
           
           // Mark current player as inactive
           const stalePlayerId = players[currentTurnIndex]?.id;
-          if (stalePlayerId && session.players[stalePlayerId]) {
-            const stalePlayerData = session.players[stalePlayerId];
+          const stalePlayerData = stalePlayerId ? session.players?.[stalePlayerId] : null;
+          if (stalePlayerId && stalePlayerData) {
             const newInactiveTurns = (stalePlayerData.inactiveTurns || 0) + 1;
             
             const updatedPlayers: PlayersMap = {
