@@ -292,6 +292,17 @@ export const translations = {
     hintSingerDesc: 'Shows a famous singer/artist from this country',
     hintSingerCost: '-1 point & -5 seconds',
     maxHintsPerTurn: 'Max 2 hints per turn',
+    
+    // Guess Modal & Map Tooltips
+    guessModalQuestion: 'What is the name of the highlighted country?',
+    scoringCorrect: '+3',
+    scoringClose: '+2',
+    scoringWrongSkip: '0',
+    scoringLabelCorrect: 'correct',
+    scoringLabelClose: 'close',
+    scoringLabelWrongSkip: 'wrong/skip',
+    mapTooltipCountryToGuess: 'This is the country to guess!',
+    mapTooltipHighlighted: 'Highlighted',
   },
 
   fr: {
@@ -585,6 +596,17 @@ export const translations = {
     hintSingerDesc: 'Montre un chanteur/artiste célèbre de ce pays',
     hintSingerCost: '-1 point & -5 secondes',
     maxHintsPerTurn: 'Max 2 indices par tour',
+    
+    // Guess Modal & Map Tooltips
+    guessModalQuestion: 'Quel est le nom du pays surligné ?',
+    scoringCorrect: '+3',
+    scoringClose: '+2',
+    scoringWrongSkip: '0',
+    scoringLabelCorrect: 'correct',
+    scoringLabelClose: 'proche',
+    scoringLabelWrongSkip: 'faux/passer',
+    mapTooltipCountryToGuess: 'C\'est le pays à deviner !',
+    mapTooltipHighlighted: 'Surligné',
   },
 
   ar: {
@@ -878,6 +900,17 @@ export const translations = {
     hintSingerDesc: 'يُظهر مغنياً/فناناً مشهوراً من هذه الدولة',
     hintSingerCost: '-1 نقطة & -5 ثوانٍ',
     maxHintsPerTurn: 'حد أقصى 2 تلميحات لكل دور',
+    
+    // Guess Modal & Map Tooltips
+    guessModalQuestion: 'ما اسم الدولة المميزة؟',
+    scoringCorrect: '+3',
+    scoringClose: '+2',
+    scoringWrongSkip: '0',
+    scoringLabelCorrect: 'صحيح',
+    scoringLabelClose: 'قريب',
+    scoringLabelWrongSkip: 'خطأ/تخطي',
+    mapTooltipCountryToGuess: 'هذه هي الدولة التي يجب تخمينها!',
+    mapTooltipHighlighted: 'مميز',
   },
 };
 
