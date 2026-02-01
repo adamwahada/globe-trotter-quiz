@@ -165,31 +165,7 @@ const GamePage = () => {
     setSoloClickStartTime(null);
   }, [soloClickedCountry, currentPlayer, session, guessedCountries, wrongCountries, updateGameState, addToast, t, playToastSound]);
 
-  // Turn timer timeout - handles both dice mode and solo click mode
-  useEffect(() => {
-    if (!isMyTurn) return;
-    
-    // Get the effective start time - either from session (dice) or solo click
-    const effectiveStartTime = session?.turnStartTime || soloClickStartTime;
-    const effectiveCountry = activeCountry || soloClickedCountry;
-    
-    if (!effectiveStartTime || !effectiveCountry) return;
-
-    const checkTimeout = () => {
-      const elapsed = Math.floor((Date.now() - effectiveStartTime) / 1000);
-      if (elapsed >= TURN_TIME_SECONDS) {
-        // For solo click mode, handle timeout locally
-        if (isSoloMode && soloClickedCountry && !currentTurnState?.diceRolled) {
-          handleSoloClickTimeout();
-        } else {
-          handleTurnTimeout();
-        }
-      }
-    };
-
-    const interval = setInterval(checkTimeout, 1000);
-    return () => clearInterval(interval);
-  }, [isMyTurn, session?.turnStartTime, soloClickStartTime, activeCountry, soloClickedCountry, isSoloMode, currentTurnState?.diceRolled, handleSoloClickTimeout]);
+  // NOTE: Turn timer useEffect is placed after handleTurnTimeout definition
 
   const handleRollDice = useCallback(async () => {
     if (!isMyTurn || isRolling || currentCountry) return;
@@ -220,11 +196,12 @@ const GamePage = () => {
       };
 
       await updateTurnState(turnState);
-      await updateGameState({ turnStartTime: Date.now() });
+      // NOTE: Do NOT reset turnStartTime here - the timer already started when turn began
+      // The player has a single 35s window for their entire turn (roll + guess)
 
       setIsRolling(false);
     }, 800);
-  }, [isMyTurn, isRolling, currentCountry, guessedCountries, currentPlayer, updateTurnState, updateGameState, addToast, endGame, playDiceSound]);
+  }, [isMyTurn, isRolling, currentCountry, guessedCountries, currentPlayer, updateTurnState, addToast, endGame, playDiceSound]);
 
   // Handle player departures notifications
   useEffect(() => {
@@ -310,10 +287,12 @@ const GamePage = () => {
   const moveToNextTurn = useCallback(async () => {
     const nextTurn = (currentTurnIndex + 1) % players.length;
 
+    // IMPORTANT: Set turnStartTime immediately when turn changes
+    // This ensures timer starts right away, preventing infinite wait if player doesn't roll dice
     await updateGameState({
       currentTurn: nextTurn,
       currentTurnState: null,
-      turnStartTime: null,
+      turnStartTime: Date.now(), // Start timer immediately for the next player
     });
   }, [players.length, currentTurnIndex, updateGameState]);
 
@@ -368,6 +347,93 @@ const GamePage = () => {
 
     setTimeout(() => moveToNextTurn(), 2000);
   }, [isMyTurn, currentTurnState, currentCountry, guessedCountries, wrongCountries, updateGameState, addToast, t, moveToNextTurn, playToastSound, updateTurnState, session, currentPlayer, navigate]);
+
+  // Turn timer timeout - handles both dice mode and solo click mode
+  // Also handles when current player hasn't rolled dice yet (prevents infinite wait)
+  // This runs for ALL players to detect when current player times out
+  useEffect(() => {
+    // Skip timer logic in solo mode for pre-roll (player can take their time)
+    if (isSoloMode && !soloClickStartTime && !currentCountry) return;
+    
+    // Get the effective start time - either from session (turn start) or solo click
+    const effectiveStartTime = session?.turnStartTime || soloClickStartTime;
+    
+    if (!effectiveStartTime) return;
+
+    const checkTimeout = () => {
+      const elapsed = Math.floor((Date.now() - effectiveStartTime) / 1000);
+      if (elapsed >= TURN_TIME_SECONDS) {
+        // For solo click mode, handle timeout locally
+        if (isSoloMode && soloClickedCountry && !currentTurnState?.diceRolled) {
+          handleSoloClickTimeout();
+        } else if (isMyTurn) {
+          // Current player's turn timed out - handle it
+          handleTurnTimeout();
+        }
+        // Non-current players: the current player's client will handle the timeout
+        // and update Firebase, which will sync to all clients via real-time listener
+      }
+    };
+
+    const interval = setInterval(checkTimeout, 1000);
+    return () => clearInterval(interval);
+  }, [isMyTurn, session?.turnStartTime, soloClickStartTime, currentCountry, soloClickedCountry, isSoloMode, currentTurnState?.diceRolled, handleSoloClickTimeout, handleTurnTimeout]);
+
+  // CRITICAL: Watch for inactive current player from other players' perspective
+  // If current player hasn't responded and their time is way over, force advance
+  // This handles cases where the current player's client crashed or disconnected
+  useEffect(() => {
+    // Only run this check for non-current players in multiplayer
+    if (isSoloMode || isMyTurn || !session?.turnStartTime) return;
+    
+    const GRACE_PERIOD = 5000; // 5 seconds grace period after timeout
+    
+    const checkForStalePlayer = () => {
+      const elapsed = Date.now() - session.turnStartTime!;
+      const expectedTimeout = (TURN_TIME_SECONDS * 1000) + GRACE_PERIOD;
+      
+      if (elapsed > expectedTimeout) {
+        // Current player is likely disconnected or crashed
+        // The host should force-advance the turn
+        if (session.host === currentPlayer?.id) {
+          console.log('Host forcing turn advance due to stale player');
+          
+          // Mark current player as inactive
+          const stalePlayerId = players[currentTurnIndex]?.id;
+          if (stalePlayerId && session.players[stalePlayerId]) {
+            const stalePlayerData = session.players[stalePlayerId];
+            const newInactiveTurns = (stalePlayerData.inactiveTurns || 0) + 1;
+            
+            const updatedPlayers: PlayersMap = {
+              ...session.players,
+              [stalePlayerId]: {
+                ...stalePlayerData,
+                turnsPlayed: (stalePlayerData.turnsPlayed || 0) + 1,
+                inactiveTurns: newInactiveTurns,
+              }
+            };
+            
+            // If player has 3+ inactive turns, kick them
+            if (newInactiveTurns >= 3) {
+              removePlayerFromSession(session.code, stalePlayerId);
+            }
+            
+            // Advance to next turn
+            const nextTurn = (currentTurnIndex + 1) % players.length;
+            updateGameState({
+              players: updatedPlayers,
+              currentTurn: nextTurn,
+              currentTurnState: null,
+              turnStartTime: Date.now(),
+            });
+          }
+        }
+      }
+    };
+    
+    const interval = setInterval(checkForStalePlayer, 2000);
+    return () => clearInterval(interval);
+  }, [isSoloMode, isMyTurn, session, currentPlayer?.id, players, currentTurnIndex, updateGameState]);
 
   const handleSubmitGuess = useCallback(async (guess: string) => {
     // For solo click mode, use soloClickedCountry if no dice was rolled
@@ -907,14 +973,14 @@ const GamePage = () => {
               </>
             )}
 
-            {/* Turn Timer - Visible to all */}
-            {currentCountry && session.turnStartTime && (
+            {/* Turn Timer - Visible to all, starts immediately when turn begins (not just after dice roll) */}
+            {session.turnStartTime && (
               <div className="mt-3 pt-3 border-t border-border">
                 <TimerProgress
                   totalSeconds={TURN_TIME_SECONDS}
                   startTime={session.turnStartTime}
                   onComplete={isMyTurn ? handleTurnTimeout : undefined}
-                  label={t('timeLeft')}
+                  label={currentCountry ? t('timeLeft') : `${t('timeLeft')} (${t('rollDice')})`}
                   enableWarningSound={isMyTurn}
                 />
               </div>
