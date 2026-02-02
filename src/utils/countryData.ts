@@ -167,6 +167,32 @@ export const countryFamousPeople: Record<string, string> = {
   'Yemen': 'Ali Abdullah Saleh',
   'Zambia': 'Kenneth Kaunda',
   'Zimbabwe': 'Robert Mugabe',
+  // Territories & Dependencies
+  'Greenland': 'Miki Nielsen',
+  'Puerto Rico': 'Roberto Clemente',
+  'Hong Kong': 'Jackie Chan',
+  'Macau': 'Edmund Ho',
+  'Bermuda': 'Flora Duffy',
+  'Cayman Islands': 'Lee Ramoon',
+  'Aruba': 'Jair Jurrjens',
+  'Curaçao': 'Andruw Jones',
+  'Faroe Islands': 'Gunnar Nielsen',
+  'Gibraltar': 'Liam Walker',
+  'French Guiana': 'Florent Malouda',
+  'New Caledonia': 'Christian Karembeu',
+  'French Polynesia': 'Taravao Fleurimond',
+  'Guam': 'Jason Cunliffe',
+  'U.S. Virgin Islands': 'Tim Duncan',
+  'British Virgin Islands': 'Tahesia Harrigan-Scott',
+  'American Samoa': 'Troy Polamalu',
+  'Northern Mariana Islands': 'Regional athletes',
+  // Disputed or Partially Recognized
+  'Western Sahara': 'Traditional leaders',
+  'Palestine': 'Mahmoud Darwish',
+  'Somaliland': 'Mo Farah',
+  // Special Geographic Regions
+  'Antarctica': 'Roald Amundsen',
+  'Falkland Islands': 'Regional explorers',
 };
 
 // Country to ISO 3166-1 alpha-2 code mapping for flag emojis
@@ -211,6 +237,16 @@ export const countryIsoCodes: Record<string, string> = {
   'Ukraine': 'UA', 'United Arab Emirates': 'AE', 'United Kingdom': 'GB', 'United States': 'US',
   'United States of America': 'US', 'Uruguay': 'UY', 'Uzbekistan': 'UZ', 'Vanuatu': 'VU',
   'Vatican City': 'VA', 'Venezuela': 'VE', 'Vietnam': 'VN', 'Yemen': 'YE', 'Zambia': 'ZM', 'Zimbabwe': 'ZW',
+  // Territories & Dependencies
+  'Greenland': 'GL', 'Puerto Rico': 'PR', 'Hong Kong': 'HK', 'Macau': 'MO',
+  'Bermuda': 'BM', 'Cayman Islands': 'KY', 'Aruba': 'AW', 'Curaçao': 'CW',
+  'Faroe Islands': 'FO', 'Gibraltar': 'GI', 'French Guiana': 'GF', 'New Caledonia': 'NC',
+  'French Polynesia': 'PF', 'Guam': 'GU', 'U.S. Virgin Islands': 'VI', 'British Virgin Islands': 'VG',
+  'American Samoa': 'AS', 'Northern Mariana Islands': 'MP',
+  // Disputed
+  'Western Sahara': 'EH', 'Palestine': 'PS', 'Somaliland': 'SO',
+  // Special regions
+  'Antarctica': 'AQ', 'Falkland Islands': 'FK',
 };
 
 // Normalize country names for flag lookup (handles GeoJSON aliases and common variants)
@@ -343,6 +379,20 @@ export const countryContinent: Record<string, string> = {
   'Micronesia': 'Oceania', 'Nauru': 'Oceania', 'New Zealand': 'Oceania', 'Palau': 'Oceania',
   'Papua New Guinea': 'Oceania', 'Samoa': 'Oceania', 'Solomon Islands': 'Oceania',
   'Tonga': 'Oceania', 'Tuvalu': 'Oceania', 'Vanuatu': 'Oceania',
+  'New Caledonia': 'Oceania', 'French Polynesia': 'Oceania', 'Guam': 'Oceania',
+  'American Samoa': 'Oceania', 'Northern Mariana Islands': 'Oceania',
+
+  // Territories & Dependencies (assigned to parent continent)
+  'Greenland': 'North America', 'Puerto Rico': 'North America', 'Bermuda': 'North America',
+  'Cayman Islands': 'North America', 'U.S. Virgin Islands': 'North America', 'British Virgin Islands': 'North America',
+  'Aruba': 'North America', 'Curaçao': 'North America',
+  'Hong Kong': 'Asia', 'Macau': 'Asia',
+  'Faroe Islands': 'Europe', 'Gibraltar': 'Europe',
+  'French Guiana': 'South America',
+
+  // Disputed / Special
+  'Western Sahara': 'Africa', 'Palestine': 'Asia', 'Somaliland': 'Africa',
+  'Falkland Islands': 'South America', 'Antarctica': 'Antarctica',
 };
 
 // Get famous person for a country
@@ -613,6 +663,32 @@ export const countryCoordinates: Record<string, { coordinates: [number, number];
   'Yemen': { coordinates: [48, 16], zoom: 3 },
   'Zambia': { coordinates: [28, -14], zoom: 3 },
   'Zimbabwe': { coordinates: [30, -19], zoom: 3.5 },
+  // Territories & Dependencies
+  'Greenland': { coordinates: [-42, 72], zoom: 1.5 },
+  'Puerto Rico': { coordinates: [-66, 18], zoom: 4 },
+  'Hong Kong': { coordinates: [114, 22], zoom: 5 },
+  'Macau': { coordinates: [113, 22], zoom: 5 },
+  'Bermuda': { coordinates: [-64, 32], zoom: 5 },
+  'Cayman Islands': { coordinates: [-81, 19], zoom: 5 },
+  'Aruba': { coordinates: [-70, 13], zoom: 5 },
+  'Curaçao': { coordinates: [-69, 12], zoom: 5 },
+  'Faroe Islands': { coordinates: [-7, 62], zoom: 4 },
+  'Gibraltar': { coordinates: [-5, 36], zoom: 6 },
+  'French Guiana': { coordinates: [-53, 4], zoom: 3.5 },
+  'New Caledonia': { coordinates: [165, -21], zoom: 3.5 },
+  'French Polynesia': { coordinates: [-149, -17], zoom: 3 },
+  'Guam': { coordinates: [145, 13], zoom: 5 },
+  'U.S. Virgin Islands': { coordinates: [-65, 18], zoom: 5 },
+  'British Virgin Islands': { coordinates: [-64, 18], zoom: 5 },
+  'American Samoa': { coordinates: [-170, -14], zoom: 4 },
+  'Northern Mariana Islands': { coordinates: [145, 15], zoom: 4 },
+  // Disputed
+  'Western Sahara': { coordinates: [-13, 24], zoom: 3 },
+  'Palestine': { coordinates: [35, 32], zoom: 4.5 },
+  'Somaliland': { coordinates: [46, 10], zoom: 3 },
+  // Special regions
+  'Falkland Islands': { coordinates: [-59, -52], zoom: 4 },
+  'Antarctica': { coordinates: [0, -80], zoom: 1 },
 };
 
 // Get country coordinates for zooming
