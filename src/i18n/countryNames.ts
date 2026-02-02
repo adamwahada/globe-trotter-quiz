@@ -414,17 +414,42 @@ export const localizedCountryNames: Record<string, LocalizedCountry> = {
 };
 
 /**
- * Remove accents and normalize for matching.
+ * Check if a string contains Arabic characters.
+ */
+const containsArabic = (str: string): boolean => {
+  return /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/.test(str);
+};
+
+/**
+ * Remove accents/diacritics from a string for comparison.
+ * Preserves Arabic text (only removes Latin diacritics).
  */
 const removeAccents = (str: string): string => {
+  // Don't apply NFD normalization to Arabic text as it destroys the characters
+  if (containsArabic(str)) {
+    return str;
+  }
   return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 };
 
 /**
  * Normalize a string for comparison (lowercase, no accents, trimmed).
+ * Handles both Latin and Arabic scripts.
  */
 const normalizeForMatch = (str: string): string => {
-  return removeAccents(str.toLowerCase().trim())
+  const trimmed = str.toLowerCase().trim();
+  
+  // For Arabic text, preserve Arabic characters and normalize whitespace
+  if (containsArabic(trimmed)) {
+    return trimmed
+      .replace(/[\u064B-\u065F\u0670]/g, '') // Remove Arabic diacritics (tashkeel)
+      .replace(/[-–—]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+  
+  // For Latin text, remove accents and special characters
+  return removeAccents(trimmed)
     .replace(/['']/g, "'")
     .replace(/[-–—]/g, ' ')
     .replace(/[^\w\s']/g, '')
