@@ -24,32 +24,33 @@ export interface LocalizedCountry {
  */
 export const localizedCountryNames: Record<string, LocalizedCountry> = {
   // === AFRICA ===
-  'Algeria': { en: 'Algeria', fr: 'Algérie', ar: 'الجزائر' },
-  'Angola': { en: 'Angola', fr: 'Angola', ar: 'أنغولا' },
+  'Algeria': { en: 'Algeria', fr: 'Algérie', ar: 'الجزائر', aliases: { ar: ['الجزاير', 'جزائر'] } },
+  'Angola': { en: 'Angola', fr: 'Angola', ar: 'أنغولا', aliases: { ar: ['انغولا'] } },
   'Benin': { en: 'Benin', fr: 'Bénin', ar: 'بنين' },
   'Botswana': { en: 'Botswana', fr: 'Botswana', ar: 'بوتسوانا' },
   'Burkina Faso': { en: 'Burkina Faso', fr: 'Burkina Faso', ar: 'بوركينا فاسو' },
   'Burundi': { en: 'Burundi', fr: 'Burundi', ar: 'بوروندي' },
   'Cabo Verde': { 
     en: 'Cabo Verde', fr: 'Cap-Vert', ar: 'الرأس الأخضر',
-    aliases: { en: ['cape verde'], fr: ['cap vert'] }
+    aliases: { en: ['cape verde'], fr: ['cap vert'], ar: ['راس الاخضر', 'الرأس الاخضر'] }
   },
-  'Cameroon': { en: 'Cameroon', fr: 'Cameroun', ar: 'الكاميرون' },
+  'Cameroon': { en: 'Cameroon', fr: 'Cameroun', ar: 'الكاميرون', aliases: { ar: ['كاميرون'] } },
   'Central African Republic': { 
     en: 'Central African Republic', fr: 'République Centrafricaine', ar: 'جمهورية أفريقيا الوسطى',
-    aliases: { en: ['car', 'c.a.r.'], fr: ['centrafrique', 'rca'] }
+    aliases: { en: ['car', 'c.a.r.'], fr: ['centrafrique', 'rca'], ar: ['افريقيا الوسطى'] }
   },
   'Chad': { en: 'Chad', fr: 'Tchad', ar: 'تشاد' },
-  'Comoros': { en: 'Comoros', fr: 'Comores', ar: 'جزر القمر' },
+  'Comoros': { en: 'Comoros', fr: 'Comores', ar: 'جزر القمر', aliases: { ar: ['القمر'] } },
   'Congo': { 
     en: 'Congo', fr: 'Congo', ar: 'الكونغو',
-    aliases: { en: ['republic of congo', 'congo brazzaville', 'congo-brazzaville'], fr: ['congo brazzaville', 'republique du congo'] }
+    aliases: { en: ['republic of congo', 'congo brazzaville', 'congo-brazzaville'], fr: ['congo brazzaville', 'republique du congo'], ar: ['كونغو', 'كونغو برازافيل'] }
   },
   'DR Congo': { 
     en: 'DR Congo', fr: 'RD Congo', ar: 'جمهورية الكونغو الديمقراطية',
     aliases: { 
       en: ['democratic republic of the congo', 'democratic republic of congo', 'drc', 'congo kinshasa', 'zaire'], 
-      fr: ['republique democratique du congo', 'congo kinshasa', 'zaire', 'rdc'] 
+      fr: ['republique democratique du congo', 'congo kinshasa', 'zaire', 'rdc'],
+      ar: ['الكونغو الديمقراطية', 'كونغو كينشاسا']
     }
   },
   'Djibouti': { en: 'Djibouti', fr: 'Djibouti', ar: 'جيبوتي' },
@@ -58,13 +59,13 @@ export const localizedCountryNames: Record<string, LocalizedCountry> = {
     en: 'Equatorial Guinea', fr: 'Guinée Équatoriale', ar: 'غينيا الاستوائية',
     aliases: { en: ['eq guinea', 'eq. guinea'], fr: ['guinee equatoriale'] }
   },
-  'Eritrea': { en: 'Eritrea', fr: 'Érythrée', ar: 'إريتريا', aliases: { fr: ['erythree'] } },
+  'Eritrea': { en: 'Eritrea', fr: 'Érythrée', ar: 'إريتريا', aliases: { fr: ['erythree'], ar: ['اريتريا'] } },
   'Eswatini': { 
     en: 'Eswatini', fr: 'Eswatini', ar: 'إسواتيني',
-    aliases: { en: ['swaziland'], fr: ['swaziland'] }
+    aliases: { en: ['swaziland'], fr: ['swaziland'], ar: ['سوازيلاند', 'اسواتيني'] }
   },
-  'Ethiopia': { en: 'Ethiopia', fr: 'Éthiopie', ar: 'إثيوبيا', aliases: { fr: ['ethiopie'] } },
-  'Gabon': { en: 'Gabon', fr: 'Gabon', ar: 'الغابون' },
+  'Ethiopia': { en: 'Ethiopia', fr: 'Éthiopie', ar: 'إثيوبيا', aliases: { fr: ['ethiopie'], ar: ['اثيوبيا', 'الحبشة'] } },
+  'Gabon': { en: 'Gabon', fr: 'Gabon', ar: 'الغابون', aliases: { ar: ['غابون'] } },
   'Gambia': { 
     en: 'Gambia', fr: 'Gambie', ar: 'غامبيا',
     aliases: { en: ['the gambia'] }
@@ -88,34 +89,34 @@ export const localizedCountryNames: Record<string, LocalizedCountry> = {
   'Mali': { en: 'Mali', fr: 'Mali', ar: 'مالي' },
   'Mauritania': { en: 'Mauritania', fr: 'Mauritanie', ar: 'موريتانيا' },
   'Mauritius': { en: 'Mauritius', fr: 'Maurice', ar: 'موريشيوس', aliases: { fr: ['ile maurice'] } },
-  'Morocco': { en: 'Morocco', fr: 'Maroc', ar: 'المغرب' },
+  'Morocco': { en: 'Morocco', fr: 'Maroc', ar: 'المغرب', aliases: { ar: ['مغرب'] } },
   'Mozambique': { en: 'Mozambique', fr: 'Mozambique', ar: 'موزمبيق' },
   'Namibia': { en: 'Namibia', fr: 'Namibie', ar: 'ناميبيا' },
-  'Niger': { en: 'Niger', fr: 'Niger', ar: 'النيجر' },
+  'Niger': { en: 'Niger', fr: 'Niger', ar: 'النيجر', aliases: { ar: ['نيجر'] } },
   'Nigeria': { en: 'Nigeria', fr: 'Nigeria', ar: 'نيجيريا', aliases: { fr: ['nigéria'] } },
   'Rwanda': { en: 'Rwanda', fr: 'Rwanda', ar: 'رواندا' },
   'Sao Tome and Principe': { 
     en: 'Sao Tome and Principe', fr: 'Sao Tomé-et-Príncipe', ar: 'ساو تومي وبرينسيبي',
     aliases: { en: ['sao tome'], fr: ['sao tome', 'sao tome et principe'] }
   },
-  'Senegal': { en: 'Senegal', fr: 'Sénégal', ar: 'السنغال', aliases: { fr: ['senegal'] } },
+  'Senegal': { en: 'Senegal', fr: 'Sénégal', ar: 'السنغال', aliases: { fr: ['senegal'], ar: ['سنغال'] } },
   'Seychelles': { en: 'Seychelles', fr: 'Seychelles', ar: 'سيشل' },
   'Sierra Leone': { en: 'Sierra Leone', fr: 'Sierra Leone', ar: 'سيراليون' },
-  'Somalia': { en: 'Somalia', fr: 'Somalie', ar: 'الصومال' },
-  'Somaliland': { en: 'Somaliland', fr: 'Somaliland', ar: 'أرض الصومال' },
-  'South Africa': { en: 'South Africa', fr: 'Afrique du Sud', ar: 'جنوب أفريقيا' },
+  'Somalia': { en: 'Somalia', fr: 'Somalie', ar: 'الصومال', aliases: { ar: ['صومال'] } },
+  'Somaliland': { en: 'Somaliland', fr: 'Somaliland', ar: 'أرض الصومال', aliases: { ar: ['ارض الصومال'] } },
+  'South Africa': { en: 'South Africa', fr: 'Afrique du Sud', ar: 'جنوب أفريقيا', aliases: { ar: ['جنوب افريقيا'] } },
   'South Sudan': { 
     en: 'South Sudan', fr: 'Soudan du Sud', ar: 'جنوب السودان',
     aliases: { en: ['s sudan', 's. sudan'] }
   },
-  'Sudan': { en: 'Sudan', fr: 'Soudan', ar: 'السودان' },
+  'Sudan': { en: 'Sudan', fr: 'Soudan', ar: 'السودان', aliases: { ar: ['سودان'] } },
   'Tanzania': { en: 'Tanzania', fr: 'Tanzanie', ar: 'تنزانيا' },
   'Togo': { en: 'Togo', fr: 'Togo', ar: 'توغو' },
   'Tunisia': { en: 'Tunisia', fr: 'Tunisie', ar: 'تونس' },
-  'Uganda': { en: 'Uganda', fr: 'Ouganda', ar: 'أوغندا' },
+  'Uganda': { en: 'Uganda', fr: 'Ouganda', ar: 'أوغندا', aliases: { ar: ['اوغندا'] } },
   'Western Sahara': { 
     en: 'Western Sahara', fr: 'Sahara Occidental', ar: 'الصحراء الغربية',
-    aliases: { en: ['w sahara', 'w. sahara'] }
+    aliases: { en: ['w sahara', 'w. sahara'], ar: ['صحراء غربية'] }
   },
   'Zambia': { en: 'Zambia', fr: 'Zambie', ar: 'زامبيا' },
   'Zimbabwe': { en: 'Zimbabwe', fr: 'Zimbabwe', ar: 'زيمبابوي' },
@@ -193,8 +194,8 @@ export const localizedCountryNames: Record<string, LocalizedCountry> = {
   'Gibraltar': { en: 'Gibraltar', fr: 'Gibraltar', ar: 'جبل طارق' },
 
   // === ASIA ===
-  'Afghanistan': { en: 'Afghanistan', fr: 'Afghanistan', ar: 'أفغانستان' },
-  'Bahrain': { en: 'Bahrain', fr: 'Bahreïn', ar: 'البحرين', aliases: { fr: ['bahrein'] } },
+  'Afghanistan': { en: 'Afghanistan', fr: 'Afghanistan', ar: 'أفغانستان', aliases: { ar: ['افغانستان'] } },
+  'Bahrain': { en: 'Bahrain', fr: 'Bahreïn', ar: 'البحرين', aliases: { fr: ['bahrein'], ar: ['بحرين'] } },
   'Bangladesh': { en: 'Bangladesh', fr: 'Bangladesh', ar: 'بنغلاديش' },
   'Bhutan': { en: 'Bhutan', fr: 'Bhoutan', ar: 'بوتان' },
   'Brunei': { 
@@ -202,23 +203,23 @@ export const localizedCountryNames: Record<string, LocalizedCountry> = {
     aliases: { en: ['brunei darussalam'] }
   },
   'Cambodia': { en: 'Cambodia', fr: 'Cambodge', ar: 'كمبوديا' },
-  'China': { en: 'China', fr: 'Chine', ar: 'الصين' },
+  'China': { en: 'China', fr: 'Chine', ar: 'الصين', aliases: { ar: ['صين'] } },
   'Hong Kong': { 
     en: 'Hong Kong', fr: 'Hong Kong', ar: 'هونغ كونغ',
-    aliases: { en: ['hongkong', 'hk'] }
+    aliases: { en: ['hongkong', 'hk'], ar: ['هونج كونج'] }
   },
-  'India': { en: 'India', fr: 'Inde', ar: 'الهند' },
-  'Indonesia': { en: 'Indonesia', fr: 'Indonésie', ar: 'إندونيسيا', aliases: { fr: ['indonesie'] } },
+  'India': { en: 'India', fr: 'Inde', ar: 'الهند', aliases: { ar: ['هند'] } },
+  'Indonesia': { en: 'Indonesia', fr: 'Indonésie', ar: 'إندونيسيا', aliases: { fr: ['indonesie'], ar: ['اندونيسيا'] } },
   'Iran': { 
     en: 'Iran', fr: 'Iran', ar: 'إيران',
-    aliases: { en: ['persia', 'islamic republic of iran'] }
+    aliases: { en: ['persia', 'islamic republic of iran'], ar: ['ايران'] }
   },
-  'Iraq': { en: 'Iraq', fr: 'Irak', ar: 'العراق' },
-  'Israel': { en: 'Israel', fr: 'Israël', ar: 'إسرائيل', aliases: { fr: ['israel'] } },
-  'Japan': { en: 'Japan', fr: 'Japon', ar: 'اليابان' },
-  'Jordan': { en: 'Jordan', fr: 'Jordanie', ar: 'الأردن' },
+  'Iraq': { en: 'Iraq', fr: 'Irak', ar: 'العراق', aliases: { ar: ['عراق'] } },
+  'Israel': { en: 'Israel', fr: 'Israël', ar: 'إسرائيل', aliases: { fr: ['israel'], ar: ['اسرائيل'] } },
+  'Japan': { en: 'Japan', fr: 'Japon', ar: 'اليابان', aliases: { ar: ['يابان'] } },
+  'Jordan': { en: 'Jordan', fr: 'Jordanie', ar: 'الأردن', aliases: { ar: ['اردن', 'الاردن'] } },
   'Kazakhstan': { en: 'Kazakhstan', fr: 'Kazakhstan', ar: 'كازاخستان' },
-  'Kuwait': { en: 'Kuwait', fr: 'Koweït', ar: 'الكويت', aliases: { fr: ['koweit'] } },
+  'Kuwait': { en: 'Kuwait', fr: 'Koweït', ar: 'الكويت', aliases: { fr: ['koweit'], ar: ['كويت'] } },
   'Kyrgyzstan': { en: 'Kyrgyzstan', fr: 'Kirghizistan', ar: 'قيرغيزستان' },
   'Laos': { 
     en: 'Laos', fr: 'Laos', ar: 'لاوس',
@@ -227,28 +228,28 @@ export const localizedCountryNames: Record<string, LocalizedCountry> = {
   'Lebanon': { en: 'Lebanon', fr: 'Liban', ar: 'لبنان' },
   'Macau': { en: 'Macau', fr: 'Macao', ar: 'ماكاو' },
   'Malaysia': { en: 'Malaysia', fr: 'Malaisie', ar: 'ماليزيا' },
-  'Maldives': { en: 'Maldives', fr: 'Maldives', ar: 'المالديف' },
+  'Maldives': { en: 'Maldives', fr: 'Maldives', ar: 'المالديف', aliases: { ar: ['مالديف'] } },
   'Mongolia': { en: 'Mongolia', fr: 'Mongolie', ar: 'منغوليا' },
   'Myanmar': { 
     en: 'Myanmar', fr: 'Myanmar', ar: 'ميانمار',
-    aliases: { en: ['burma'], fr: ['birmanie'] }
+    aliases: { en: ['burma'], fr: ['birmanie'], ar: ['بورما'] }
   },
   'Nepal': { en: 'Nepal', fr: 'Népal', ar: 'نيبال', aliases: { fr: ['nepal'] } },
   'North Korea': { 
     en: 'North Korea', fr: 'Corée du Nord', ar: 'كوريا الشمالية',
     aliases: { en: ['n korea', 'dprk', "democratic people's republic of korea"], fr: ['coree du nord'] }
   },
-  'Oman': { en: 'Oman', fr: 'Oman', ar: 'عُمان' },
+  'Oman': { en: 'Oman', fr: 'Oman', ar: 'عُمان', aliases: { ar: ['عمان'] } },
   'Pakistan': { en: 'Pakistan', fr: 'Pakistan', ar: 'باكستان' },
   'Palestine': { 
     en: 'Palestine', fr: 'Palestine', ar: 'فلسطين',
     aliases: { en: ['palestinian territories', 'west bank', 'gaza'] }
   },
-  'Philippines': { en: 'Philippines', fr: 'Philippines', ar: 'الفلبين' },
+  'Philippines': { en: 'Philippines', fr: 'Philippines', ar: 'الفلبين', aliases: { ar: ['فلبين'] } },
   'Qatar': { en: 'Qatar', fr: 'Qatar', ar: 'قطر' },
   'Saudi Arabia': { 
     en: 'Saudi Arabia', fr: 'Arabie Saoudite', ar: 'المملكة العربية السعودية',
-    aliases: { en: ['saudi', 'ksa'] }
+    aliases: { en: ['saudi', 'ksa'], ar: ['السعودية', 'سعودية'] }
   },
   'Singapore': { en: 'Singapore', fr: 'Singapour', ar: 'سنغافورة' },
   'South Korea': { 
@@ -258,7 +259,7 @@ export const localizedCountryNames: Record<string, LocalizedCountry> = {
   'Sri Lanka': { en: 'Sri Lanka', fr: 'Sri Lanka', ar: 'سريلانكا' },
   'Syria': { 
     en: 'Syria', fr: 'Syrie', ar: 'سوريا',
-    aliases: { en: ['syrian arab republic'] }
+    aliases: { en: ['syrian arab republic'], ar: ['سورية'] }
   },
   'Taiwan': { 
     en: 'Taiwan', fr: 'Taïwan', ar: 'تايوان',
@@ -273,14 +274,14 @@ export const localizedCountryNames: Record<string, LocalizedCountry> = {
   'Turkmenistan': { en: 'Turkmenistan', fr: 'Turkménistan', ar: 'تركمانستان', aliases: { fr: ['turkmenistan'] } },
   'United Arab Emirates': { 
     en: 'United Arab Emirates', fr: 'Émirats Arabes Unis', ar: 'الإمارات العربية المتحدة',
-    aliases: { en: ['uae', 'u.a.e.', 'emirates'], fr: ['emirats arabes unis', 'eau'] }
+    aliases: { en: ['uae', 'u.a.e.', 'emirates'], fr: ['emirats arabes unis', 'eau'], ar: ['الامارات', 'امارات'] }
   },
-  'Uzbekistan': { en: 'Uzbekistan', fr: 'Ouzbékistan', ar: 'أوزبكستان', aliases: { fr: ['ouzbekistan'] } },
+  'Uzbekistan': { en: 'Uzbekistan', fr: 'Ouzbékistan', ar: 'أوزبكستان', aliases: { fr: ['ouzbekistan'], ar: ['اوزبكستان'] } },
   'Vietnam': { 
     en: 'Vietnam', fr: 'Viêt Nam', ar: 'فيتنام',
     aliases: { en: ['viet nam'], fr: ['vietnam'] }
   },
-  'Yemen': { en: 'Yemen', fr: 'Yémen', ar: 'اليمن', aliases: { fr: ['yemen'] } },
+  'Yemen': { en: 'Yemen', fr: 'Yémen', ar: 'اليمن', aliases: { fr: ['yemen'], ar: ['يمن'] } },
 
   // === NORTH AMERICA ===
   'Antigua and Barbuda': { 
@@ -457,6 +458,17 @@ const normalizeForMatch = (str: string): string => {
 };
 
 /**
+ * Remove the Arabic definite article "ال" from the beginning of a string.
+ */
+const removeArabicArticle = (str: string): string => {
+  // Remove "ال" from the start
+  if (str.startsWith('ال')) {
+    return str.slice(2);
+  }
+  return str;
+};
+
+/**
  * Build a reverse lookup map: normalized name/alias -> canonical English name
  * This is built for each language.
  */
@@ -509,6 +521,21 @@ export const matchCountryInput = (input: string, language: Language): string | n
   // First try the current language
   if (countryLookupMaps[language][normalized]) {
     return countryLookupMaps[language][normalized];
+  }
+  
+  // For Arabic: also try without the definite article "ال"
+  if (containsArabic(normalized)) {
+    const withoutArticle = removeArabicArticle(normalized);
+    if (withoutArticle !== normalized && countryLookupMaps.ar[withoutArticle]) {
+      return countryLookupMaps.ar[withoutArticle];
+    }
+    // Also check if input WITHOUT article matches a name WITH article
+    for (const [key, value] of Object.entries(countryLookupMaps.ar)) {
+      const keyWithoutArticle = removeArabicArticle(key);
+      if (keyWithoutArticle === normalized || keyWithoutArticle === withoutArticle) {
+        return value;
+      }
+    }
   }
   
   // Fallback to English if not found in current language
