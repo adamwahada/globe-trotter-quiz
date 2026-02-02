@@ -20,6 +20,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useGame, TurnState, Player } from '@/contexts/GameContext';
 import { useToastContext } from '@/contexts/ToastContext';
 import { useSound } from '@/contexts/SoundContext';
+import { useLocalizedCountry } from '@/hooks/useLocalizedCountry';
 import { isCorrectGuess } from '@/utils/scoring';
 import { getRandomUnplayedCountry, getFamousPerson, getMapCountryName, getCountryFlag, preloadCountryFlag, preloadAllCountryFlags } from '@/utils/countryData';
 import { hasExtendedHints, getFamousPlayer, getFamousSinger, getCountryCapital, getHintAvailability, HintAvailability } from '@/utils/countryHints';
@@ -620,6 +621,9 @@ const GamePage = () => {
     setTimeout(() => moveToNextTurn(), 2000);
   }, [isMyTurn, currentTurnState, currentCountry, guessedCountries, wrongCountries, updateGameState, addToast, t, moveToNextTurn, updateTurnState, session, currentPlayer, navigate, playToastSound, isSoloMode, soloClickedCountry]);
 
+  // Get localized country data
+  const { getCountryDisplayName, getLocalizedHints } = useLocalizedCountry();
+
   const handleUseHint = useCallback((type: 'letter' | 'famous' | 'flag') => {
     // Use activeCountry which works for both dice mode and solo click mode
     const countryForHint = isSoloMode && soloClickedCountry ? soloClickedCountry : currentCountry;
@@ -660,15 +664,18 @@ const GamePage = () => {
 
     if (type === 'famous') {
       addToast('info', t('hintUsed') + ' (-0.5 point)');
-      return getFamousPerson(countryForHint) || 'No famous person data found';
+      // Get localized famous person
+      const localizedHints = getLocalizedHints(countryForHint);
+      return localizedHints.famousPerson || getFamousPerson(countryForHint) || 'No famous person data found';
     }
 
-    // Letter hint
+    // Letter hint - use first letter of localized country name
     addToast('info', t('hintUsed') + ' (-1 point)');
-    return countryForHint[0] || '';
-  }, [currentCountry, currentPlayer, session, updateGameState, addToast, t, isSoloMode, soloClickedCountry]);
+    const localizedName = getCountryDisplayName(countryForHint);
+    return localizedName[0] || countryForHint[0] || '';
+  }, [currentCountry, currentPlayer, session, updateGameState, addToast, t, isSoloMode, soloClickedCountry, getCountryDisplayName, getLocalizedHints]);
 
-  // Handle guided hints (player, singer, capital)
+  // Handle guided hints (player, singer, capital) - with localization
   const handleUseGuidedHint = useCallback((type: GuidedHintType): { value: string; timePenalty: number } | null => {
     const countryForHint = isSoloMode && soloClickedCountry ? soloClickedCountry : currentCountry;
     if (!countryForHint || !currentPlayer || !session) return null;
@@ -678,20 +685,26 @@ const GamePage = () => {
 
     const currentPlayerData = session.players[currentPlayerUid];
     
+    // Get localized hints first
+    const localizedHints = getLocalizedHints(countryForHint);
+    
     let hintValue: string | null = null;
     let timePenalty = 0;
     let pointCost = 0;
 
     if (type === 'capital') {
-      hintValue = getCountryCapital(countryForHint);
+      // Prefer localized capital, fallback to English
+      hintValue = localizedHints.capital || getCountryCapital(countryForHint);
       timePenalty = 10; // 10 seconds penalty
       pointCost = 1; // 1 point cost
     } else if (type === 'player') {
-      hintValue = getFamousPlayer(countryForHint);
+      // Prefer localized player, fallback to English
+      hintValue = localizedHints.famousPlayer || getFamousPlayer(countryForHint);
       timePenalty = 5; // 5 seconds penalty
       pointCost = 1; // 1 point cost
     } else if (type === 'singer') {
-      hintValue = getFamousSinger(countryForHint);
+      // Prefer localized singer, fallback to English
+      hintValue = localizedHints.famousSinger || getFamousSinger(countryForHint);
       timePenalty = 5; // 5 seconds penalty
       pointCost = 1; // 1 point cost
     }
@@ -723,7 +736,7 @@ const GamePage = () => {
     addToast('info', `${t('hintUsed')} ${costMessage}`);
 
     return { value: hintValue, timePenalty };
-  }, [currentCountry, currentPlayer, session, updateGameState, addToast, t, isSoloMode, soloClickedCountry]);
+  }, [currentCountry, currentPlayer, session, updateGameState, addToast, t, isSoloMode, soloClickedCountry, getLocalizedHints]);
 
   const handleLeave = useCallback(async () => {
     await leaveSession();

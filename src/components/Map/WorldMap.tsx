@@ -10,6 +10,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { ZoomIn, ZoomOut, Maximize, Globe, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getContinent, getMapCountryName, getGameCountryName, getCountryCoordinates } from '@/utils/countryData';
+import { getLocalizedCountryName } from '@/i18n/countryNames';
 
 const geoUrl = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
 
@@ -42,7 +43,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
   disabled = false,
   isSoloMode = false,
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [position, setPosition] = useState({ coordinates: [0, 20] as [number, number], zoom: 1 });
   const [tooltip, setTooltip] = useState<{ country: string; x: number; y: number } | null>(null);
   const [hoveredCountry, setHoveredCountry] = useState<string | null>(null);
@@ -217,14 +218,20 @@ export const WorldMap: React.FC<WorldMapProps> = ({
   };
 
   // Tooltip should NEVER reveal unplayed country names
+  // For guessed countries, show the localized name
   const getTooltipContent = (countryName: string) => {
     const normalizedName = getMapCountryName(countryName);
     const isCorrect = normalizedCorrect.includes(normalizedName);
     const isWrong = normalizedWrong.includes(normalizedName);
     const isCurrent = normalizedCurrent === normalizedName;
 
-    if (isCorrect) return `✓ ${countryName}`;
-    if (isWrong) return `✗ ${countryName}`;
+    // Get the game name (canonical English name) for localization lookup
+    const gameName = getGameCountryName(countryName);
+    // Get the localized name based on current language
+    const localizedName = getLocalizedCountryName(gameName, language);
+
+    if (isCorrect) return `✓ ${localizedName}`;
+    if (isWrong) return `✗ ${localizedName}`;
     if (isCurrent) return disabled ? `🎯 ${t('mapTooltipHighlighted')}` : `🎯 ${t('mapTooltipCountryToGuess')}`;
     return '???';
   };
