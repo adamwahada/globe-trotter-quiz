@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { GameTooltip } from '@/components/Tooltip/GameTooltip';
 import { TimerProgress } from '@/components/Timer/TimerProgress';
+import type { HintAvailability } from '@/utils/countryHints';
 
 // Hint costs
 const HINT_COST_LETTER = 1;
@@ -28,8 +29,17 @@ interface GuessModalProps {
   turnStartTime?: number;
   playerScore?: number;
   hasExtendedHints?: boolean;
+  hintAvailability?: HintAvailability;
   isSoloClickMode?: boolean; // For solo mode without dice roll
 }
+
+const defaultHintAvailability: HintAvailability = {
+  hasFlag: true,
+  hasCapital: false,
+  hasPlayer: false,
+  hasSinger: false,
+  hasFamousPerson: true,
+};
 
 export const GuessModal: React.FC<GuessModalProps> = ({
   isOpen,
@@ -42,6 +52,7 @@ export const GuessModal: React.FC<GuessModalProps> = ({
   turnStartTime,
   playerScore = 0,
   hasExtendedHints = false,
+  hintAvailability = defaultHintAvailability,
   isSoloClickMode = false,
 }) => {
   const { t } = useLanguage();
@@ -312,6 +323,7 @@ export const GuessModal: React.FC<GuessModalProps> = ({
 
             {/* Hint buttons - compact icons with tooltips */}
             <div className="flex justify-center gap-3 flex-wrap">
+              {/* First letter hint - always available */}
               <GameTooltip content={hintUsed ? t('alreadyUsed') : (maxHintsReached ? t('maxHintsReached') : (!canUseHint('letter') ? t('notEnoughPoints') : t('tooltipHint')))} position="top">
                 <Button
                   variant="outline"
@@ -328,24 +340,27 @@ export const GuessModal: React.FC<GuessModalProps> = ({
                 </Button>
               </GameTooltip>
 
-              <GameTooltip content={flagUsed ? t('alreadyUsed') : (maxHintsReached ? t('maxHintsReached') : (!canUseHint('flag') ? t('notEnoughPoints') : t('tooltipFlag')))} position="top">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={handleFlag}
-                  disabled={!canUseHint('flag')}
-                  className={`h-12 w-12 ${flagUsed ? 'bg-destructive/20 border-destructive' : !canUseHint('flag') ? 'opacity-50 cursor-not-allowed' : 'hover:bg-destructive/10 hover:border-destructive'}`}
-                >
-                  {flagUsed ? (
-                    <span className="text-destructive font-bold">✓</span>
-                  ) : (
-                    <Flag className="h-5 w-5 text-destructive" />
-                  )}
-                </Button>
-              </GameTooltip>
+              {/* Flag hint - only show if flag data available */}
+              {hintAvailability.hasFlag && (
+                <GameTooltip content={flagUsed ? t('alreadyUsed') : (maxHintsReached ? t('maxHintsReached') : (!canUseHint('flag') ? t('notEnoughPoints') : t('tooltipFlag')))} position="top">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={handleFlag}
+                    disabled={!canUseHint('flag')}
+                    className={`h-12 w-12 ${flagUsed ? 'bg-destructive/20 border-destructive' : !canUseHint('flag') ? 'opacity-50 cursor-not-allowed' : 'hover:bg-destructive/10 hover:border-destructive'}`}
+                  >
+                    {flagUsed ? (
+                      <span className="text-destructive font-bold">✓</span>
+                    ) : (
+                      <Flag className="h-5 w-5 text-destructive" />
+                    )}
+                  </Button>
+                </GameTooltip>
+              )}
 
-              {/* Capital hint - standalone button (available for countries with extended hints) */}
-              {hasExtendedHints && (
+              {/* Capital hint - only show if capital data available */}
+              {hasExtendedHints && hintAvailability.hasCapital && (
                 <GameTooltip content={capitalHint ? t('alreadyUsed') : (maxHintsReached ? t('maxHintsReached') : (!canUseHint('capital') ? t('notEnoughPoints') : `${t('hintCapital')} (-1pt -10s)`))} position="top">
                   <Button
                     variant="outline"
@@ -363,8 +378,8 @@ export const GuessModal: React.FC<GuessModalProps> = ({
                 </GameTooltip>
               )}
 
-              {/* Famous Persons Menu - Only show if country has extended hints */}
-              {hasExtendedHints && (
+              {/* Famous Persons Menu - Only show if at least one option is available */}
+              {(hintAvailability.hasFamousPerson || hintAvailability.hasPlayer || hintAvailability.hasSinger) && (
                 <div className="relative">
                   <GameTooltip content={maxHintsReached ? t('maxHintsReached') : t('tooltipGuidedHints')} position="top">
                     <Button
@@ -385,47 +400,56 @@ export const GuessModal: React.FC<GuessModalProps> = ({
                         {t('chooseFamousPerson')} ({t('hintsRemaining')}: {MAX_TOTAL_HINTS - totalHintsUsed})
                       </p>
                       
-                      <button
-                        onClick={handleFamousPerson}
-                        disabled={!canUseHint('famous')}
-                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
-                          canUseHint('famous') 
-                            ? 'hover:bg-info/20 text-foreground' 
-                            : 'opacity-50 cursor-not-allowed text-muted-foreground'
-                        }`}
-                      >
-                        <User className="h-4 w-4 text-info" />
-                        <span>{t('famousPerson')}</span>
-                        <span className="ml-auto text-xs text-muted-foreground">-0.5pt</span>
-                      </button>
+                      {/* Famous person hint - only show if data available */}
+                      {hintAvailability.hasFamousPerson && (
+                        <button
+                          onClick={handleFamousPerson}
+                          disabled={!canUseHint('famous')}
+                          className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+                            canUseHint('famous') 
+                              ? 'hover:bg-info/20 text-foreground' 
+                              : 'opacity-50 cursor-not-allowed text-muted-foreground'
+                          }`}
+                        >
+                          <User className="h-4 w-4 text-info" />
+                          <span>{t('famousPerson')}</span>
+                          <span className="ml-auto text-xs text-muted-foreground">-0.5pt</span>
+                        </button>
+                      )}
 
-                      <button
-                        onClick={() => handleGuidedHint('player')}
-                        disabled={!canUseHint('player')}
-                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
-                          canUseHint('player') 
-                            ? 'hover:bg-green-500/20 text-foreground' 
-                            : 'opacity-50 cursor-not-allowed text-muted-foreground'
-                        }`}
-                      >
-                        <Dribbble className="h-4 w-4 text-green-400" />
-                        <span>{t('hintPlayer')}</span>
-                        <span className="ml-auto text-xs text-muted-foreground">-1pt -5s</span>
-                      </button>
+                      {/* Famous player hint - only show if data available */}
+                      {hintAvailability.hasPlayer && (
+                        <button
+                          onClick={() => handleGuidedHint('player')}
+                          disabled={!canUseHint('player')}
+                          className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+                            canUseHint('player') 
+                              ? 'hover:bg-green-500/20 text-foreground' 
+                              : 'opacity-50 cursor-not-allowed text-muted-foreground'
+                          }`}
+                        >
+                          <Dribbble className="h-4 w-4 text-green-400" />
+                          <span>{t('hintPlayer')}</span>
+                          <span className="ml-auto text-xs text-muted-foreground">-1pt -5s</span>
+                        </button>
+                      )}
 
-                      <button
-                        onClick={() => handleGuidedHint('singer')}
-                        disabled={!canUseHint('singer')}
-                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
-                          canUseHint('singer') 
-                            ? 'hover:bg-pink-500/20 text-foreground' 
-                            : 'opacity-50 cursor-not-allowed text-muted-foreground'
-                        }`}
-                      >
-                        <Music className="h-4 w-4 text-pink-400" />
-                        <span>{t('hintSinger')}</span>
-                        <span className="ml-auto text-xs text-muted-foreground">-1pt -5s</span>
-                      </button>
+                      {/* Famous singer hint - only show if data available */}
+                      {hintAvailability.hasSinger && (
+                        <button
+                          onClick={() => handleGuidedHint('singer')}
+                          disabled={!canUseHint('singer')}
+                          className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+                            canUseHint('singer') 
+                              ? 'hover:bg-pink-500/20 text-foreground' 
+                              : 'opacity-50 cursor-not-allowed text-muted-foreground'
+                          }`}
+                        >
+                          <Music className="h-4 w-4 text-pink-400" />
+                          <span>{t('hintSinger')}</span>
+                          <span className="ml-auto text-xs text-muted-foreground">-1pt -5s</span>
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
