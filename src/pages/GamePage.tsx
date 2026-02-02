@@ -30,7 +30,7 @@ import { removePlayerFromSession, clearRecoveryData } from '@/services/gameSessi
 import { supabase } from '@/integrations/supabase/client';
 
 const GamePage = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const {
     session,
     currentPlayer,
@@ -442,7 +442,7 @@ const GamePage = () => {
     const countryToGuess = isSoloMode && soloClickedCountry ? soloClickedCountry : currentCountry;
     if (!countryToGuess || !currentPlayer || !isMyTurn || !session) return;
 
-    const result = isCorrectGuess(guess, countryToGuess);
+    const result = isCorrectGuess(guess, countryToGuess, language);
 
     const nextGuessedCountries = guessedCountries.includes(countryToGuess)
       ? guessedCountries

@@ -1,4 +1,11 @@
 /**
+ * Scoring and answer validation with multilingual support.
+ */
+
+import { Language } from '@/i18n/translations';
+import { matchCountryInput, isCorrectGuess as checkCorrectGuess, isCloseGuess } from '@/i18n/countryNames';
+
+/**
  * Calculate Levenshtein distance between two strings
  */
 export const levenshteinDistance = (str1: string, str2: string): number => {
@@ -42,12 +49,19 @@ export const fuzzyMatch = (guess: string, correct: string, threshold = 1): boole
 };
 
 /**
- * Calculate score based on guess accuracy
+ * Remove accents and normalize a string for comparison.
+ */
+const removeAccents = (str: string): string => {
+  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+};
+
+/**
+ * Calculate score based on guess accuracy (legacy, language-agnostic version)
  * @returns { points: number, matchType: 'exact' | 'close' | 'wrong' }
  */
 export const calculateScore = (guess: string, correct: string): { points: number; matchType: 'exact' | 'close' | 'wrong' } => {
-  const normalizedGuess = guess.toLowerCase().trim();
-  const normalizedCorrect = correct.toLowerCase().trim();
+  const normalizedGuess = removeAccents(guess.toLowerCase().trim());
+  const normalizedCorrect = removeAccents(correct.toLowerCase().trim());
 
   // Exact match
   if (normalizedGuess === normalizedCorrect) {
@@ -64,11 +78,11 @@ export const calculateScore = (guess: string, correct: string): { points: number
 };
 
 /**
- * Normalize country name for comparison
- * Handles common variations and abbreviations
+ * Normalize country name for comparison (legacy version)
+ * For multilingual support, use matchCountryInput from countryNames.ts instead.
  */
 export const normalizeCountryName = (name: string): string => {
-  const normalized = name.toLowerCase().trim();
+  const normalized = removeAccents(name.toLowerCase().trim());
   
   // Common variations mapping
   const variations: Record<string, string> = {
@@ -77,7 +91,7 @@ export const normalizeCountryName = (name: string): string => {
     'united states of america': 'united states',
     'uk': 'united kingdom',
     'great britain': 'united kingdom',
-    'england': 'united kingdom', // Note: technically incorrect but common
+    'england': 'united kingdom',
     'uae': 'united arab emirates',
     'drc': 'democratic republic of the congo',
     'dr congo': 'democratic republic of the congo',
@@ -89,16 +103,54 @@ export const normalizeCountryName = (name: string): string => {
 };
 
 /**
- * Check if a country guess is correct
+ * Check if a country guess is correct with multilingual support.
+ * @param guess The user's guess
+ * @param correctCountry The canonical English name of the target country
+ * @param language The current UI language (for matching localized names)
  */
-export const isCorrectGuess = (guess: string, correctCountry: string): { correct: boolean; points: number; matchType: 'exact' | 'close' | 'wrong' } => {
+export const isCorrectGuess = (
+  guess: string, 
+  correctCountry: string, 
+  language: Language = 'en'
+): { correct: boolean; points: number; matchType: 'exact' | 'close' | 'wrong' } => {
+  // Try matching with the localized country names system
+  const isExact = checkCorrectGuess(guess, correctCountry, language);
+  
+  if (isExact) {
+    return { correct: true, points: 3, matchType: 'exact' };
+  }
+  
+  // Check for close match (typos allowed)
+  const isClose = isCloseGuess(guess, correctCountry, language);
+  
+  if (isClose) {
+    return { correct: true, points: 2, matchType: 'close' };
+  }
+  
+  // Fallback: Try the legacy matching for backward compatibility
   const normalizedGuess = normalizeCountryName(guess);
   const normalizedCorrect = normalizeCountryName(correctCountry);
   
-  const result = calculateScore(normalizedGuess, normalizedCorrect);
+  if (normalizedGuess === normalizedCorrect) {
+    return { correct: true, points: 3, matchType: 'exact' };
+  }
   
-  return {
-    correct: result.points > 0,
-    ...result,
-  };
+  if (fuzzyMatch(normalizedGuess, normalizedCorrect, 1)) {
+    return { correct: true, points: 2, matchType: 'close' };
+  }
+  
+  return { correct: false, points: 0, matchType: 'wrong' };
+};
+
+/**
+ * Calculate score for a country guess with language support.
+ * Use this as the main scoring function for gameplay.
+ */
+export const calculateCountryScore = (
+  guess: string,
+  correctCountry: string,
+  language: Language = 'en'
+): { points: number; matchType: 'exact' | 'close' | 'wrong' } => {
+  const result = isCorrectGuess(guess, correctCountry, language);
+  return { points: result.points, matchType: result.matchType };
 };

@@ -1,4 +1,5 @@
 import React, { useState, ReactNode } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface GameTooltipProps {
   content: string;
@@ -12,9 +13,20 @@ export const GameTooltip: React.FC<GameTooltipProps> = ({
   position = 'top' 
 }) => {
   const [isVisible, setIsVisible] = useState(false);
+  const { isRTL } = useLanguage();
+
+  // For RTL, invert left/right positions
+  const getEffectivePosition = () => {
+    if (!isRTL) return position;
+    if (position === 'left') return 'right';
+    if (position === 'right') return 'left';
+    return position;
+  };
+
+  const effectivePosition = getEffectivePosition();
 
   const getPositionStyles = () => {
-    switch (position) {
+    switch (effectivePosition) {
       case 'top':
         return 'bottom-full left-1/2 -translate-x-1/2 mb-2';
       case 'bottom':
@@ -25,6 +37,21 @@ export const GameTooltip: React.FC<GameTooltipProps> = ({
         return 'left-full top-1/2 -translate-y-1/2 ml-2';
       default:
         return 'bottom-full left-1/2 -translate-x-1/2 mb-2';
+    }
+  };
+
+  const getArrowStyles = () => {
+    switch (effectivePosition) {
+      case 'top':
+        return 'top-full -translate-y-1/2 left-1/2 -translate-x-1/2 border-r border-b';
+      case 'bottom':
+        return 'bottom-full translate-y-1/2 left-1/2 -translate-x-1/2 border-l border-t';
+      case 'left':
+        return 'left-full -translate-x-1/2 top-1/2 -translate-y-1/2 border-t border-r';
+      case 'right':
+        return 'right-full translate-x-1/2 top-1/2 -translate-y-1/2 border-b border-l';
+      default:
+        return 'top-full -translate-y-1/2 left-1/2 -translate-x-1/2 border-r border-b';
     }
   };
 
@@ -43,16 +70,15 @@ export const GameTooltip: React.FC<GameTooltipProps> = ({
             shadow-lg whitespace-nowrap tooltip-fade-in
             ${getPositionStyles()}
           `}
+          // Ensure tooltip text direction matches content language
+          dir={isRTL ? 'rtl' : 'ltr'}
         >
           {content}
           {/* Arrow */}
           <div 
             className={`
               absolute w-2 h-2 bg-popover border-border rotate-45
-              ${position === 'top' ? 'top-full -translate-y-1/2 left-1/2 -translate-x-1/2 border-r border-b' : ''}
-              ${position === 'bottom' ? 'bottom-full translate-y-1/2 left-1/2 -translate-x-1/2 border-l border-t' : ''}
-              ${position === 'left' ? 'left-full -translate-x-1/2 top-1/2 -translate-y-1/2 border-t border-r' : ''}
-              ${position === 'right' ? 'right-full translate-x-1/2 top-1/2 -translate-y-1/2 border-b border-l' : ''}
+              ${getArrowStyles()}
             `}
           />
         </div>
