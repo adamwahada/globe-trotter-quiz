@@ -494,6 +494,46 @@ export const oceaniaHints: CountryHint[] = [
 ]
 ;
 
+// Territory & dependency hints
+export const territoryHints: CountryHint[] = [
+  // North American territories
+  { country: "Greenland", iso_code: "GL", capital: "Nuuk", famous_player_hint: "Miki Nielsen", famous_singer_hint: "Julie Berthelsen" },
+  { country: "Puerto Rico", iso_code: "PR", capital: "San Juan", famous_player_hint: "Roberto Clemente", famous_singer_hint: "Bad Bunny" },
+  { country: "Bermuda", iso_code: "BM", capital: "Hamilton", famous_player_hint: "Flora Duffy", famous_singer_hint: "Heather Nova" },
+  { country: "Cayman Islands", iso_code: "KY", capital: "George Town", famous_player_hint: "Lee Ramoon", famous_singer_hint: "Barefoot Man" },
+  { country: "Aruba", iso_code: "AW", capital: "Oranjestad", famous_player_hint: "Jair Jurrjens", famous_singer_hint: "Ciro Wix" },
+  { country: "Curaçao", iso_code: "CW", capital: "Willemstad", famous_player_hint: "Andruw Jones", famous_singer_hint: "Izaline Calister" },
+  { country: "U.S. Virgin Islands", iso_code: "VI", capital: "Charlotte Amalie", famous_player_hint: "Tim Duncan", famous_singer_hint: "Pressure Busspipe" },
+  { country: "British Virgin Islands", iso_code: "VG", capital: "Road Town", famous_player_hint: "Tahesia Harrigan-Scott", famous_singer_hint: "Quito Rymer" },
+
+  // European territories
+  { country: "Faroe Islands", iso_code: "FO", capital: "Tórshavn", famous_player_hint: "Gunnar Nielsen", famous_singer_hint: "Eivør" },
+  { country: "Gibraltar", iso_code: "GI", capital: "Gibraltar", famous_player_hint: "Liam Walker", famous_singer_hint: "Jetstream" },
+
+  // Asian territories
+  { country: "Hong Kong", iso_code: "HK", capital: "Hong Kong", famous_player_hint: "Jackie Chan", famous_singer_hint: "Eason Chan" },
+  { country: "Macau", iso_code: "MO", capital: "Macau", famous_player_hint: "Edmund Ho", famous_singer_hint: "Sam Lok Ka Ho" },
+
+  // South American territories
+  { country: "French Guiana", iso_code: "GF", capital: "Cayenne", famous_player_hint: "Florent Malouda", famous_singer_hint: "Yaniss Odua" },
+  { country: "Falkland Islands", iso_code: "FK", capital: "Stanley", famous_player_hint: "Regional explorers", famous_singer_hint: "Local folk artists" },
+
+  // Oceania territories
+  { country: "New Caledonia", iso_code: "NC", capital: "Nouméa", famous_player_hint: "Christian Karembeu", famous_singer_hint: "Kaneka artists" },
+  { country: "French Polynesia", iso_code: "PF", capital: "Papeete", famous_player_hint: "Marama Vahirua", famous_singer_hint: "Bobby Holcomb" },
+  { country: "Guam", iso_code: "GU", capital: "Hagåtña", famous_player_hint: "Jason Cunliffe", famous_singer_hint: "Johnny Sablan" },
+  { country: "American Samoa", iso_code: "AS", capital: "Pago Pago", famous_player_hint: "Troy Polamalu", famous_singer_hint: "Samoan traditional" },
+  { country: "Northern Mariana Islands", iso_code: "MP", capital: "Saipan", famous_player_hint: "Regional athletes", famous_singer_hint: "Island musicians" },
+];
+
+// Disputed & special region hints
+export const disputedHints: CountryHint[] = [
+  { country: "Western Sahara", iso_code: "EH", capital: "Laayoune (disputed)", famous_player_hint: "Regional football", famous_singer_hint: "Sahrawi artists" },
+  { country: "Palestine", iso_code: "PS", capital: "Ramallah (de facto)", famous_player_hint: "Mahmoud Sarsak", famous_singer_hint: "Mohammed Assaf" },
+  { country: "Somaliland", iso_code: "SO", capital: "Hargeisa", famous_player_hint: "Mo Farah (heritage)", famous_singer_hint: "Nimco Yaasiin" },
+  { country: "Antarctica", iso_code: "AQ", capital: "—", famous_player_hint: "Roald Amundsen (explorer)", famous_singer_hint: "Scientific stations" },
+];
+
 // Combine all continents (will be expanded as user provides more data)
 export const allCountryHints: CountryHint[] = [
   ...africaHints,
@@ -501,7 +541,9 @@ export const allCountryHints: CountryHint[] = [
   ...asiaHints,
   ...northAmericaHints,
   ...southAmericaHints,
-  ...oceaniaHints, 
+  ...oceaniaHints,
+  ...territoryHints,
+  ...disputedHints,
 ];
 
 // Create a lookup map for quick access by country name
