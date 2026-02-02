@@ -76,6 +76,12 @@ export const GuessModal: React.FC<GuessModalProps> = ({
   
   // Track if we've initialized for this turn (to prevent re-init on modal reopen)
   const [lastTurnStartTime, setLastTurnStartTime] = useState<number | undefined>(undefined);
+  
+  // Track remaining time to disable time-costly hints when time is too low
+  const [remainingSeconds, setRemainingSeconds] = useState(turnTimeSeconds);
+  
+  // Buffer seconds - hints are disabled when remaining time < penalty + buffer
+  const TIME_BUFFER = 5;
 
   // Reset state only when a NEW turn starts (turnStartTime changes), not when modal reopens
   useEffect(() => {
@@ -95,12 +101,34 @@ export const GuessModal: React.FC<GuessModalProps> = ({
       setTimePenaltyApplied(0);
       setShowGuidedMenu(false);
       setLastTurnStartTime(turnStartTime);
+      setRemainingSeconds(turnTimeSeconds);
     } else if (isOpen) {
       // Just reopening same turn - only reset the guess input
       setGuess('');
       setShowGuidedMenu(false);
     }
-  }, [isOpen, turnStartTime, lastTurnStartTime]);
+  }, [isOpen, turnStartTime, lastTurnStartTime, turnTimeSeconds]);
+
+  // Track remaining time to disable time-costly hints
+  useEffect(() => {
+    if (!isOpen || !turnStartTime) return;
+    
+    const calculateRemaining = () => {
+      const adjustedStart = turnStartTime - (timePenaltyApplied * 1000);
+      const elapsed = Math.floor((Date.now() - adjustedStart) / 1000);
+      return Math.max(0, turnTimeSeconds - elapsed);
+    };
+    
+    // Initial calculation
+    setRemainingSeconds(calculateRemaining());
+    
+    // Update every second
+    const interval = setInterval(() => {
+      setRemainingSeconds(calculateRemaining());
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, [isOpen, turnStartTime, turnTimeSeconds, timePenaltyApplied]);
 
   if (!isOpen) return null;
 
@@ -127,7 +155,53 @@ export const GuessModal: React.FC<GuessModalProps> = ({
     else if (type === 'capital') cost = HINT_COST_CAPITAL;
     else cost = HINT_COST_GUIDED;
     
-    return playerScore >= cost;
+    if (playerScore < cost) return false;
+    
+    // Check time constraints for time-costly hints
+    // Disable hint if remaining time < time_penalty + buffer
+    if (type === 'capital' && remainingSeconds <= CAPITAL_TIME_PENALTY + TIME_BUFFER) {
+      return false;
+    }
+    if ((type === 'player' || type === 'singer') && remainingSeconds <= GUIDED_TIME_PENALTY + TIME_BUFFER) {
+      return false;
+    }
+    
+    return true;
+  };
+  
+  // Check if hint is disabled due to time constraint (for tooltip messages)
+  const isTimeConstrained = (type: GuidedHintType): boolean => {
+    if (type === 'capital') {
+      return remainingSeconds <= CAPITAL_TIME_PENALTY + TIME_BUFFER;
+    }
+    if (type === 'player' || type === 'singer') {
+      return remainingSeconds <= GUIDED_TIME_PENALTY + TIME_BUFFER;
+    }
+    return false;
+  };
+
+  // Get the appropriate tooltip message for a hint type
+  const getHintTooltip = (type: 'letter' | 'famous' | 'flag' | GuidedHintType, defaultText: string): string => {
+    // Check if already used
+    if (type === 'letter' && hintUsed) return t('alreadyUsed');
+    if (type === 'famous' && famousPersonUsed) return t('alreadyUsed');
+    if (type === 'flag' && flagUsed) return t('alreadyUsed');
+    if (type === 'player' && playerHint) return t('alreadyUsed');
+    if (type === 'singer' && singerHint) return t('alreadyUsed');
+    if (type === 'capital' && capitalHint) return t('alreadyUsed');
+    
+    // Check max hints
+    if (maxHintsReached) return t('maxHintsReached');
+    
+    // Check time constraint for time-costly hints
+    if ((type === 'capital' || type === 'player' || type === 'singer') && isTimeConstrained(type as GuidedHintType)) {
+      return t('notEnoughTime');
+    }
+    
+    // Check points
+    if (!canUseHint(type)) return t('notEnoughPoints');
+    
+    return defaultText;
   };
 
   const handleHint = () => {
@@ -361,7 +435,7 @@ export const GuessModal: React.FC<GuessModalProps> = ({
 
               {/* Capital hint - only show if capital data available */}
               {hasExtendedHints && hintAvailability.hasCapital && (
-                <GameTooltip content={capitalHint ? t('alreadyUsed') : (maxHintsReached ? t('maxHintsReached') : (!canUseHint('capital') ? t('notEnoughPoints') : `${t('hintCapital')} (-1pt -10s)`))} position="top">
+                <GameTooltip content={getHintTooltip('capital', `${t('hintCapital')} (-1pt -10s)`)} position="top">
                   <Button
                     variant="outline"
                     size="icon"
@@ -422,6 +496,7 @@ export const GuessModal: React.FC<GuessModalProps> = ({
                         <button
                           onClick={() => handleGuidedHint('player')}
                           disabled={!canUseHint('player')}
+                          title={!canUseHint('player') ? (isTimeConstrained('player') ? t('notEnoughTime') : (playerHint ? t('alreadyUsed') : t('notEnoughPoints'))) : ''}
                           className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
                             canUseHint('player') 
                               ? 'hover:bg-green-500/20 text-foreground' 
@@ -430,7 +505,9 @@ export const GuessModal: React.FC<GuessModalProps> = ({
                         >
                           <Dribbble className="h-4 w-4 text-green-400" />
                           <span>{t('hintPlayer')}</span>
-                          <span className="ml-auto text-xs text-muted-foreground">-1pt -5s</span>
+                          <span className="ml-auto text-xs text-muted-foreground">
+                            {isTimeConstrained('player') ? t('notEnoughTime') : '-1pt -5s'}
+                          </span>
                         </button>
                       )}
 
@@ -439,6 +516,7 @@ export const GuessModal: React.FC<GuessModalProps> = ({
                         <button
                           onClick={() => handleGuidedHint('singer')}
                           disabled={!canUseHint('singer')}
+                          title={!canUseHint('singer') ? (isTimeConstrained('singer') ? t('notEnoughTime') : (singerHint ? t('alreadyUsed') : t('notEnoughPoints'))) : ''}
                           className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
                             canUseHint('singer') 
                               ? 'hover:bg-pink-500/20 text-foreground' 
@@ -447,7 +525,9 @@ export const GuessModal: React.FC<GuessModalProps> = ({
                         >
                           <Music className="h-4 w-4 text-pink-400" />
                           <span>{t('hintSinger')}</span>
-                          <span className="ml-auto text-xs text-muted-foreground">-1pt -5s</span>
+                          <span className="ml-auto text-xs text-muted-foreground">
+                            {isTimeConstrained('singer') ? t('notEnoughTime') : '-1pt -5s'}
+                          </span>
                         </button>
                       )}
                     </div>
