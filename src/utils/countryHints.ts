@@ -1,6 +1,8 @@
 // Extended country hints data with capitals, famous players, and famous singers
 // Organized by continent for easier management
 
+import { countryIsoCodes, normalizeCountryNameForFlag, countryFamousPeople } from './countryData';
+
 export interface CountryHint {
   country: string;
   iso_code: string;
@@ -540,4 +542,71 @@ export const getFamousSinger = (country: string): string | null => {
 // Check if a country has extended hints available
 export const hasExtendedHints = (country: string): boolean => {
   return !!countryHintsMap[country];
+};
+
+// Placeholder/generic values that indicate missing data
+const INVALID_HINT_VALUES = [
+  'N/A',
+  'n/a',
+  'Traditional',
+  'traditional',
+  'Island musicians',
+  'Island songs',
+  'Folk musicians',
+  'Local traditional artists',
+  'Regional athletes',
+  'Athletics icons',
+  'Island sports icons',
+  'Weightlifting champions',
+  'Track Olympic icons',
+  'Rugby legends',
+  'Football rising stars',
+  'Kingdom singers',
+];
+
+// Check if a hint value is a valid/real hint (not a placeholder)
+const isValidHintValue = (value: string | null): boolean => {
+  if (!value) return false;
+  return !INVALID_HINT_VALUES.some(invalid => 
+    value.toLowerCase().includes(invalid.toLowerCase())
+  );
+};
+
+// Check which hints are available for a country
+export interface HintAvailability {
+  hasFlag: boolean;
+  hasCapital: boolean;
+  hasPlayer: boolean;
+  hasSinger: boolean;
+  hasFamousPerson: boolean;
+}
+
+export const getHintAvailability = (country: string): HintAvailability => {
+  const hint = countryHintsMap[country];
+  
+  // For flag, check if country has a proper ISO code (not falling back to UN)
+  const normalized = normalizeCountryNameForFlag(country);
+  const isoCode = countryIsoCodes[normalized] || countryIsoCodes[country];
+  const hasFlag = !!isoCode; // Has a real ISO code, not fallback
+  
+  // Check famous person data
+  const hasFamousPerson = !!countryFamousPeople[country];
+  
+  if (!hint) {
+    return {
+      hasFlag,
+      hasCapital: false,
+      hasPlayer: false,
+      hasSinger: false,
+      hasFamousPerson,
+    };
+  }
+  
+  return {
+    hasFlag,
+    hasCapital: isValidHintValue(hint.capital),
+    hasPlayer: isValidHintValue(hint.famous_player_hint),
+    hasSinger: isValidHintValue(hint.famous_singer_hint),
+    hasFamousPerson,
+  };
 };

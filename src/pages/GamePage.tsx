@@ -22,7 +22,7 @@ import { useToastContext } from '@/contexts/ToastContext';
 import { useSound } from '@/contexts/SoundContext';
 import { isCorrectGuess } from '@/utils/scoring';
 import { getRandomUnplayedCountry, getFamousPerson, getMapCountryName, getCountryFlag, preloadCountryFlag, preloadAllCountryFlags } from '@/utils/countryData';
-import { hasExtendedHints, getFamousPlayer, getFamousSinger, getCountryCapital } from '@/utils/countryHints';
+import { hasExtendedHints, getFamousPlayer, getFamousSinger, getCountryCapital, getHintAvailability, HintAvailability } from '@/utils/countryHints';
 import { GuidedHintType } from '@/components/Guess/GuessModal';
 import { TURN_TIME_SECONDS, COUNTDOWN_SECONDS, playersMapToArray, PlayersMap } from '@/types/game';
 import { Trophy, LogOut, Volume2, VolumeX, Users, Clock } from 'lucide-react';
@@ -1093,6 +1093,7 @@ const GamePage = () => {
         turnStartTime={session.turnStartTime || soloClickStartTime || undefined}
         playerScore={currentPlayer?.score || 0}
         hasExtendedHints={hasExtendedHints(activeCountry || '')}
+        hintAvailability={getHintAvailability(activeCountry || '')}
         isSoloClickMode={isSoloMode && !currentTurnState?.diceRolled}
       />
 
