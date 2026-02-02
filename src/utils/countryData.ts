@@ -488,6 +488,357 @@ const reverseCountryMapping: Record<string, string> = {
 };
 
 /**
+ * Comprehensive country name aliases for forgiving user input matching.
+ * ALL keys are lowercase with accents/punctuation removed.
+ * Values are the canonical game names used throughout the codebase.
+ */
+export const countryNameAliases: Record<string, string> = {
+  // === AFRICA ===
+  // DR Congo variants
+  'dr congo': 'DR Congo',
+  'drc': 'DR Congo',
+  'democratic republic of the congo': 'DR Congo',
+  'democratic republic of congo': 'DR Congo',
+  'dem rep congo': 'DR Congo',
+  'congo kinshasa': 'DR Congo',
+  'congo-kinshasa': 'DR Congo',
+  'zaire': 'DR Congo',
+  
+  // Republic of the Congo variants
+  'congo': 'Congo',
+  'republic of the congo': 'Congo',
+  'republic of congo': 'Congo',
+  'congo brazzaville': 'Congo',
+  'congo-brazzaville': 'Congo',
+  'congo republic': 'Congo',
+  
+  // Ivory Coast variants
+  'ivory coast': 'Ivory Coast',
+  'cote divoire': 'Ivory Coast',
+  'cote d ivoire': 'Ivory Coast',
+  "cote d'ivoire": 'Ivory Coast',
+  'côte divoire': 'Ivory Coast',
+  "côte d'ivoire": 'Ivory Coast',
+  'the ivory coast': 'Ivory Coast',
+  
+  // Eswatini variants
+  'eswatini': 'Eswatini',
+  'swaziland': 'Eswatini',
+  'kingdom of eswatini': 'Eswatini',
+  
+  // Cabo Verde variants
+  'cabo verde': 'Cabo Verde',
+  'cape verde': 'Cabo Verde',
+  'cape verde islands': 'Cabo Verde',
+  
+  // Central African Republic
+  'central african republic': 'Central African Republic',
+  'car': 'Central African Republic',
+  'c.a.r.': 'Central African Republic',
+  'centrafrique': 'Central African Republic',
+  
+  // South Sudan
+  'south sudan': 'South Sudan',
+  's sudan': 'South Sudan',
+  's. sudan': 'South Sudan',
+  
+  // Western Sahara
+  'western sahara': 'Western Sahara',
+  'w sahara': 'Western Sahara',
+  'w. sahara': 'Western Sahara',
+  'sahrawi': 'Western Sahara',
+  
+  // Equatorial Guinea
+  'equatorial guinea': 'Equatorial Guinea',
+  'eq guinea': 'Equatorial Guinea',
+  'eq. guinea': 'Equatorial Guinea',
+  
+  // Sao Tome
+  'sao tome and principe': 'Sao Tome and Principe',
+  'sao tome': 'Sao Tome and Principe',
+  'são tomé and príncipe': 'Sao Tome and Principe',
+  'são tomé': 'Sao Tome and Principe',
+  
+  // Guinea-Bissau
+  'guinea bissau': 'Guinea-Bissau',
+  'guinea-bissau': 'Guinea-Bissau',
+  'guineabissau': 'Guinea-Bissau',
+  
+  // Gambia
+  'gambia': 'Gambia',
+  'the gambia': 'Gambia',
+  
+  // === EUROPE ===
+  // Czechia variants
+  'czechia': 'Czechia',
+  'czech republic': 'Czechia',
+  'czech': 'Czechia',
+  'cz': 'Czechia',
+  
+  // North Macedonia variants
+  'north macedonia': 'North Macedonia',
+  'macedonia': 'North Macedonia',
+  'n macedonia': 'North Macedonia',
+  'n. macedonia': 'North Macedonia',
+  'fyrom': 'North Macedonia',
+  'republic of macedonia': 'North Macedonia',
+  'republic of north macedonia': 'North Macedonia',
+  
+  // United Kingdom variants
+  'united kingdom': 'United Kingdom',
+  'uk': 'United Kingdom',
+  'u.k.': 'United Kingdom',
+  'great britain': 'United Kingdom',
+  'britain': 'United Kingdom',
+  'england': 'United Kingdom',
+  'gb': 'United Kingdom',
+  
+  // Bosnia variants
+  'bosnia and herzegovina': 'Bosnia and Herzegovina',
+  'bosnia': 'Bosnia and Herzegovina',
+  'bosnia herzegovina': 'Bosnia and Herzegovina',
+  'bosnia & herzegovina': 'Bosnia and Herzegovina',
+  'bih': 'Bosnia and Herzegovina',
+  
+  // Vatican
+  'vatican city': 'Vatican City',
+  'vatican': 'Vatican City',
+  'holy see': 'Vatican City',
+  
+  // === ASIA ===
+  // Laos variants
+  'laos': 'Laos',
+  'lao': 'Laos',
+  'lao pdr': 'Laos',
+  "lao people's democratic republic": 'Laos',
+  
+  // Myanmar variants
+  'myanmar': 'Myanmar',
+  'burma': 'Myanmar',
+  'republic of the union of myanmar': 'Myanmar',
+  
+  // Timor-Leste variants
+  'timor leste': 'Timor-Leste',
+  'timor-leste': 'Timor-Leste',
+  'east timor': 'Timor-Leste',
+  'timor': 'Timor-Leste',
+  
+  // North Korea variants
+  'north korea': 'North Korea',
+  'n korea': 'North Korea',
+  'n. korea': 'North Korea',
+  'dprk': 'North Korea',
+  "democratic people's republic of korea": 'North Korea',
+  'korea north': 'North Korea',
+  
+  // South Korea variants
+  'south korea': 'South Korea',
+  's korea': 'South Korea',
+  's. korea': 'South Korea',
+  'korea': 'South Korea',
+  'republic of korea': 'South Korea',
+  'korea south': 'South Korea',
+  'rok': 'South Korea',
+  
+  // Brunei variants
+  'brunei': 'Brunei',
+  'brunei darussalam': 'Brunei',
+  
+  // Iran variants
+  'iran': 'Iran',
+  'persia': 'Iran',
+  'islamic republic of iran': 'Iran',
+  
+  // Syria variants
+  'syria': 'Syria',
+  'syrian arab republic': 'Syria',
+  
+  // Vietnam variants
+  'vietnam': 'Vietnam',
+  'viet nam': 'Vietnam',
+  
+  // Taiwan variants
+  'taiwan': 'Taiwan',
+  'republic of china': 'Taiwan',
+  'roc': 'Taiwan',
+  'chinese taipei': 'Taiwan',
+  
+  // UAE
+  'united arab emirates': 'United Arab Emirates',
+  'uae': 'United Arab Emirates',
+  'u.a.e.': 'United Arab Emirates',
+  'emirates': 'United Arab Emirates',
+  
+  // Saudi Arabia
+  'saudi arabia': 'Saudi Arabia',
+  'saudi': 'Saudi Arabia',
+  'ksa': 'Saudi Arabia',
+  
+  // Palestine
+  'palestine': 'Palestine',
+  'palestinian territories': 'Palestine',
+  'west bank': 'Palestine',
+  'gaza': 'Palestine',
+  
+  // Hong Kong
+  'hong kong': 'Hong Kong',
+  'hongkong': 'Hong Kong',
+  'hk': 'Hong Kong',
+  
+  // === AMERICAS ===
+  // United States variants
+  'united states': 'United States',
+  'united states of america': 'United States',
+  'usa': 'United States',
+  'u.s.a.': 'United States',
+  'us': 'United States',
+  'u.s.': 'United States',
+  'america': 'United States',
+  'the states': 'United States',
+  
+  // Dominican Republic
+  'dominican republic': 'Dominican Republic',
+  'dominican rep': 'Dominican Republic',
+  'dominican rep.': 'Dominican Republic',
+  'dr': 'Dominican Republic',
+  
+  // Trinidad
+  'trinidad and tobago': 'Trinidad and Tobago',
+  'trinidad': 'Trinidad and Tobago',
+  'trinidad & tobago': 'Trinidad and Tobago',
+  't&t': 'Trinidad and Tobago',
+  
+  // Saint countries
+  'saint kitts and nevis': 'Saint Kitts and Nevis',
+  'st kitts and nevis': 'Saint Kitts and Nevis',
+  'st. kitts and nevis': 'Saint Kitts and Nevis',
+  'st kitts': 'Saint Kitts and Nevis',
+  
+  'saint lucia': 'Saint Lucia',
+  'st lucia': 'Saint Lucia',
+  'st. lucia': 'Saint Lucia',
+  
+  'saint vincent and the grenadines': 'Saint Vincent and the Grenadines',
+  'st vincent and the grenadines': 'Saint Vincent and the Grenadines',
+  'st. vincent and the grenadines': 'Saint Vincent and the Grenadines',
+  'st vincent': 'Saint Vincent and the Grenadines',
+  'st. vincent': 'Saint Vincent and the Grenadines',
+  
+  // Antigua
+  'antigua and barbuda': 'Antigua and Barbuda',
+  'antigua': 'Antigua and Barbuda',
+  'antigua & barbuda': 'Antigua and Barbuda',
+  
+  // Bahamas
+  'bahamas': 'Bahamas',
+  'the bahamas': 'Bahamas',
+  
+  // Puerto Rico
+  'puerto rico': 'Puerto Rico',
+  'pr': 'Puerto Rico',
+  
+  // Virgin Islands
+  'us virgin islands': 'U.S. Virgin Islands',
+  'u.s. virgin islands': 'U.S. Virgin Islands',
+  'usvi': 'U.S. Virgin Islands',
+  'american virgin islands': 'U.S. Virgin Islands',
+  
+  'british virgin islands': 'British Virgin Islands',
+  'bvi': 'British Virgin Islands',
+  
+  // === OCEANIA ===
+  // Papua New Guinea
+  'papua new guinea': 'Papua New Guinea',
+  'png': 'Papua New Guinea',
+  'papua': 'Papua New Guinea',
+  
+  // Solomon Islands
+  'solomon islands': 'Solomon Islands',
+  'solomon is': 'Solomon Islands',
+  'solomon is.': 'Solomon Islands',
+  'solomons': 'Solomon Islands',
+  
+  // Marshall Islands
+  'marshall islands': 'Marshall Islands',
+  'marshalls': 'Marshall Islands',
+  
+  // Micronesia
+  'micronesia': 'Micronesia',
+  'federated states of micronesia': 'Micronesia',
+  'fsm': 'Micronesia',
+  
+  // New Zealand
+  'new zealand': 'New Zealand',
+  'nz': 'New Zealand',
+  'aotearoa': 'New Zealand',
+  
+  // === TERRITORIES ===
+  // Curaçao
+  'curacao': 'Curaçao',
+  'curaçao': 'Curaçao',
+  
+  // Faroe Islands
+  'faroe islands': 'Faroe Islands',
+  'faroes': 'Faroe Islands',
+  'faeroe islands': 'Faroe Islands',
+  
+  // Falkland Islands
+  'falkland islands': 'Falkland Islands',
+  'falklands': 'Falkland Islands',
+  'malvinas': 'Falkland Islands',
+  'islas malvinas': 'Falkland Islands',
+  
+  // French territories
+  'french guiana': 'French Guiana',
+  'guyane': 'French Guiana',
+  
+  'french polynesia': 'French Polynesia',
+  'tahiti': 'French Polynesia',
+  
+  'new caledonia': 'New Caledonia',
+  'nouvelle caledonie': 'New Caledonia',
+  
+  // Northern Mariana
+  'northern mariana islands': 'Northern Mariana Islands',
+  'northern marianas': 'Northern Mariana Islands',
+  'cnmi': 'Northern Mariana Islands',
+  
+  // American Samoa
+  'american samoa': 'American Samoa',
+  
+  // Russia
+  'russia': 'Russia',
+  'russian federation': 'Russia',
+};
+
+/**
+ * Remove accents and normalize a string for matching.
+ */
+const removeAccents = (str: string): string => {
+  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+};
+
+/**
+ * Normalize a country name for alias lookup.
+ * Converts to lowercase, removes accents and extra punctuation.
+ */
+const normalizeForAliasLookup = (name: string): string => {
+  return removeAccents(name.toLowerCase().trim())
+    .replace(/['']/g, "'")  // Normalize apostrophes
+    .replace(/[^\w\s'-]/g, '')  // Remove special chars except hyphen and apostrophe
+    .replace(/\s+/g, ' ');  // Normalize whitespace
+};
+
+/**
+ * Resolve a country name to its canonical form using aliases.
+ * Use this for forgiving user input matching.
+ */
+export const resolveCountryName = (input: string): string => {
+  const normalized = normalizeForAliasLookup(input);
+  return countryNameAliases[normalized] || input;
+};
+
+/**
  * Convert a GeoJSON country name back to the game's country name.
  * Used when clicking on a country in the map.
  */
