@@ -16,6 +16,7 @@ import { FloatingScore } from '@/components/Score/FloatingScore';
 import { LonePlayerOverlay } from '@/components/Modal/LonePlayerOverlay';
 import { InactivityWarning } from '@/components/Modal/InactivityWarning';
 import { ReconnectionBanner } from '@/components/Banner/ReconnectionBanner';
+import { AgainstTheClockGame } from '@/components/Game/AgainstTheClockGame';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useGame, TurnState, Player } from '@/contexts/GameContext';
 import { useToastContext } from '@/contexts/ToastContext';
@@ -812,6 +813,23 @@ const GamePage = () => {
   // Show countdown overlay
   if (session.status === 'countdown') {
     return <CountdownOverlay startTime={session.countdownStartTime!} />;
+  }
+
+  // Check if this is Against the Clock mode
+  const isAgainstTheClock = session.gameMode === 'againstTheClock';
+
+  // Render Against the Clock game if in that mode
+  if (isAgainstTheClock && session.status === 'playing') {
+    return (
+      <>
+        <AgainstTheClockGame onShowResults={() => setShowResults(true)} />
+        <GameResults
+          isOpen={showResults}
+          players={players}
+          onPlayAgain={handlePlayAgain}
+        />
+      </>
+    );
   }
 
   // Get current player's inactivity count for warning display

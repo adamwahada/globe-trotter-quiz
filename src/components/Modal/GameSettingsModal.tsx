@@ -3,10 +3,11 @@ import { X, Users, Clock, Hash, Copy, Check, User, Dice5, MousePointer } from 'l
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { useGame } from '@/contexts/GameContext';
+import { useGame, GameMode } from '@/contexts/GameContext';
 import { useToastContext } from '@/contexts/ToastContext';
 import { useNavigate } from 'react-router-dom';
 import { GameTooltip } from '@/components/Tooltip/GameTooltip';
+import { GameModeSelector } from './GameModeSelector';
 
 interface GameSettingsModalProps {
   isOpen: boolean;
@@ -21,13 +22,14 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
   const { addToast } = useToastContext();
   const navigate = useNavigate();
 
-  const [mode, setMode] = useState<'choose' | 'multiplayer' | 'solo' | 'create' | 'join'>('choose');
+  const [mode, setMode] = useState<'choose' | 'multiplayer' | 'solo' | 'selectGameMode' | 'create' | 'join'>('choose');
   const [players, setPlayers] = useState(2);
   const [duration, setDuration] = useState(30);
   const [sessionCode, setSessionCode] = useState('');
   const [generatedCode, setGeneratedCode] = useState('');
   const [guestName, setGuestName] = useState(localStorage.getItem('guest_username') || '');
   const [copied, setCopied] = useState(false);
+  const [selectedGameMode, setSelectedGameMode] = useState<GameMode>('turnBased');
 
   // Auto-fill session code from invite link
   React.useEffect(() => {
@@ -41,6 +43,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
     setMode('choose');
     setGeneratedCode('');
     setSessionCode('');
+    setSelectedGameMode('turnBased');
     onClose();
   };
 
@@ -48,7 +51,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
 
   const handleCreate = async () => {
     try {
-      const code = await createSession(players, duration);
+      const code = await createSession(players, duration, false, selectedGameMode);
       setGeneratedCode(code);
       addToast('success', t('sessionCreated', { code }));
     } catch (err) {
@@ -151,7 +154,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
                 <Button
                   variant="game"
                   className="h-24 flex-col gap-3 relative overflow-hidden group"
-                  onClick={() => setMode('create')}
+                  onClick={() => setMode('selectGameMode')}
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                   <Users className="h-7 w-7" />
@@ -173,6 +176,16 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
                 {t('back')}
               </Button>
             </div>
+          )}
+
+          {mode === 'selectGameMode' && (
+            <GameModeSelector
+              onSelect={(gameMode) => {
+                setSelectedGameMode(gameMode);
+                setMode('create');
+              }}
+              onBack={() => setMode('multiplayer')}
+            />
           )}
 
           {mode === 'solo' && (
@@ -243,6 +256,18 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
                 {t('createSession')}
               </h2>
 
+              {/* Selected Game Mode Badge */}
+              <div className="flex justify-center">
+                <span className={`
+                  px-4 py-2 rounded-full text-sm font-medium
+                  ${selectedGameMode === 'againstTheClock' 
+                    ? 'bg-warning/20 text-warning border border-warning/30' 
+                    : 'bg-primary/20 text-primary border border-primary/30'}
+                `}>
+                  {selectedGameMode === 'againstTheClock' ? t('againstTheClockMode') : t('turnBasedMode')}
+                </span>
+              </div>
+
               {/* Players Selection */}
               <div className="space-y-3">
                 <label className="flex items-center gap-2 text-sm font-medium text-foreground">
@@ -295,7 +320,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
               </div>
 
               <div className="flex gap-3 pt-4">
-                <Button variant="outline" onClick={() => setMode('multiplayer')} className="flex-1">
+                <Button variant="outline" onClick={() => setMode('selectGameMode')} className="flex-1">
                   {t('cancel')}
                 </Button>
                 <Button
