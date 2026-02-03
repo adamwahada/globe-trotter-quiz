@@ -202,7 +202,7 @@ export const AgainstTheClockGame: React.FC<AgainstTheClockGameProps> = ({ onShow
       players: updatedPlayers,
     });
 
-    addToast('info', t('turnSkipped'));
+    addToast('info', t('countrySkipped'));
     setSelectedCountry(null);
     setCountrySelectTime(null);
   }, [selectedCountry, currentPlayer, session, updateGameState, addToast, t]);

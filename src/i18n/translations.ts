@@ -147,6 +147,7 @@ export const translations = {
     timeUp: "Time's up! Moving to next player...",
     points: 'points',
     turnSkipped: 'Turn skipped',
+    countrySkipped: 'Country skipped',
     hintUsed: 'Hint used: -1 point',
 
     // Map Controls
@@ -470,6 +471,7 @@ export const translations = {
     timeUp: "Temps écoulé ! Passage au joueur suivant...",
     points: 'points',
     turnSkipped: 'Tour passé',
+    countrySkipped: 'Pays ignoré',
     hintUsed: 'Indice utilisé : -1 point',
 
     // Map Controls
@@ -793,6 +795,7 @@ export const translations = {
     timeUp: 'انتهى الوقت! الانتقال للاعب التالي...',
     points: 'نقاط',
     turnSkipped: 'تم تخطي الدور',
+    countrySkipped: 'تم تخطي البلد',
     hintUsed: 'تم استخدام التلميح: -1 نقطة',
 
     // Map Controls
