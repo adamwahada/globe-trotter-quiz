@@ -37,6 +37,7 @@ const GamePage = () => {
     session,
     currentPlayer,
     leaveSession,
+    updatePlayerMetadata,
     updateGameState,
     updateTurnState,
     endGame,
@@ -68,6 +69,7 @@ const GamePage = () => {
   const wrongCountries = session?.wrongCountries || [];
   const currentCountry = currentTurnState?.country || null;
   const isSoloMode = session?.isSoloMode || false;
+  const isAgainstTheClock = session?.gameMode === 'againstTheClock';
 
   // For solo mode, store the country clicked by the player for click-to-guess mode
   const [soloClickedCountry, setSoloClickedCountry] = useState<string | null>(null);
@@ -128,20 +130,22 @@ const GamePage = () => {
 
   // Show toast notifications for turn changes (skip in solo mode)
   useEffect(() => {
+    if (isAgainstTheClock) return;
     if (session?.status === 'playing' && currentTurnPlayer && !isSoloMode) {
       if (isMyTurn) {
         addToast('game', `🎯 ${t('yourTurn')}! ${t('rollDice')} 🎲`);
         playToastSound('game');
       }
     }
-  }, [currentTurnIndex, session?.status, isSoloMode]);
+  }, [currentTurnIndex, session?.status, isSoloMode, isAgainstTheClock, isMyTurn, currentTurnPlayer, addToast, t, playToastSound]);
 
   // Sync modal state with session
   useEffect(() => {
+    if (isAgainstTheClock) return;
     if (currentTurnState?.modalOpen && isMyTurn && !guessModalOpen) {
       setGuessModalOpen(true);
     }
-  }, [currentTurnState?.modalOpen, isMyTurn]);
+  }, [currentTurnState?.modalOpen, isMyTurn, guessModalOpen, isAgainstTheClock]);
 
   // Handle solo click mode timeout (when timer expires without answer)
   const handleSoloClickTimeout = useCallback(async () => {
@@ -226,6 +230,7 @@ const GamePage = () => {
 
   // Auto-roll dice if not done in 3 seconds (disabled for solo mode)
   useEffect(() => {
+    if (isAgainstTheClock) return;
     // Skip auto-roll for solo mode - player can choose dice or click
     if (isSoloMode) return;
     
@@ -247,7 +252,7 @@ const GamePage = () => {
     } else {
       if (autoRollCountdown !== null) setAutoRollCountdown(null);
     }
-  }, [isMyTurn, currentCountry, isRolling, session?.status, autoRollCountdown, handleRollDice, isSoloMode]);
+  }, [isAgainstTheClock, isMyTurn, currentCountry, isRolling, session?.status, autoRollCountdown, handleRollDice, isSoloMode]);
 
   const handleCountryClick = useCallback(async (countryName: string) => {
     if (!isMyTurn) return;
@@ -356,6 +361,7 @@ const GamePage = () => {
   // Also handles when current player hasn't rolled dice yet (prevents infinite wait)
   // This runs for ALL players to detect when current player times out
   useEffect(() => {
+    if (isAgainstTheClock) return;
     // Skip timer logic in solo mode for pre-roll (player can take their time)
     if (isSoloMode && !soloClickStartTime && !currentCountry) return;
     
@@ -381,14 +387,14 @@ const GamePage = () => {
 
     const interval = setInterval(checkTimeout, 1000);
     return () => clearInterval(interval);
-  }, [isMyTurn, session?.turnStartTime, soloClickStartTime, currentCountry, soloClickedCountry, isSoloMode, currentTurnState?.diceRolled, handleSoloClickTimeout, handleTurnTimeout]);
+  }, [isAgainstTheClock, isMyTurn, session?.turnStartTime, soloClickStartTime, currentCountry, soloClickedCountry, isSoloMode, currentTurnState?.diceRolled, handleSoloClickTimeout, handleTurnTimeout]);
 
   // CRITICAL: Watch for inactive current player from other players' perspective
   // If current player hasn't responded and their time is way over, force advance
   // This handles cases where the current player's client crashed or disconnected
   useEffect(() => {
     // Only run this check for non-current players in multiplayer
-    if (isSoloMode || isMyTurn || !session?.turnStartTime) return;
+    if (isAgainstTheClock || isSoloMode || isMyTurn || !session?.turnStartTime) return;
     
     const GRACE_PERIOD = 5000; // 5 seconds grace period after timeout
     
@@ -437,7 +443,7 @@ const GamePage = () => {
     
     const interval = setInterval(checkForStalePlayer, 2000);
     return () => clearInterval(interval);
-  }, [isSoloMode, isMyTurn, session, currentPlayer?.id, players, currentTurnIndex, updateGameState]);
+  }, [isAgainstTheClock, isSoloMode, isMyTurn, session, currentPlayer?.id, players, currentTurnIndex, updateGameState]);
 
   const handleSubmitGuess = useCallback(async (guess: string) => {
     // For solo click mode, use soloClickedCountry if no dice was rolled
@@ -625,7 +631,7 @@ const GamePage = () => {
   // Get localized country data
   const { getCountryDisplayName, getLocalizedHints } = useLocalizedCountry();
 
-  const handleUseHint = useCallback((type: 'letter' | 'famous' | 'flag') => {
+  const handleUseHint = useCallback(async (type: 'letter' | 'famous' | 'flag'): Promise<string> => {
     // Use activeCountry which works for both dice mode and solo click mode
     const countryForHint = isSoloMode && soloClickedCountry ? soloClickedCountry : currentCountry;
     if (!countryForHint || !currentPlayer || !session) return '';
@@ -639,45 +645,41 @@ const GamePage = () => {
     const pointCost = type === 'famous' ? 0.5 : 1;
     const newScore = Math.max(0, currentPlayerData.score - pointCost);
 
-    const updatedPlayers: PlayersMap = {
-      ...session.players,
-      [currentPlayerUid]: {
-        ...currentPlayerData,
-        score: newScore,
-      }
-    };
+    try {
+      // Update ONLY the current player's score (avoids writing the whole players map)
+      await updatePlayerMetadata({ score: newScore });
 
-    // Apply flag time penalty when we have a shared turnStartTime; otherwise just charge points.
-    if (type === 'flag') {
-      if (session.turnStartTime) {
-        const newTurnStartTime = session.turnStartTime - 10000;
-        updateGameState({ players: updatedPlayers, turnStartTime: newTurnStartTime });
-        addToast('info', t('hintUsed') + ' (-1 point, -10 seconds)');
-      } else {
-        updateGameState({ players: updatedPlayers });
-        addToast('info', t('hintUsed') + ' (-1 point)');
+      // Apply flag time penalty when we have a shared turnStartTime
+      if (type === 'flag') {
+        if (session.turnStartTime) {
+          const newTurnStartTime = session.turnStartTime - 10000;
+          await updateGameState({ turnStartTime: newTurnStartTime });
+          addToast('info', t('hintUsed') + ' (-1 point, -10 seconds)');
+        } else {
+          addToast('info', t('hintUsed') + ' (-1 point)');
+        }
+        return getCountryFlag(countryForHint);
       }
 
-      return getCountryFlag(countryForHint);
+      if (type === 'famous') {
+        addToast('info', t('hintUsed') + ' (-0.5 point)');
+        const localizedHints = getLocalizedHints(countryForHint);
+        return localizedHints.famousPerson || getFamousPerson(countryForHint) || 'No famous person data found';
+      }
+
+      // Letter hint - use first letter of localized country name
+      addToast('info', t('hintUsed') + ' (-1 point)');
+      const localizedName = getCountryDisplayName(countryForHint);
+      return localizedName[0] || countryForHint[0] || '';
+    } catch (error) {
+      console.error('[Hints] Failed to apply hint cost:', error);
+      addToast('error', t('hintFailed') || 'Failed to use hint. Please try again.');
+      return '';
     }
-
-    updateGameState({ players: updatedPlayers });
-
-    if (type === 'famous') {
-      addToast('info', t('hintUsed') + ' (-0.5 point)');
-      // Get localized famous person
-      const localizedHints = getLocalizedHints(countryForHint);
-      return localizedHints.famousPerson || getFamousPerson(countryForHint) || 'No famous person data found';
-    }
-
-    // Letter hint - use first letter of localized country name
-    addToast('info', t('hintUsed') + ' (-1 point)');
-    const localizedName = getCountryDisplayName(countryForHint);
-    return localizedName[0] || countryForHint[0] || '';
-  }, [currentCountry, currentPlayer, session, updateGameState, addToast, t, isSoloMode, soloClickedCountry, getCountryDisplayName, getLocalizedHints]);
+  }, [isSoloMode, soloClickedCountry, currentCountry, currentPlayer, session, updatePlayerMetadata, updateGameState, addToast, t, getLocalizedHints, getCountryDisplayName]);
 
   // Handle guided hints (player, singer, capital) - with localization
-  const handleUseGuidedHint = useCallback((type: GuidedHintType): { value: string; timePenalty: number } | null => {
+  const handleUseGuidedHint = useCallback(async (type: GuidedHintType): Promise<{ value: string; timePenalty: number } | null> => {
     const countryForHint = isSoloMode && soloClickedCountry ? soloClickedCountry : currentCountry;
     if (!countryForHint || !currentPlayer || !session) return null;
 
@@ -715,29 +717,28 @@ const GamePage = () => {
     // Deduct points if applicable
     const newScore = Math.max(0, currentPlayerData.score - pointCost);
 
-    const updatedPlayers: PlayersMap = {
-      ...session.players,
-      [currentPlayerUid]: {
-        ...currentPlayerData,
-        score: newScore,
+    try {
+      // Update ONLY the current player's score (avoids writing the whole players map)
+      await updatePlayerMetadata({ score: newScore });
+
+      // Apply time penalty (if we have a shared timer)
+      if (session.turnStartTime) {
+        const newTurnStartTime = session.turnStartTime - (timePenalty * 1000);
+        await updateGameState({ turnStartTime: newTurnStartTime });
       }
-    };
 
-    // Apply time penalty
-    if (session.turnStartTime) {
-      const newTurnStartTime = session.turnStartTime - (timePenalty * 1000);
-      updateGameState({ players: updatedPlayers, turnStartTime: newTurnStartTime });
-    } else {
-      updateGameState({ players: updatedPlayers });
+      const costMessage = type === 'capital'
+        ? `(-${timePenalty}s)`
+        : `(-${pointCost}pt, -${timePenalty}s)`;
+      addToast('info', `${t('hintUsed')} ${costMessage}`);
+
+      return { value: hintValue, timePenalty };
+    } catch (error) {
+      console.error('[Hints] Failed to apply guided hint cost:', error);
+      addToast('error', t('hintFailed') || 'Failed to use hint. Please try again.');
+      return null;
     }
-
-    const costMessage = type === 'capital' 
-      ? `(-${timePenalty}s)` 
-      : `(-${pointCost}pt, -${timePenalty}s)`;
-    addToast('info', `${t('hintUsed')} ${costMessage}`);
-
-    return { value: hintValue, timePenalty };
-  }, [currentCountry, currentPlayer, session, updateGameState, addToast, t, isSoloMode, soloClickedCountry, getLocalizedHints]);
+  }, [isSoloMode, soloClickedCountry, currentCountry, currentPlayer, session, updatePlayerMetadata, updateGameState, addToast, t, getLocalizedHints]);
 
   const handleLeave = useCallback(async () => {
     await leaveSession();
@@ -814,9 +815,6 @@ const GamePage = () => {
   if (session.status === 'countdown') {
     return <CountdownOverlay startTime={session.countdownStartTime!} />;
   }
-
-  // Check if this is Against the Clock mode
-  const isAgainstTheClock = session.gameMode === 'againstTheClock';
 
   // Render Against the Clock game if in that mode
   if (isAgainstTheClock && session.status === 'playing') {

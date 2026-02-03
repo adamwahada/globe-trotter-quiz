@@ -31,6 +31,7 @@ interface GuessModalProps {
   hasExtendedHints?: boolean;
   hintAvailability?: HintAvailability;
   isSoloClickMode?: boolean; // For solo mode without dice roll
+  enableWarningSound?: boolean; // Enable/disable timer warning sounds
 }
 
 const defaultHintAvailability: HintAvailability = {
@@ -54,6 +55,7 @@ export const GuessModal: React.FC<GuessModalProps> = ({
   hasExtendedHints = false,
   hintAvailability = defaultHintAvailability,
   isSoloClickMode = false,
+  enableWarningSound = true,
 }) => {
   const { t } = useLanguage();
   const [guess, setGuess] = useState('');
@@ -299,7 +301,7 @@ export const GuessModal: React.FC<GuessModalProps> = ({
               startTime={adjustedStartTime}
               onComplete={handleSkip}
               label={t('timeLeft')}
-              enableWarningSound={true}
+              enableWarningSound={enableWarningSound}
               isActive={isOpen}
             />
           </div>

@@ -95,7 +95,6 @@ export const AgainstTheClockGame: React.FC<AgainstTheClockGameProps> = ({ onShow
         lastMinuteTriggeredRef.current = true;
         setShowLastMinuteWarning(true);
         addToast('game', t('lastChance'));
-        playToastSound('game');
       }
     };
 
@@ -545,6 +544,7 @@ export const AgainstTheClockGame: React.FC<AgainstTheClockGameProps> = ({ onShow
         hasExtendedHints={hasExtendedHints(selectedCountry || '')}
         hintAvailability={getHintAvailability(selectedCountry || '')}
         isSoloClickMode={true}
+        enableWarningSound={false}
       />
 
       {/* Ranking Modal */}
