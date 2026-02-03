@@ -304,6 +304,22 @@ export const translations = {
     scoringLabelWrongSkip: 'wrong/skip',
     mapTooltipCountryToGuess: 'This is the country to guess!',
     mapTooltipHighlighted: 'Highlighted',
+    
+    // Game Mode Selection
+    selectGameMode: 'Select Game Mode',
+    turnBasedMode: 'Turn-Based',
+    turnBasedModeDesc: 'Players take turns one by one. Roll the dice, guess the country, pass to the next player.',
+    turnBasedFeature1: 'One player at a time',
+    turnBasedFeature2: '35 seconds per turn',
+    againstTheClockMode: 'Against the Clock',
+    againstTheClockModeDesc: 'All players compete simultaneously! Race to guess as many countries as you can before time runs out.',
+    clockFeature1: 'Simultaneous play',
+    clockFeature2: 'Live leaderboard',
+    clockFeature3: 'All countries available',
+    lastChance: '🔥 LAST CHANCE!',
+    globalTimeRemaining: 'Time Remaining',
+    clickAnyCountry: 'Click any country on the map to guess!',
+    raceMode: 'Race Mode',
   },
 
   fr: {
@@ -609,6 +625,22 @@ export const translations = {
     scoringLabelWrongSkip: 'faux/passer',
     mapTooltipCountryToGuess: 'C\'est le pays à deviner !',
     mapTooltipHighlighted: 'Surligné',
+    
+    // Game Mode Selection
+    selectGameMode: 'Choisir le Mode de Jeu',
+    turnBasedMode: 'Tour par Tour',
+    turnBasedModeDesc: 'Les joueurs jouent chacun leur tour. Lancez le dé, devinez le pays, passez au joueur suivant.',
+    turnBasedFeature1: 'Un joueur à la fois',
+    turnBasedFeature2: '35 secondes par tour',
+    againstTheClockMode: 'Contre la Montre',
+    againstTheClockModeDesc: 'Tous les joueurs jouent simultanément ! Devinez le plus de pays possible avant la fin du temps.',
+    clockFeature1: 'Jeu simultané',
+    clockFeature2: 'Classement en direct',
+    clockFeature3: 'Tous les pays disponibles',
+    lastChance: '🔥 DERNIÈRE CHANCE !',
+    globalTimeRemaining: 'Temps Restant',
+    clickAnyCountry: 'Cliquez sur n\'importe quel pays pour deviner !',
+    raceMode: 'Mode Course',
   },
 
   ar: {
@@ -914,6 +946,22 @@ export const translations = {
     scoringLabelWrongSkip: 'خطأ/تخطي',
     mapTooltipCountryToGuess: 'هذه هي الدولة التي يجب تخمينها!',
     mapTooltipHighlighted: 'مميز',
+    
+    // Game Mode Selection
+    selectGameMode: 'اختر وضع اللعب',
+    turnBasedMode: 'بالأدوار',
+    turnBasedModeDesc: 'يلعب اللاعبون بالتناوب. ارمِ النرد، خمّن الدولة، مرر للاعب التالي.',
+    turnBasedFeature1: 'لاعب واحد في كل مرة',
+    turnBasedFeature2: '35 ثانية لكل دور',
+    againstTheClockMode: 'ضد الساعة',
+    againstTheClockModeDesc: 'جميع اللاعبين يتنافسون في نفس الوقت! سابق لتخمين أكبر عدد من الدول قبل انتهاء الوقت.',
+    clockFeature1: 'لعب متزامن',
+    clockFeature2: 'ترتيب مباشر',
+    clockFeature3: 'جميع الدول متاحة',
+    lastChance: '🔥 الفرصة الأخيرة!',
+    globalTimeRemaining: 'الوقت المتبقي',
+    clickAnyCountry: 'انقر على أي دولة على الخريطة لتخمينها!',
+    raceMode: 'وضع السباق',
   },
 };
 

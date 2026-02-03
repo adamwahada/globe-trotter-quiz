@@ -14,7 +14,7 @@ import { ReconnectionBanner } from '@/components/Banner/ReconnectionBanner';
 import { useSound } from '@/contexts/SoundContext';
 import { COUNTDOWN_SECONDS, WAITING_ROOM_TIMEOUT, playersMapToArray } from '@/types/game';
 import { Player } from '@/types/game';
-import { Copy, Check, Users, Clock, Play, LogOut, Link } from 'lucide-react';
+import { Copy, Check, Users, Clock, Play, LogOut, Link, Zap } from 'lucide-react';
 import { kickUnreadyPlayers, clearRecoveryData } from '@/services/gameSessionService';
 
 const WaitingRoom = () => {
@@ -254,7 +254,7 @@ const WaitingRoom = () => {
         )}
 
         {/* Game Settings Summary */}
-        <div className="flex justify-center gap-8 mb-8">
+        <div className="flex flex-wrap justify-center gap-4 md:gap-8 mb-8">
           <div className="flex items-center gap-2 text-muted-foreground">
             <Users className="h-5 w-5" />
             <span>{players.length}/{session.maxPlayers} {t('participants')}</span>
@@ -263,6 +263,26 @@ const WaitingRoom = () => {
             <Clock className="h-5 w-5" />
             <span>{session.duration} {t('minutes')}</span>
           </div>
+          {/* Game Mode Badge */}
+          {session.gameMode && (
+            <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${
+              session.gameMode === 'againstTheClock' 
+                ? 'bg-warning/20 text-warning border border-warning/30' 
+                : 'bg-primary/20 text-primary border border-primary/30'
+            }`}>
+              {session.gameMode === 'againstTheClock' ? (
+                <>
+                  <Zap className="h-4 w-4" />
+                  {t('againstTheClockMode')}
+                </>
+              ) : (
+                <>
+                  <Users className="h-4 w-4" />
+                  {t('turnBasedMode')}
+                </>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Players Grid */}

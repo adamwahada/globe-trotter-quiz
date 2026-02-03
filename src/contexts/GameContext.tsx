@@ -1,9 +1,9 @@
 import React, { createContext, useContext, ReactNode } from 'react';
 import { useFirebaseSession } from '@/hooks/useFirebaseSession';
-import type { GameSession, Player, PlayerData, PlayersMap, TurnState } from '@/types/game';
+import type { GameSession, Player, PlayerData, PlayersMap, TurnState, GameMode } from '@/types/game';
 
 // Re-export types for backward compatibility
-export type { GameSession, Player, PlayerData, PlayersMap, TurnState };
+export type { GameSession, Player, PlayerData, PlayersMap, TurnState, GameMode };
 
 interface GameContextType {
   session: GameSession | null;
@@ -11,7 +11,7 @@ interface GameContextType {
   isLoading: boolean;
   error: string | null;
   hasActiveSession: boolean;
-  createSession: (maxPlayers: number, duration: number, isSoloMode?: boolean) => Promise<string>;
+  createSession: (maxPlayers: number, duration: number, isSoloMode?: boolean, gameMode?: GameMode) => Promise<string>;
   joinSession: (code: string, username?: string) => Promise<boolean>;
   leaveSession: () => Promise<void>;
   setReady: (ready: boolean) => Promise<void>;

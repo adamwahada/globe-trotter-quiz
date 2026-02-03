@@ -1,5 +1,8 @@
 // Game types for multiplayer World Quiz
 
+// Game mode types
+export type GameMode = 'turnBased' | 'againstTheClock';
+
 // Player data stored in Firebase under sessions/{code}/players/{uid}
 export interface PlayerData {
   username: string;
@@ -12,6 +15,8 @@ export interface PlayerData {
   isConnected: boolean;
   lastSeen: number;
   inactiveTurns?: number; // Track consecutive inactive turns (timeout/skip)
+  // Against the Clock specific - tracks which country the player is currently guessing
+  currentGuessCountry?: string | null;
 }
 
 // Full player with uid (used in client-side arrays)
@@ -54,7 +59,8 @@ export interface GameSession {
   countdownStartTime: number | null;
   turnStartTime: number | null;
   isExtraTime?: boolean;
-  isSoloMode?: boolean; // New: indicates solo practice mode
+  isSoloMode?: boolean; // Indicates solo practice mode
+  gameMode?: GameMode; // 'turnBased' (default) or 'againstTheClock'
 }
 
 // Helper function to convert PlayersMap to Player array

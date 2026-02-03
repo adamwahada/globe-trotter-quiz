@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { GameSession, Player, PlayerData, PlayersMap, TurnState, SessionRecoveryData } from '@/types/game';
+import type { GameSession, Player, PlayerData, PlayersMap, TurnState, SessionRecoveryData, GameMode } from '@/types/game';
 import { playersMapToArray, getPlayerUids } from '@/types/game';
 import { translations } from '@/i18n/translations';
 import {
@@ -183,7 +183,7 @@ export const useFirebaseSession = () => {
     }
   }, []);
 
-  const createSession = useCallback(async (maxPlayers: number, duration: number, isSoloMode?: boolean): Promise<string> => {
+  const createSession = useCallback(async (maxPlayers: number, duration: number, isSoloMode?: boolean, gameMode?: GameMode): Promise<string> => {
     // Get current user's auth.uid
     const uid = getCurrentUid();
     if (!uid || !user) {
@@ -231,6 +231,9 @@ export const useFirebaseSession = () => {
         [playerId]: playerData
       };
 
+      // Determine effective game mode
+      const effectiveGameMode: GameMode = isSoloMode ? 'turnBased' : (gameMode || 'turnBased');
+
       const newSession: GameSession = {
         id: Date.now().toString(),
         code,
@@ -251,6 +254,7 @@ export const useFirebaseSession = () => {
         // For solo mode, start turn timer immediately so player has limited time per country
         turnStartTime: isSoloMode ? null : null, // Solo mode uses different timing (click-based)
         isSoloMode: isSoloMode || false,
+        gameMode: effectiveGameMode,
       };
 
       await createSessionInFirebase(newSession);
