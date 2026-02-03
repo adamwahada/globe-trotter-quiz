@@ -239,8 +239,8 @@ export const AgainstTheClockGame: React.FC<AgainstTheClockGameProps> = ({ onShow
     setCountrySelectTime(null);
   }, [selectedCountry, currentPlayer, session, updateGameState, addToast, t, playToastSound]);
 
-  // Handle hints
-  const handleUseHint = useCallback((type: 'letter' | 'famous' | 'flag') => {
+  // Handle hints - async with error handling to prevent point deduction on failure
+  const handleUseHint = useCallback(async (type: 'letter' | 'famous' | 'flag'): Promise<string> => {
     if (!selectedCountry || !currentPlayer || !session) return '';
 
     const playerData = session.players[currentPlayer.id];
@@ -257,30 +257,36 @@ export const AgainstTheClockGame: React.FC<AgainstTheClockGameProps> = ({ onShow
       }
     };
 
-    if (type === 'flag') {
-      if (countrySelectTime) {
-        setCountrySelectTime(countrySelectTime - 10000);
+    try {
+      if (type === 'flag') {
+        await updateGameState({ players: updatedPlayers });
+        if (countrySelectTime) {
+          setCountrySelectTime(countrySelectTime - 10000);
+        }
+        addToast('info', t('hintUsed') + ' (-1 point, -10 seconds)');
+        return getCountryFlag(selectedCountry);
       }
-      updateGameState({ players: updatedPlayers });
-      addToast('info', t('hintUsed') + ' (-1 point, -10 seconds)');
-      return getCountryFlag(selectedCountry);
+
+      await updateGameState({ players: updatedPlayers });
+
+      if (type === 'famous') {
+        addToast('info', t('hintUsed') + ' (-0.5 point)');
+        const localizedHints = getLocalizedHints(selectedCountry);
+        return localizedHints.famousPerson || getFamousPerson(selectedCountry) || 'No famous person data found';
+      }
+
+      addToast('info', t('hintUsed') + ' (-1 point)');
+      const localizedName = getCountryDisplayName(selectedCountry);
+      return localizedName[0] || selectedCountry[0] || '';
+    } catch (error) {
+      console.error('Failed to use hint:', error);
+      addToast('error', t('hintFailed') || 'Failed to use hint. Please try again.');
+      return '';
     }
-
-    updateGameState({ players: updatedPlayers });
-
-    if (type === 'famous') {
-      addToast('info', t('hintUsed') + ' (-0.5 point)');
-      const localizedHints = getLocalizedHints(selectedCountry);
-      return localizedHints.famousPerson || getFamousPerson(selectedCountry) || 'No famous person data found';
-    }
-
-    addToast('info', t('hintUsed') + ' (-1 point)');
-    const localizedName = getCountryDisplayName(selectedCountry);
-    return localizedName[0] || selectedCountry[0] || '';
   }, [selectedCountry, currentPlayer, session, countrySelectTime, updateGameState, addToast, t, getLocalizedHints, getCountryDisplayName]);
 
-  // Handle guided hints
-  const handleUseGuidedHint = useCallback((type: GuidedHintType): { value: string; timePenalty: number } | null => {
+  // Handle guided hints - async with error handling
+  const handleUseGuidedHint = useCallback(async (type: GuidedHintType): Promise<{ value: string; timePenalty: number } | null> => {
     if (!selectedCountry || !currentPlayer || !session) return null;
 
     const playerData = session.players[currentPlayer.id];
@@ -318,17 +324,23 @@ export const AgainstTheClockGame: React.FC<AgainstTheClockGameProps> = ({ onShow
       }
     };
 
-    if (countrySelectTime) {
-      setCountrySelectTime(countrySelectTime - (timePenalty * 1000));
+    try {
+      await updateGameState({ players: updatedPlayers });
+      if (countrySelectTime) {
+        setCountrySelectTime(countrySelectTime - (timePenalty * 1000));
+      }
+
+      const costMessage = type === 'capital' 
+        ? `(-${timePenalty}s)` 
+        : `(-${pointCost}pt, -${timePenalty}s)`;
+      addToast('info', `${t('hintUsed')} ${costMessage}`);
+
+      return { value: hintValue, timePenalty };
+    } catch (error) {
+      console.error('Failed to use guided hint:', error);
+      addToast('error', t('hintFailed') || 'Failed to use hint. Please try again.');
+      return null;
     }
-    updateGameState({ players: updatedPlayers });
-
-    const costMessage = type === 'capital' 
-      ? `(-${timePenalty}s)` 
-      : `(-${pointCost}pt, -${timePenalty}s)`;
-    addToast('info', `${t('hintUsed')} ${costMessage}`);
-
-    return { value: hintValue, timePenalty };
   }, [selectedCountry, currentPlayer, session, countrySelectTime, updateGameState, addToast, t, getLocalizedHints]);
 
   const handleLeave = useCallback(async () => {
