@@ -55,10 +55,15 @@ export const AgainstTheClockGame: React.FC<AgainstTheClockGameProps> = ({ onShow
   const [remainingGameSeconds, setRemainingGameSeconds] = useState(0);
   const lastMinuteTriggeredRef = useRef(false);
 
+  // Per-player tracking: each player sees only their own correct/wrong on the map
+  const [myCorrectCountries, setMyCorrectCountries] = useState<string[]>([]);
+  const [myWrongCountries, setMyWrongCountries] = useState<string[]>([]);
+
   const players = getPlayersArray ? getPlayersArray() : playersMapToArray(session?.players);
-  const guessedCountries = session?.guessedCountries || [];
-  const correctCountries = session?.correctCountries || [];
-  const wrongCountries = session?.wrongCountries || [];
+  
+  // Per-player guessed countries - only what THIS player has guessed
+  const currentPlayerData = currentPlayer?.id ? session?.players[currentPlayer.id] : null;
+  const myGuessedCountries = currentPlayerData?.countriesGuessed || [];
 
   // Handle scroll for navbar blur effect
   useEffect(() => {
@@ -106,16 +111,9 @@ export const AgainstTheClockGame: React.FC<AgainstTheClockGameProps> = ({ onShow
   const handleCountryClick = useCallback(async (countryName: string) => {
     if (!currentPlayer || !session) return;
 
-    // Check if country already guessed by this player
-    const playerData = session.players[currentPlayer.id];
-    if (playerData?.countriesGuessed?.includes(countryName)) {
+    // Check if country already guessed by THIS player only (independent per-player maps)
+    if (myGuessedCountries.includes(countryName)) {
       addToast('info', 'You already guessed this country!');
-      return;
-    }
-
-    // Check if country is in the global guessed list (someone already got it right)
-    if (correctCountries.includes(countryName)) {
-      addToast('info', 'This country was already correctly guessed!');
       return;
     }
 
@@ -123,7 +121,7 @@ export const AgainstTheClockGame: React.FC<AgainstTheClockGameProps> = ({ onShow
     setSelectedCountry(countryName);
     setCountrySelectTime(Date.now());
     setGuessModalOpen(true);
-  }, [currentPlayer, session, correctCountries, addToast]);
+  }, [currentPlayer, session, myGuessedCountries, addToast, t]);
 
   // Handle guess submission
   const handleSubmitGuess = useCallback(async (guess: string) => {
@@ -135,39 +133,31 @@ export const AgainstTheClockGame: React.FC<AgainstTheClockGameProps> = ({ onShow
     setGuessModalOpen(false);
 
     // Update player's countries guessed list and score
-    const currentPlayerData = session.players[currentPlayer.id];
-    if (!currentPlayerData) return;
+    const playerData = session.players[currentPlayer.id];
+    if (!playerData) return;
 
-    const newCountriesGuessed = [...(currentPlayerData.countriesGuessed || []), selectedCountry];
-    
-    // Track in global lists
-    const nextGuessedCountries = guessedCountries.includes(selectedCountry) 
-      ? guessedCountries 
-      : [...guessedCountries, selectedCountry];
-    
-    const nextCorrectCountries = result.correct && !correctCountries.includes(selectedCountry)
-      ? [...correctCountries, selectedCountry]
-      : correctCountries;
-    
-    const nextWrongCountries = !result.correct && !wrongCountries.includes(selectedCountry)
-      ? [...wrongCountries, selectedCountry]
-      : wrongCountries;
+    const newCountriesGuessed = [...(playerData.countriesGuessed || []), selectedCountry];
+
+    // Update LOCAL per-player correct/wrong tracking for map display
+    if (result.correct) {
+      setMyCorrectCountries(prev => [...prev, selectedCountry]);
+    } else {
+      setMyWrongCountries(prev => [...prev, selectedCountry]);
+    }
 
     const updatedPlayers: PlayersMap = {
       ...session.players,
       [currentPlayer.id]: {
-        ...currentPlayerData,
-        score: currentPlayerData.score + result.points,
+        ...playerData,
+        score: playerData.score + result.points,
         countriesGuessed: newCountriesGuessed,
-        turnsPlayed: (currentPlayerData.turnsPlayed || 0) + 1,
+        turnsPlayed: (playerData.turnsPlayed || 0) + 1,
       }
     };
 
+    // Only update players in session - no global correct/wrong tracking needed
     await updateGameState({
       players: updatedPlayers,
-      guessedCountries: nextGuessedCountries,
-      correctCountries: nextCorrectCountries,
-      wrongCountries: nextWrongCountries,
     });
 
     setFloatingScore({ points: result.points, show: true });
@@ -183,7 +173,7 @@ export const AgainstTheClockGame: React.FC<AgainstTheClockGameProps> = ({ onShow
 
     setSelectedCountry(null);
     setCountrySelectTime(null);
-  }, [selectedCountry, currentPlayer, session, language, guessedCountries, correctCountries, wrongCountries, updateGameState, addToast, t, playToastSound]);
+  }, [selectedCountry, currentPlayer, session, language, updateGameState, addToast, t, playToastSound]);
 
   // Handle skip
   const handleSkip = useCallback(async () => {
@@ -191,69 +181,55 @@ export const AgainstTheClockGame: React.FC<AgainstTheClockGameProps> = ({ onShow
 
     setGuessModalOpen(false);
 
-    const currentPlayerData = session.players[currentPlayer.id];
-    if (!currentPlayerData) return;
+    const playerData = session.players[currentPlayer.id];
+    if (!playerData) return;
 
-    const newCountriesGuessed = [...(currentPlayerData.countriesGuessed || []), selectedCountry];
+    const newCountriesGuessed = [...(playerData.countriesGuessed || []), selectedCountry];
     
-    const nextGuessedCountries = guessedCountries.includes(selectedCountry)
-      ? guessedCountries
-      : [...guessedCountries, selectedCountry];
-    
-    const nextWrongCountries = wrongCountries.includes(selectedCountry)
-      ? wrongCountries
-      : [...wrongCountries, selectedCountry];
+    // Track as wrong for this player's map
+    setMyWrongCountries(prev => [...prev, selectedCountry]);
 
     const updatedPlayers: PlayersMap = {
       ...session.players,
       [currentPlayer.id]: {
-        ...currentPlayerData,
+        ...playerData,
         countriesGuessed: newCountriesGuessed,
-        turnsPlayed: (currentPlayerData.turnsPlayed || 0) + 1,
+        turnsPlayed: (playerData.turnsPlayed || 0) + 1,
       }
     };
 
     await updateGameState({
       players: updatedPlayers,
-      guessedCountries: nextGuessedCountries,
-      wrongCountries: nextWrongCountries,
     });
 
     addToast('info', t('turnSkipped'));
     setSelectedCountry(null);
     setCountrySelectTime(null);
-  }, [selectedCountry, currentPlayer, session, guessedCountries, wrongCountries, updateGameState, addToast, t]);
+  }, [selectedCountry, currentPlayer, session, updateGameState, addToast, t]);
 
   // Handle timeout (timer expired while guessing)
   const handleGuessTimeout = useCallback(async () => {
     if (!selectedCountry || !currentPlayer || !session) return;
 
-    const currentPlayerData = session.players[currentPlayer.id];
-    if (!currentPlayerData) return;
+    const playerData = session.players[currentPlayer.id];
+    if (!playerData) return;
 
-    const newCountriesGuessed = [...(currentPlayerData.countriesGuessed || []), selectedCountry];
+    const newCountriesGuessed = [...(playerData.countriesGuessed || []), selectedCountry];
     
-    const nextGuessedCountries = guessedCountries.includes(selectedCountry)
-      ? guessedCountries
-      : [...guessedCountries, selectedCountry];
-    
-    const nextWrongCountries = wrongCountries.includes(selectedCountry)
-      ? wrongCountries
-      : [...wrongCountries, selectedCountry];
+    // Track as wrong for this player's map
+    setMyWrongCountries(prev => [...prev, selectedCountry]);
 
     const updatedPlayers: PlayersMap = {
       ...session.players,
       [currentPlayer.id]: {
-        ...currentPlayerData,
+        ...playerData,
         countriesGuessed: newCountriesGuessed,
-        turnsPlayed: (currentPlayerData.turnsPlayed || 0) + 1,
+        turnsPlayed: (playerData.turnsPlayed || 0) + 1,
       }
     };
 
     await updateGameState({
       players: updatedPlayers,
-      guessedCountries: nextGuessedCountries,
-      wrongCountries: nextWrongCountries,
     });
 
     addToast('error', t('timeUp'));
@@ -261,22 +237,22 @@ export const AgainstTheClockGame: React.FC<AgainstTheClockGameProps> = ({ onShow
     setGuessModalOpen(false);
     setSelectedCountry(null);
     setCountrySelectTime(null);
-  }, [selectedCountry, currentPlayer, session, guessedCountries, wrongCountries, updateGameState, addToast, t, playToastSound]);
+  }, [selectedCountry, currentPlayer, session, updateGameState, addToast, t, playToastSound]);
 
   // Handle hints
   const handleUseHint = useCallback((type: 'letter' | 'famous' | 'flag') => {
     if (!selectedCountry || !currentPlayer || !session) return '';
 
-    const currentPlayerData = session.players[currentPlayer.id];
-    if (!currentPlayerData) return '';
+    const playerData = session.players[currentPlayer.id];
+    if (!playerData) return '';
 
     const pointCost = type === 'famous' ? 0.5 : 1;
-    const newScore = Math.max(0, currentPlayerData.score - pointCost);
+    const newScore = Math.max(0, playerData.score - pointCost);
 
     const updatedPlayers: PlayersMap = {
       ...session.players,
       [currentPlayer.id]: {
-        ...currentPlayerData,
+        ...playerData,
         score: newScore,
       }
     };
@@ -307,8 +283,8 @@ export const AgainstTheClockGame: React.FC<AgainstTheClockGameProps> = ({ onShow
   const handleUseGuidedHint = useCallback((type: GuidedHintType): { value: string; timePenalty: number } | null => {
     if (!selectedCountry || !currentPlayer || !session) return null;
 
-    const currentPlayerData = session.players[currentPlayer.id];
-    if (!currentPlayerData) return null;
+    const playerData = session.players[currentPlayer.id];
+    if (!playerData) return null;
 
     const localizedHints = getLocalizedHints(selectedCountry);
     
@@ -332,12 +308,12 @@ export const AgainstTheClockGame: React.FC<AgainstTheClockGameProps> = ({ onShow
 
     if (!hintValue) return null;
 
-    const newScore = Math.max(0, currentPlayerData.score - pointCost);
+    const newScore = Math.max(0, playerData.score - pointCost);
 
     const updatedPlayers: PlayersMap = {
       ...session.players,
       [currentPlayer.id]: {
-        ...currentPlayerData,
+        ...playerData,
         score: newScore,
       }
     };
@@ -366,21 +342,24 @@ export const AgainstTheClockGame: React.FC<AgainstTheClockGameProps> = ({ onShow
     await endGame();
 
     // Save game results to Supabase for each player
+    // Note: In Against the Clock, we calculate correct/wrong from scores
     try {
       const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
       const winnerScore = sortedPlayers[0]?.score || 0;
       
       const savePromises = players.map(async (player) => {
-        const playerCorrect = player.countriesGuessed.filter(c => correctCountries.includes(c)).length;
-        const playerWrong = player.countriesGuessed.filter(c => wrongCountries.includes(c)).length;
+        // Estimate correct/wrong based on score (3 pts = correct, 2 pts = close, 0 = wrong)
+        // This is an approximation since we don't track globally anymore
         const totalTurns = player.countriesGuessed.length;
+        const estimatedCorrect = Math.floor(player.score / 2.5); // Average between 2 and 3
+        const estimatedWrong = Math.max(0, totalTurns - estimatedCorrect);
         
         const { error } = await supabase.from('game_history').insert({
           user_id: player.id,
           session_code: session.code,
           score: player.score,
-          countries_correct: playerCorrect,
-          countries_wrong: playerWrong,
+          countries_correct: estimatedCorrect,
+          countries_wrong: estimatedWrong,
           total_turns: totalTurns,
           is_winner: player.score === winnerScore && winnerScore > 0,
           player_count: players.length,
@@ -400,7 +379,7 @@ export const AgainstTheClockGame: React.FC<AgainstTheClockGameProps> = ({ onShow
     }
 
     onShowResults();
-  }, [session, players, endGame, correctCountries, wrongCountries, onShowResults]);
+  }, [session, players, endGame, onShowResults]);
 
   if (!session) return null;
 
@@ -522,12 +501,12 @@ export const AgainstTheClockGame: React.FC<AgainstTheClockGameProps> = ({ onShow
           />
         </div>
 
-        {/* Map Area */}
+        {/* Map Area - Uses per-player tracking */}
         <div className="flex-1 min-h-[500px] lg:min-h-[700px]">
           <WorldMap
-            guessedCountries={guessedCountries}
-            correctCountries={correctCountries}
-            wrongCountries={wrongCountries}
+            guessedCountries={myGuessedCountries}
+            correctCountries={myCorrectCountries}
+            wrongCountries={myWrongCountries}
             currentCountry={selectedCountry || undefined}
             onCountryClick={handleCountryClick}
             disabled={false}
@@ -562,8 +541,8 @@ export const AgainstTheClockGame: React.FC<AgainstTheClockGameProps> = ({ onShow
         onClose={() => setShowRankingModal(false)}
         players={players}
         currentPlayerId={currentPlayer?.id}
-        correctCountries={correctCountries}
-        wrongCountries={wrongCountries}
+        correctCountries={myCorrectCountries}
+        wrongCountries={myWrongCountries}
       />
     </div>
   );
