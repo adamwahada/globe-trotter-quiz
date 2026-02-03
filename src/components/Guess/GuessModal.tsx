@@ -23,8 +23,8 @@ interface GuessModalProps {
   onClose: () => void;
   onSubmit: (guess: string) => void;
   onSkip: () => void;
-  onUseHint: (type: 'letter' | 'famous' | 'flag') => string;
-  onUseGuidedHint?: (type: GuidedHintType) => { value: string; timePenalty: number } | null;
+  onUseHint: (type: 'letter' | 'famous' | 'flag') => string | Promise<string>;
+  onUseGuidedHint?: (type: GuidedHintType) => { value: string; timePenalty: number } | null | Promise<{ value: string; timePenalty: number } | null>;
   turnTimeSeconds?: number;
   turnStartTime?: number;
   playerScore?: number;
@@ -204,34 +204,44 @@ export const GuessModal: React.FC<GuessModalProps> = ({
     return defaultText;
   };
 
-  const handleHint = () => {
+  const handleHint = async () => {
     if (!canUseHint('letter')) return;
-    const letter = onUseHint('letter');
-    setFirstLetter(letter);
-    setHintUsed(true);
-    setTotalHintsUsed(prev => prev + 1);
+    const result = onUseHint('letter');
+    const letter = result instanceof Promise ? await result : result;
+    if (letter) {
+      setFirstLetter(letter);
+      setHintUsed(true);
+      setTotalHintsUsed(prev => prev + 1);
+    }
   };
 
-  const handleFamousPerson = () => {
+  const handleFamousPerson = async () => {
     if (!canUseHint('famous')) return;
-    const name = onUseHint('famous');
-    setFamousPersonUsed(true);
-    setFamousPerson(name);
-    setTotalHintsUsed(prev => prev + 1);
+    const result = onUseHint('famous');
+    const name = result instanceof Promise ? await result : result;
+    if (name) {
+      setFamousPersonUsed(true);
+      setFamousPerson(name);
+      setTotalHintsUsed(prev => prev + 1);
+    }
   };
 
-  const handleFlag = () => {
+  const handleFlag = async () => {
     if (!canUseHint('flag')) return;
-    const flag = onUseHint('flag');
-    setFlagUsed(true);
-    setCountryFlag(flag);
-    setTotalHintsUsed(prev => prev + 1);
+    const result = onUseHint('flag');
+    const flag = result instanceof Promise ? await result : result;
+    if (flag) {
+      setFlagUsed(true);
+      setCountryFlag(flag);
+      setTotalHintsUsed(prev => prev + 1);
+    }
   };
 
-  const handleGuidedHint = (type: GuidedHintType) => {
+  const handleGuidedHint = async (type: GuidedHintType) => {
     if (!onUseGuidedHint || !canUseHint(type)) return;
 
-    const result = onUseGuidedHint(type);
+    const resultOrPromise = onUseGuidedHint(type);
+    const result = resultOrPromise instanceof Promise ? await resultOrPromise : resultOrPromise;
     if (result) {
       setTotalHintsUsed(prev => prev + 1);
       setTimePenaltyApplied(prev => prev + result.timePenalty);

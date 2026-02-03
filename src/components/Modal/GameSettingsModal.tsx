@@ -182,6 +182,8 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
             <GameModeSelector
               onSelect={(gameMode) => {
                 setSelectedGameMode(gameMode);
+                // Set appropriate default duration based on game mode
+                setDuration(gameMode === 'againstTheClock' ? 15 : 30);
                 setMode('create');
               }}
               onBack={() => setMode('multiplayer')}
@@ -292,20 +294,22 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
                 </div>
               </div>
 
-              {/* Duration Selection */}
+              {/* Duration Selection - Different options based on game mode */}
               <div className="space-y-3">
                 <label className="flex items-center justify-between text-sm font-medium text-foreground">
                   <span className="flex items-center gap-2">
                     <Clock className="h-4 w-4 text-primary" />
                     {t('gameDuration')}
                   </span>
-                  <span className="text-xs text-muted-foreground">{t('maxDurationNote')}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {selectedGameMode === 'againstTheClock' ? t('maxDuration30') : t('maxDurationNote')}
+                  </span>
                 </label>
                 <div className="flex gap-2">
-                  {[20, 30, 45, 60].map((mins) => (
+                  {(selectedGameMode === 'againstTheClock' ? [10, 15, 20, 30] : [20, 30, 45, 60]).map((mins) => (
                     <button
                       key={mins}
-                      onClick={() => setDuration(Math.min(mins, 60))}
+                      onClick={() => setDuration(mins)}
                       className={`
                         flex-1 py-3 rounded-lg font-semibold transition-all
                         ${duration === mins
