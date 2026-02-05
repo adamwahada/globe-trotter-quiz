@@ -433,30 +433,14 @@ const GamePage = () => {
         if (session.host === currentPlayer?.id) {
           console.log('Host forcing turn advance due to stale player');
           
-          // Mark current player as inactive
+          // Force advance the turn WITHOUT incrementing inactivity
+          // The stale player's own client should have already incremented it
+          // We only advance the turn to prevent the game from being stuck
           const stalePlayerId = players[currentTurnIndex]?.id;
-          const stalePlayerData = stalePlayerId ? session.players?.[stalePlayerId] : null;
-          if (stalePlayerId && stalePlayerData) {
-            const newInactiveTurns = (stalePlayerData.inactiveTurns || 0) + 1;
-            
-            const updatedPlayers: PlayersMap = {
-              ...session.players,
-              [stalePlayerId]: {
-                ...stalePlayerData,
-                turnsPlayed: (stalePlayerData.turnsPlayed || 0) + 1,
-                inactiveTurns: newInactiveTurns,
-              }
-            };
-            
-            // If player has 3+ inactive turns, kick them
-            if (newInactiveTurns >= 3) {
-              removePlayerFromSession(session.code, stalePlayerId);
-            }
-            
+          if (stalePlayerId) {
             // Advance to next turn
             const nextTurn = (currentTurnIndex + 1) % players.length;
             updateGameState({
-              players: updatedPlayers,
               currentTurn: nextTurn,
               currentTurnState: null,
               turnStartTime: Date.now(),
