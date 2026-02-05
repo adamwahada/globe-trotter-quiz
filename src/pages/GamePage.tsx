@@ -17,6 +17,10 @@ import { LonePlayerOverlay } from '@/components/Modal/LonePlayerOverlay';
 import { InactivityWarning } from '@/components/Modal/InactivityWarning';
 import { ReconnectionBanner } from '@/components/Banner/ReconnectionBanner';
 import { AgainstTheClockGame } from '@/components/Game/AgainstTheClockGame';
+ import { CardButton } from '@/components/Cards/CardButton';
+ import { CardModal } from '@/components/Cards/CardModal';
+ import { CardEffectIndicator } from '@/components/Cards/CardEffectIndicator';
+ import { useCardSystem } from '@/hooks/useCardSystem';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useGame, TurnState, Player } from '@/contexts/GameContext';
 import { useToastContext } from '@/contexts/ToastContext';
@@ -28,6 +32,7 @@ import { hasExtendedHints, getFamousPlayer, getFamousSinger, getCountryCapital, 
 import { GuidedHintType } from '@/components/Guess/GuessModal';
 import { TURN_TIME_SECONDS, COUNTDOWN_SECONDS, playersMapToArray, PlayersMap } from '@/types/game';
 import { Trophy, LogOut, Volume2, VolumeX, Users, Clock } from 'lucide-react';
+ import { Sparkles } from 'lucide-react';
 import { removePlayerFromSession, clearRecoveryData } from '@/services/gameSessionService';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -57,6 +62,21 @@ const GamePage = () => {
   const [autoRollCountdown, setAutoRollCountdown] = useState<number | null>(null);
   const [floatingScore, setFloatingScore] = useState<{ points: number; show: boolean }>({ points: 0, show: false });
   const [isRolling, setIsRolling] = useState(false);
+   const [showCardModal, setShowCardModal] = useState(false);
+
+   // Card system hook
+   const {
+     isCardModeEnabled,
+     cardPoints,
+     playerCards,
+     activeEffects,
+     updateStreak,
+     buyCard,
+     activateCard,
+     fuseCards,
+     hasEffect,
+     cleanupExpiredEffects,
+   } = useCardSystem();
 
   // Get players as array for rendering and game logic
   const players = getPlayersArray ? getPlayersArray() : playersMapToArray(session?.players);
@@ -518,6 +538,11 @@ const GamePage = () => {
       addToast('error', t('wrongGuess', { player: '' }));
       playToastSound('error');
     }
+
+     // Update card system streak
+     if (isCardModeEnabled) {
+       await updateStreak(result.correct);
+     }
     
     // Reset solo clicked country and timer after submission
     if (isSoloMode && soloClickedCountry) {
@@ -532,7 +557,7 @@ const GamePage = () => {
       // In multiplayer, wait then move to next turn
       setTimeout(() => moveToNextTurn(), 2000);
     }
-  }, [currentPlayer, isMyTurn, currentTurnState, updateTurnState, guessedCountries, correctCountries, wrongCountries, session, updateGameState, addToast, t, moveToNextTurn, playToastSound, isSoloMode, soloClickedCountry, currentCountry]);
+   }, [currentPlayer, isMyTurn, currentTurnState, updateTurnState, guessedCountries, correctCountries, wrongCountries, session, updateGameState, addToast, t, moveToNextTurn, playToastSound, isSoloMode, soloClickedCountry, currentCountry, isCardModeEnabled, updateStreak]);
 
   const handleSkip = useCallback(async () => {
     if (!isMyTurn || !currentPlayer || !session) return;
@@ -625,8 +650,13 @@ const GamePage = () => {
       wrongCountries: nextWrongCountries,
     });
 
+     // Reset card streak on skip (counts as wrong)
+     if (isCardModeEnabled) {
+       await updateStreak(false);
+     }
+
     setTimeout(() => moveToNextTurn(), 2000);
-  }, [isMyTurn, currentTurnState, currentCountry, guessedCountries, wrongCountries, updateGameState, addToast, t, moveToNextTurn, updateTurnState, session, currentPlayer, navigate, playToastSound, isSoloMode, soloClickedCountry]);
+   }, [isMyTurn, currentTurnState, currentCountry, guessedCountries, wrongCountries, updateGameState, addToast, t, moveToNextTurn, updateTurnState, session, currentPlayer, navigate, playToastSound, isSoloMode, soloClickedCountry, isCardModeEnabled, updateStreak]);
 
   // Get localized country data
   const { getCountryDisplayName, getLocalizedHints } = useLocalizedCountry();
@@ -903,6 +933,15 @@ const GamePage = () => {
               </Button>
             </GameTooltip>
 
+             {/* Card Mode Button - Only for turn-based multiplayer */}
+             {isCardModeEnabled && (
+               <CardButton
+                 cardPoints={cardPoints}
+                 cardsCount={playerCards.filter(c => !c.isActivated).length}
+                 onClick={() => setShowCardModal(true)}
+               />
+             )}
+
             {/* Leave */}
             <GameTooltip content={t('tooltipQuit')} position="bottom">
               <Button variant="outline" size="sm" onClick={handleLeave} className="gap-2">
@@ -1149,6 +1188,19 @@ const GamePage = () => {
           onQuit={handleLeave}
         />
       )}
+
+       {/* Card Modal */}
+       {isCardModeEnabled && (
+         <CardModal
+           isOpen={showCardModal}
+           onClose={() => setShowCardModal(false)}
+           cardPoints={cardPoints}
+           playerCards={playerCards}
+           onBuyCard={buyCard}
+           onActivateCard={activateCard}
+           onFuseCards={fuseCards}
+         />
+       )}
     </div>
   );
 };

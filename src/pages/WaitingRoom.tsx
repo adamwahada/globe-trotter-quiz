@@ -14,7 +14,7 @@ import { ReconnectionBanner } from '@/components/Banner/ReconnectionBanner';
 import { useSound } from '@/contexts/SoundContext';
 import { COUNTDOWN_SECONDS, WAITING_ROOM_TIMEOUT, playersMapToArray } from '@/types/game';
 import { Player } from '@/types/game';
-import { Copy, Check, Users, Clock, Play, LogOut, Link, Zap } from 'lucide-react';
+ import { Copy, Check, Users, Clock, Play, LogOut, Link, Zap, Sparkles } from 'lucide-react';
 import { kickUnreadyPlayers, clearRecoveryData } from '@/services/gameSessionService';
 
 const WaitingRoom = () => {
@@ -281,6 +281,17 @@ const WaitingRoom = () => {
                   {t('turnBasedMode')}
                 </>
               )}
+            </div>
+          )}
+          {/* Card Mode Badge - Only for turn-based */}
+          {session.gameMode !== 'againstTheClock' && (
+            <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${
+              session.cardModeEnabled 
+                ? 'bg-warning/20 text-warning border border-warning/30' 
+                : 'bg-muted/50 text-muted-foreground border border-border'
+            }`}>
+              <Sparkles className="h-4 w-4" />
+              {session.cardModeEnabled ? t('cardModeEnabled') : t('cardModeDisabled')}
             </div>
           )}
         </div>

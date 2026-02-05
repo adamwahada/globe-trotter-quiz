@@ -2,6 +2,9 @@
 
 // Game mode types
 export type GameMode = 'turnBased' | 'againstTheClock';
+ 
+ // Import card types
+ import type { PlayerCard, ActiveCardEffect } from './cards';
 
 // Player data stored in Firebase under sessions/{code}/players/{uid}
 export interface PlayerData {
@@ -17,6 +20,10 @@ export interface PlayerData {
   inactiveTurns?: number; // Track consecutive inactive turns (timeout/skip)
   // Against the Clock specific - tracks which country the player is currently guessing
   currentGuessCountry?: string | null;
+   // Card system state
+   cardPoints?: number;
+   correctStreak?: number;
+   playerCards?: PlayerCard[];
 }
 
 // Full player with uid (used in client-side arrays)
@@ -61,6 +68,8 @@ export interface GameSession {
   isExtraTime?: boolean;
   isSoloMode?: boolean; // Indicates solo practice mode
   gameMode?: GameMode; // 'turnBased' (default) or 'againstTheClock'
+   cardModeEnabled?: boolean; // Card system enabled for this session
+   activeCardEffects?: ActiveCardEffect[]; // Global card effects affecting gameplay
 }
 
 // Helper function to convert PlayersMap to Player array
