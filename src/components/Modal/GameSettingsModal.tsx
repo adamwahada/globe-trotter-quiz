@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { X, Users, Clock, Hash, Copy, Check, User, Dice5, MousePointer } from 'lucide-react';
+ import { X, Users, Clock, Hash, Copy, Check, User, Dice5, MousePointer, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+ import { Switch } from '@/components/ui/switch';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGame, GameMode } from '@/contexts/GameContext';
@@ -30,6 +31,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
   const [guestName, setGuestName] = useState(localStorage.getItem('guest_username') || '');
   const [copied, setCopied] = useState(false);
   const [selectedGameMode, setSelectedGameMode] = useState<GameMode>('turnBased');
+   const [cardModeEnabled, setCardModeEnabled] = useState(false);
 
   // Auto-fill session code from invite link
   React.useEffect(() => {
@@ -44,6 +46,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
     setGeneratedCode('');
     setSessionCode('');
     setSelectedGameMode('turnBased');
+     setCardModeEnabled(false);
     onClose();
   };
 
@@ -51,7 +54,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
 
   const handleCreate = async () => {
     try {
-      const code = await createSession(players, duration, false, selectedGameMode);
+       const code = await createSession(players, duration, false, selectedGameMode, cardModeEnabled);
       setGeneratedCode(code);
       addToast('success', t('sessionCreated', { code }));
     } catch (err) {
@@ -322,6 +325,27 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
                   ))}
                 </div>
               </div>
+
+               {/* Card Mode Toggle - Only for turn-based */}
+               {selectedGameMode === 'turnBased' && (
+                 <div className="space-y-3">
+                   <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg border border-border">
+                     <div className="flex items-center gap-3">
+                       <div className="p-2 bg-warning/20 rounded-lg">
+                         <Sparkles className="h-5 w-5 text-warning" />
+                       </div>
+                       <div>
+                         <p className="text-sm font-medium text-foreground">{t('cardMode')}</p>
+                         <p className="text-xs text-muted-foreground">{t('cardModeDesc')}</p>
+                       </div>
+                     </div>
+                     <Switch
+                       checked={cardModeEnabled}
+                       onCheckedChange={setCardModeEnabled}
+                     />
+                   </div>
+                 </div>
+               )}
 
               <div className="flex gap-3 pt-4">
                 <Button variant="outline" onClick={() => setMode('selectGameMode')} className="flex-1">

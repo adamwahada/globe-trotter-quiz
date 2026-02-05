@@ -1,6 +1,7 @@
 import React, { createContext, useContext, ReactNode } from 'react';
 import { useFirebaseSession } from '@/hooks/useFirebaseSession';
 import type { GameSession, Player, PlayerData, PlayersMap, TurnState, GameMode } from '@/types/game';
+ import type { ActiveCardEffect } from '@/types/cards';
 
 // Re-export types for backward compatibility
 export type { GameSession, Player, PlayerData, PlayersMap, TurnState, GameMode };
@@ -11,7 +12,7 @@ interface GameContextType {
   isLoading: boolean;
   error: string | null;
   hasActiveSession: boolean;
-  createSession: (maxPlayers: number, duration: number, isSoloMode?: boolean, gameMode?: GameMode) => Promise<string>;
+   createSession: (maxPlayers: number, duration: number, isSoloMode?: boolean, gameMode?: GameMode, cardModeEnabled?: boolean) => Promise<string>;
   joinSession: (code: string, username?: string) => Promise<boolean>;
   leaveSession: () => Promise<void>;
   setReady: (ready: boolean) => Promise<void>;
@@ -27,6 +28,7 @@ interface GameContextType {
     wrongCountries?: string[];
     turnStartTime?: number | null;
     isExtraTime?: boolean;
+     activeCardEffects?: ActiveCardEffect[];
   }) => Promise<void>;
   updateTurnState: (turnState: TurnState | null) => Promise<void>;
   endGame: () => Promise<void>;

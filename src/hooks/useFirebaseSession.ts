@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { GameSession, Player, PlayerData, PlayersMap, TurnState, SessionRecoveryData, GameMode } from '@/types/game';
+ import type { ActiveCardEffect } from '@/types/cards';
 import { playersMapToArray, getPlayerUids } from '@/types/game';
 import { translations } from '@/i18n/translations';
 import {
@@ -183,7 +184,7 @@ export const useFirebaseSession = () => {
     }
   }, []);
 
-  const createSession = useCallback(async (maxPlayers: number, duration: number, isSoloMode?: boolean, gameMode?: GameMode): Promise<string> => {
+   const createSession = useCallback(async (maxPlayers: number, duration: number, isSoloMode?: boolean, gameMode?: GameMode, cardModeEnabled?: boolean): Promise<string> => {
     // Get current user's auth.uid
     const uid = getCurrentUid();
     if (!uid || !user) {
@@ -255,6 +256,8 @@ export const useFirebaseSession = () => {
         turnStartTime: isSoloMode ? null : null, // Solo mode uses different timing (click-based)
         isSoloMode: isSoloMode || false,
         gameMode: effectiveGameMode,
+         cardModeEnabled: cardModeEnabled || false,
+         activeCardEffects: [],
       };
 
       await createSessionInFirebase(newSession);
@@ -438,6 +441,7 @@ export const useFirebaseSession = () => {
       wrongCountries?: string[];
       turnStartTime?: number | null;
       isExtraTime?: boolean;
+       activeCardEffects?: ActiveCardEffect[];
     }
   ) => {
     if (!session?.code) return;
