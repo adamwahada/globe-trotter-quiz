@@ -278,24 +278,16 @@ export const GuessModal: React.FC<GuessModalProps> = ({
     : undefined;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-8 sm:pt-16">
       <div
         className="absolute inset-0 bg-background/80 backdrop-blur-sm"
         onClick={onClose}
       />
 
-      <div className="relative w-full max-w-lg mx-4 bg-card border border-border rounded-2xl shadow-2xl animate-scale-in overflow-hidden">
-        <div className="p-6">
-          <button
-            onClick={onClose}
-            className="absolute top-3 right-3 p-2.5 rounded-full bg-secondary border border-border hover:bg-destructive hover:text-white hover:border-destructive transition-all duration-200 z-10 shadow-lg"
-            aria-label="Close"
-          >
-            <X className="h-5 w-5" />
-          </button>
-
-          {/* Timer */}
-          <div className="mb-6">
+      <div className="relative w-full max-w-xl mx-4 bg-card border border-border rounded-2xl shadow-2xl animate-scale-in overflow-hidden max-h-[90vh] overflow-y-auto">
+        <div className="p-6 sm:p-8">
+          {/* Timer - full width at top */}
+          <div className="mb-6 pr-12">
             <TimerProgress
               totalSeconds={turnTimeSeconds}
               startTime={adjustedStartTime}
@@ -305,6 +297,15 @@ export const GuessModal: React.FC<GuessModalProps> = ({
               isActive={isOpen}
             />
           </div>
+
+          {/* Close button - positioned after timer so it doesn't overlap */}
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 p-2.5 rounded-full bg-secondary border border-border hover:bg-destructive hover:text-white hover:border-destructive transition-all duration-200 z-10 shadow-lg"
+            aria-label="Close"
+          >
+            <X className="h-5 w-5" />
+          </button>
 
           <h2 className="text-3xl font-display text-foreground text-center mb-2">
             {t('guessCountry')}
