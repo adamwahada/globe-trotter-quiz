@@ -67,6 +67,11 @@ const GamePage = () => {
   // Track which turn we've already shown the "your turn" toast for
   const lastToastTurnRef = useRef<number>(-1);
 
+  // Guard to ensure we only process a timeout ONCE per turn.
+  // Without this, the 1s interval can fire multiple times after time hits 0,
+  // quickly incrementing inactiveTurns multiple times and kicking too early.
+  const handledTimeoutKeyRef = useRef<string | null>(null);
+
    // Card system hook
    const {
      isCardModeEnabled,
@@ -331,6 +336,14 @@ const GamePage = () => {
   const handleTurnTimeout = useCallback(async () => {
     if (!isMyTurn || !currentPlayer || !session) return;
 
+    // If the turn already has an outcome recorded, do nothing.
+    if (session.currentTurnState?.submittedAnswer) return;
+
+    // Process timeout at most once per (session, turn index, start time)
+    const timeoutKey = `${session.code}:${currentTurnIndex}:${session.turnStartTime ?? 'null'}`;
+    if (handledTimeoutKeyRef.current === timeoutKey) return;
+    handledTimeoutKeyRef.current = timeoutKey;
+
     if (currentCountry && !guessedCountries.includes(currentCountry)) {
       await updateGameState({
         guessedCountries: [...guessedCountries, currentCountry],
@@ -380,7 +393,7 @@ const GamePage = () => {
     setGuessModalOpen(false);
 
     setTimeout(() => moveToNextTurn(), 2000);
-  }, [isMyTurn, currentTurnState, currentCountry, guessedCountries, wrongCountries, updateGameState, addToast, t, moveToNextTurn, playToastSound, updateTurnState, session, currentPlayer, navigate]);
+  }, [isMyTurn, currentTurnState, currentCountry, guessedCountries, wrongCountries, updateGameState, addToast, t, moveToNextTurn, playToastSound, updateTurnState, session, currentPlayer, navigate, currentTurnIndex]);
 
   // Turn timer timeout - handles both dice mode and solo click mode
   // Also handles when current player hasn't rolled dice yet (prevents infinite wait)
@@ -396,6 +409,15 @@ const GamePage = () => {
     if (!effectiveStartTime) return;
 
     const checkTimeout = () => {
+      // If the turn already ended (submit/skip/timeout already recorded), don't fire again.
+      if (session?.currentTurnState?.submittedAnswer) return;
+
+      // If we've already handled the timeout for this turn, don't re-run.
+      if (!isSoloMode && session) {
+        const timeoutKey = `${session.code}:${currentTurnIndex}:${effectiveStartTime}`;
+        if (handledTimeoutKeyRef.current === timeoutKey) return;
+      }
+
       const elapsed = Math.floor((Date.now() - effectiveStartTime) / 1000);
       if (elapsed >= TURN_TIME_SECONDS) {
         // For solo click mode, handle timeout locally
@@ -412,7 +434,7 @@ const GamePage = () => {
 
     const interval = setInterval(checkTimeout, 1000);
     return () => clearInterval(interval);
-  }, [isAgainstTheClock, isMyTurn, session?.turnStartTime, soloClickStartTime, currentCountry, soloClickedCountry, isSoloMode, currentTurnState?.diceRolled, handleSoloClickTimeout, handleTurnTimeout]);
+  }, [isAgainstTheClock, isMyTurn, session?.turnStartTime, soloClickStartTime, currentCountry, soloClickedCountry, isSoloMode, currentTurnState?.diceRolled, handleSoloClickTimeout, handleTurnTimeout, session?.currentTurnState?.submittedAnswer, currentTurnIndex]);
 
   // CRITICAL: Watch for inactive current player from other players' perspective
   // If current player hasn't responded and their time is way over, force advance
