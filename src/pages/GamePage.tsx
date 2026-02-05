@@ -64,6 +64,9 @@ const GamePage = () => {
   const [isRolling, setIsRolling] = useState(false);
    const [showCardModal, setShowCardModal] = useState(false);
 
+  // Track which turn we've already shown the "your turn" toast for
+  const lastToastTurnRef = useRef<number>(-1);
+
    // Card system hook
    const {
      isCardModeEnabled,
@@ -151,13 +154,15 @@ const GamePage = () => {
   // Show toast notifications for turn changes (skip in solo mode)
   useEffect(() => {
     if (isAgainstTheClock) return;
-    if (session?.status === 'playing' && currentTurnPlayer && !isSoloMode) {
-      if (isMyTurn) {
-        addToast('game', `🎯 ${t('yourTurn')}! ${t('rollDice')} 🎲`);
-        playToastSound('game');
-      }
+    if (session?.status !== 'playing' || isSoloMode) return;
+    
+    // Only show toast once per turn index change
+    if (isMyTurn && lastToastTurnRef.current !== currentTurnIndex) {
+      lastToastTurnRef.current = currentTurnIndex;
+      addToast('game', `🎯 ${t('yourTurn')}! ${t('rollDice')} 🎲`);
+      playToastSound('game');
     }
-  }, [currentTurnIndex, session?.status, isSoloMode, isAgainstTheClock, isMyTurn, currentTurnPlayer, addToast, t, playToastSound]);
+  }, [currentTurnIndex, session?.status, isSoloMode, isAgainstTheClock, isMyTurn, addToast, t, playToastSound]);
 
   // Sync modal state with session
   useEffect(() => {
@@ -621,27 +626,14 @@ const GamePage = () => {
       return; // Don't move to next turn in solo mode
     }
 
-    // Multiplayer: Track inactivity (skip counts as inactive)
-    const newInactiveTurns = (currentPlayerData.inactiveTurns || 0) + 1;
-
-    if (newInactiveTurns >= 3) {
-      // Kick player after 3 inactive turns
-      addToast('error', 'You have been kicked for inactivity (3 skipped turns)');
-      playToastSound('error');
-      await removePlayerFromSession(session.code, currentPlayer.id);
-      clearRecoveryData();
-      navigate('/');
-      return;
-    }
-
-    // Update player with inactivity count, countriesGuessed, and turnsPlayed
+    // Multiplayer: Skip is an ACTIVE choice, so reset inactivity counter
     const updatedPlayers: PlayersMap = {
       ...session.players,
       [currentPlayerUid]: {
         ...currentPlayerData,
         countriesGuessed: newCountriesGuessed,
         turnsPlayed: (currentPlayerData.turnsPlayed || 0) + 1,
-        inactiveTurns: newInactiveTurns,
+        inactiveTurns: 0, // Reset - skip is active participation
       }
     };
     await updateGameState({
