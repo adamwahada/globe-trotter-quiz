@@ -25,7 +25,7 @@ import { GuidedHintType } from '@/components/Guess/GuessModal';
 import { playersMapToArray, TURN_TIME_SECONDS } from '@/types/game';
 import { Trophy, LogOut, Volume2, VolumeX, Clock, Zap } from 'lucide-react';
 import { clearRecoveryData } from '@/services/gameSessionService';
-import { supabase } from '@/integrations/supabase/safeClient';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AgainstTheClockGameProps {
   onShowResults: () => void;

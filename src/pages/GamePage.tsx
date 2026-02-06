@@ -34,7 +34,7 @@ import { TURN_TIME_SECONDS, COUNTDOWN_SECONDS, playersMapToArray, PlayersMap } f
 import { Trophy, LogOut, Volume2, VolumeX, Users, Clock } from 'lucide-react';
  import { Sparkles } from 'lucide-react';
 import { removePlayerFromSession, clearRecoveryData } from '@/services/gameSessionService';
-import { supabase } from '@/integrations/supabase/safeClient';
+import { supabase } from '@/integrations/supabase/client';
 
 const GamePage = () => {
   const { t, language } = useLanguage();
