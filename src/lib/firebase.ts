@@ -7,6 +7,8 @@ import {
   signOut as firebaseSignOut,
   onAuthStateChanged,
   updateProfile,
+  signInWithPopup,
+  GoogleAuthProvider,
   Auth,
   User as FirebaseUser
 } from 'firebase/auth';
@@ -25,11 +27,13 @@ const firebaseConfig = {
 let app: FirebaseApp | null = null;
 let database: Database | null = null;
 let auth: Auth | null = null;
+let googleProvider: GoogleAuthProvider | null = null;
 
 try {
   app = initializeApp(firebaseConfig);
   database = getDatabase(app);
   auth = getAuth(app);
+  googleProvider = new GoogleAuthProvider();
   console.log('Firebase initialized successfully');
 } catch (error) {
   console.error('Failed to initialize Firebase:', error);
@@ -38,6 +42,7 @@ try {
 export {
   database,
   auth,
+  googleProvider,
   ref,
   set,
   onValue,
@@ -50,6 +55,7 @@ export {
   firebaseSignOut,
   onAuthStateChanged,
   updateProfile,
+  signInWithPopup,
   onDisconnect
 };
 export type { DatabaseReference, FirebaseUser };
