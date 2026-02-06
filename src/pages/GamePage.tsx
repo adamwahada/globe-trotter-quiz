@@ -64,6 +64,9 @@ const GamePage = () => {
   const [isRolling, setIsRolling] = useState(false);
    const [showCardModal, setShowCardModal] = useState(false);
 
+  // Ref-based rolling lock to prevent race conditions between auto-roll and manual click
+  const rollingLockRef = useRef(false);
+
   // Track which turn we've already shown the "your turn" toast for
   const lastToastTurnRef = useRef<number>(-1);
 
@@ -204,8 +207,11 @@ const GamePage = () => {
   // NOTE: Turn timer useEffect is placed after handleTurnTimeout definition
 
   const handleRollDice = useCallback(async () => {
-    if (!isMyTurn || isRolling || currentCountry) return;
-
+    // Use ref-based lock to prevent race condition between auto-roll and manual click
+    if (!isMyTurn || isRolling || currentCountry || rollingLockRef.current) return;
+    
+    // Immediately lock to prevent any concurrent calls
+    rollingLockRef.current = true;
     setIsRolling(true);
     playDiceSound();
 
@@ -213,6 +219,8 @@ const GamePage = () => {
       const country = getRandomUnplayedCountry(guessedCountries);
       if (!country) {
         addToast('info', 'All countries have been guessed!');
+        rollingLockRef.current = false;
+        setIsRolling(false);
         await endGame();
         return;
       }
@@ -235,6 +243,7 @@ const GamePage = () => {
       // NOTE: Do NOT reset turnStartTime here - the timer already started when turn began
       // The player has a single 35s window for their entire turn (roll + guess)
 
+      rollingLockRef.current = false;
       setIsRolling(false);
     }, 800);
   }, [isMyTurn, isRolling, currentCountry, guessedCountries, currentPlayer, updateTurnState, addToast, endGame, playDiceSound]);

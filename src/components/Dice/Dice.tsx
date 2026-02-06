@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Dices } from 'lucide-react';
 import { GameTooltip } from '@/components/Tooltip/GameTooltip';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -15,6 +15,8 @@ export const Dice: React.FC<DiceProps> = ({ onRoll, disabled = false, isRolling 
   const { playDiceSound } = useSound();
   const [rolling, setRolling] = useState(false);
   const [diceValue, setDiceValue] = useState<number>(1);
+  // Ref-based lock to prevent double-roll when auto-roll and manual click happen simultaneously
+  const rollLockRef = useRef(false);
 
   // Animate dice faces during roll
   useEffect(() => {
@@ -27,14 +29,16 @@ export const Dice: React.FC<DiceProps> = ({ onRoll, disabled = false, isRolling 
   }, [rolling, isRolling]);
 
   const handleRoll = () => {
-    if (disabled || rolling) return;
+    if (disabled || rolling || rollLockRef.current) return;
 
+    rollLockRef.current = true;
     setRolling(true);
     playDiceSound();
 
     // Extended animation for better effect
     setTimeout(() => {
       setRolling(false);
+      rollLockRef.current = false;
       setDiceValue(Math.floor(Math.random() * 6) + 1);
       onRoll();
     }, 800);
