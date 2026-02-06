@@ -1,13 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
 import {
-  getFirebaseAuth,
+  auth,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   firebaseSignOut,
   onAuthStateChanged,
   updateProfile as firebaseUpdateProfile,
-  FirebaseUser,
-  Auth
+  FirebaseUser
 } from '@/lib/firebase';
 import { trackUserPresence, subscribeToUserPresence, clearUserPresence } from '@/services/gameSessionService';
 import { translations } from '@/i18n/translations';
@@ -73,80 +72,70 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const presenceUnsubscribeRef = useRef<(() => void) | null>(null);
   // Track if we've registered our presence - only log out on conflicts AFTER we've registered
   const presenceRegisteredRef = useRef<boolean>(false);
-  const authRef = useRef<Auth | null>(null);
 
   // Listen for auth state changes
   useEffect(() => {
-    let unsubscribe: (() => void) | undefined;
-    
-    const setupAuth = async () => {
-      const auth = await getFirebaseAuth();
-      authRef.current = auth;
-      
-      if (!auth) {
-        console.error('Firebase auth not initialized');
-        setIsLoading(false);
-        return;
-      }
+    if (!auth) {
+      console.error('Firebase auth not initialized');
+      setIsLoading(false);
+      return;
+    }
 
-      unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-        if (firebaseUser) {
-          const mappedUser = mapFirebaseUser(firebaseUser);
-          setUser(mappedUser);
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        const mappedUser = mapFirebaseUser(firebaseUser);
+        setUser(mappedUser);
 
-          // Reset presence flag before registering
-          presenceRegisteredRef.current = false;
+        // Reset presence flag before registering
+        presenceRegisteredRef.current = false;
 
-          // Register this tab's presence - this will kick out other sessions
-          await trackUserPresence(firebaseUser.uid, tabSessionIdRef.current);
-          
-          // Mark that we've successfully registered our presence
-          presenceRegisteredRef.current = true;
+        // Register this tab's presence - this will kick out other sessions
+        await trackUserPresence(firebaseUser.uid, tabSessionIdRef.current);
+        
+        // Mark that we've successfully registered our presence
+        presenceRegisteredRef.current = true;
 
-          // Start watching for session conflicts (from OTHER devices logging in later)
-          if (presenceUnsubscribeRef.current) presenceUnsubscribeRef.current();
-          presenceUnsubscribeRef.current = subscribeToUserPresence(firebaseUser.uid, (presence) => {
-            // Only act on conflicts AFTER we've registered our presence
-            // This prevents the new session from being kicked by its own registration
-            if (!presenceRegisteredRef.current) {
-              return; // Ignore updates until we're registered
-            }
-
-            if (presence && presence.sessionId !== tabSessionIdRef.current) {
-              console.warn('[Security] Another device logged in. Logging out this session...');
-
-              // Get current language for toast
-              const lang = (localStorage.getItem('worldquiz_language') || 'en') as 'en' | 'fr' | 'ar';
-              addToast('error', translations[lang].sessionConflictDesc, 10000);
-
-              // Force logout this (old) session
-              signOut();
-            }
-          });
-
-          // Store user data
-          localStorage.setItem(`user_${firebaseUser.uid}`, JSON.stringify({
-            username: mappedUser.username,
-            avatar: mappedUser.avatar,
-            color: mappedUser.color,
-            stats: mappedUser.stats,
-          }));
-        } else {
-          setUser(null);
-          presenceRegisteredRef.current = false;
-          if (presenceUnsubscribeRef.current) {
-            presenceUnsubscribeRef.current();
-            presenceUnsubscribeRef.current = null;
+        // Start watching for session conflicts (from OTHER devices logging in later)
+        if (presenceUnsubscribeRef.current) presenceUnsubscribeRef.current();
+        presenceUnsubscribeRef.current = subscribeToUserPresence(firebaseUser.uid, (presence) => {
+          // Only act on conflicts AFTER we've registered our presence
+          // This prevents the new session from being kicked by its own registration
+          if (!presenceRegisteredRef.current) {
+            return; // Ignore updates until we're registered
           }
-        }
-        setIsLoading(false);
-      });
-    };
 
-    setupAuth();
+          if (presence && presence.sessionId !== tabSessionIdRef.current) {
+            console.warn('[Security] Another device logged in. Logging out this session...');
+
+            // Get current language for toast
+            const lang = (localStorage.getItem('worldquiz_language') || 'en') as 'en' | 'fr' | 'ar';
+            addToast('error', translations[lang].sessionConflictDesc, 10000);
+
+            // Force logout this (old) session
+            signOut();
+          }
+        });
+
+        // Store user data
+        localStorage.setItem(`user_${firebaseUser.uid}`, JSON.stringify({
+          username: mappedUser.username,
+          avatar: mappedUser.avatar,
+          color: mappedUser.color,
+          stats: mappedUser.stats,
+        }));
+      } else {
+        setUser(null);
+        presenceRegisteredRef.current = false;
+        if (presenceUnsubscribeRef.current) {
+          presenceUnsubscribeRef.current();
+          presenceUnsubscribeRef.current = null;
+        }
+      }
+      setIsLoading(false);
+    });
 
     return () => {
-      if (unsubscribe) unsubscribe();
+      unsubscribe();
       if (presenceUnsubscribeRef.current) {
         presenceUnsubscribeRef.current();
       }
@@ -154,7 +143,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const auth = await getFirebaseAuth();
     if (!auth) throw new Error('Firebase not initialized');
     setIsLoading(true);
     try {
@@ -165,7 +153,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const signUp = async (email: string, password: string, username: string) => {
-    const auth = await getFirebaseAuth();
     if (!auth) throw new Error('Firebase not initialized');
     setIsLoading(true);
     try {
@@ -189,7 +176,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const signOut = async () => {
-    const auth = authRef.current || await getFirebaseAuth();
     if (!auth) return;
     try {
       if (user?.id) {
