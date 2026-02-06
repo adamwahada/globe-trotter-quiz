@@ -20,6 +20,7 @@ export const translations = {
     createAccount: 'Create Account',
     welcomeBack: 'Welcome Back',
     joinUs: 'Join the Adventure',
+    signInWithGoogle: 'Continue with Google',
 
     // Landing Page
     heroTitle: 'Test Your World Knowledge',
@@ -390,6 +391,7 @@ export const translations = {
     createAccount: 'Créer un compte',
     welcomeBack: 'Bon retour',
     joinUs: "Rejoignez l'aventure",
+    signInWithGoogle: 'Continuer avec Google',
 
     // Landing Page
     heroTitle: 'Testez Vos Connaissances',
@@ -760,6 +762,7 @@ export const translations = {
     createAccount: 'إنشاء حساب',
     welcomeBack: 'مرحباً بعودتك',
     joinUs: 'انضم إلى المغامرة',
+    signInWithGoogle: 'المتابعة مع جوجل',
 
     // Landing Page
     heroTitle: 'اختبر معرفتك بالعالم',
