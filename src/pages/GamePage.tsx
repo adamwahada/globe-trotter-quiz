@@ -1210,7 +1210,7 @@ const GamePage = () => {
            cardPoints={cardPoints}
            playerCards={playerCards}
            onBuyCard={buyCard}
-           onActivateCard={activateCard}
+           onActivateCard={(cardId, targetData) => activateCard(cardId, targetData)}
            onFuseCards={fuseCards}
          />
        )}
