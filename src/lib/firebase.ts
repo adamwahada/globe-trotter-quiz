@@ -9,6 +9,7 @@ import {
   updateProfile,
   signInWithPopup,
   GoogleAuthProvider,
+  sendPasswordResetEmail,
   Auth,
   User as FirebaseUser
 } from 'firebase/auth';
@@ -56,6 +57,7 @@ export {
   onAuthStateChanged,
   updateProfile,
   signInWithPopup,
+  sendPasswordResetEmail,
   onDisconnect
 };
 export type { DatabaseReference, FirebaseUser };

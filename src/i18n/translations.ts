@@ -247,6 +247,10 @@ export const translations = {
     networkError: 'Network error. Please try again.',
     authRequired: 'Please sign in to continue',
     invalidCredentials: 'Invalid email or password',
+    invalidCredentialsGoogleHint: 'Invalid credentials. If you previously signed in with Google, use "Continue with Google" or reset your password.',
+    enterEmailFirst: 'Please enter your email address first.',
+    passwordResetSent: 'Password reset email sent! Check your inbox.',
+    noAccountWithEmail: 'No account found with this email.',
     emailExists: 'Email already registered',
 
     // Tooltips
@@ -655,6 +659,10 @@ export const translations = {
     networkError: 'Erreur réseau. Veuillez réessayer.',
     authRequired: 'Veuillez vous connecter pour continuer',
     invalidCredentials: 'Email ou mot de passe invalide',
+    invalidCredentialsGoogleHint: 'Identifiants invalides. Si vous vous êtes connecté avec Google, utilisez "Continuer avec Google" ou réinitialisez votre mot de passe.',
+    enterEmailFirst: 'Veuillez entrer votre adresse email d\'abord.',
+    passwordResetSent: 'Email de réinitialisation envoyé ! Vérifiez votre boîte de réception.',
+    noAccountWithEmail: 'Aucun compte trouvé avec cet email.',
     emailExists: 'Email déjà enregistré',
 
     // Tooltips
@@ -1063,6 +1071,10 @@ export const translations = {
     networkError: 'خطأ في الشبكة. حاول مرة أخرى.',
     authRequired: 'يرجى تسجيل الدخول للمتابعة',
     invalidCredentials: 'البريد الإلكتروني أو كلمة المرور غير صحيحة',
+    invalidCredentialsGoogleHint: 'بيانات اعتماد غير صالحة. إذا سجلت الدخول سابقاً عبر Google، استخدم "المتابعة مع Google" أو أعد تعيين كلمة المرور.',
+    enterEmailFirst: 'يرجى إدخال بريدك الإلكتروني أولاً.',
+    passwordResetSent: 'تم إرسال بريد إعادة تعيين كلمة المرور! تحقق من صندوق الوارد.',
+    noAccountWithEmail: 'لم يتم العثور على حساب بهذا البريد الإلكتروني.',
     emailExists: 'البريد الإلكتروني مسجل بالفعل',
 
     // Tooltips
