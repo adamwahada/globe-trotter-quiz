@@ -3,6 +3,8 @@ import { Navbar } from "@/components/Navbar/Navbar";
 import { GameSettingsModal } from "@/components/Modal/GameSettingsModal";
 import { Button } from "@/components/ui/button";
 import { GameRuleCard } from "@/components/RuleCards/GameRuleCard";
+import { GameModesSection } from "@/components/LandingPage/GameModesSection";
+import { CardSystemSection } from "@/components/LandingPage/CardSystemSection";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useGame } from "@/contexts/GameContext";
@@ -342,6 +344,9 @@ const Index = () => {
         </div>
       </section>
 
+      {/* Game Modes Section */}
+      <GameModesSection />
+
       {/* Hints Section */}
       <section className="relative z-10 py-20 px-4">
         <div className="max-w-5xl mx-auto">
@@ -436,6 +441,9 @@ const Index = () => {
           </div>
         </div>
       </section>
+
+      {/* Card System Section */}
+      <CardSystemSection />
 
       {/* Features Section */}
       <section className="relative z-10 py-20 px-4">
