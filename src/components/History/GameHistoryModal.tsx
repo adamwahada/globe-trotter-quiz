@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { X, Trophy, Target, Calendar, Users, Clock, CheckCircle, XCircle, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/safeClient';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface GameHistoryEntry {
