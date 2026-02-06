@@ -1,47 +1,69 @@
 import React from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { CARD_DEFINITIONS, CardType } from '@/types/cards';
+import { Clock, Lightbulb, Settings2, Trophy, Sparkles } from 'lucide-react';
 
 const cardCategories = [
   {
     category: 'time' as const,
     cards: ['timeBoost', 'timeSteal'] as CardType[],
+    icon: Clock,
   },
   {
     category: 'hints' as const,
     cards: ['extraHint', 'hintBlock'] as CardType[],
+    icon: Lightbulb,
   },
   {
     category: 'control' as const,
     cards: ['skipNextPlayer', 'pickYourCountry', 'pickYourContinent', 'forcedContinent'] as CardType[],
+    icon: Settings2,
   },
   {
     category: 'score' as const,
     cards: ['doublePoints', 'pointStrike'] as CardType[],
+    icon: Trophy,
   },
   {
     category: 'wild' as const,
     cards: ['joker'] as CardType[],
+    icon: Sparkles,
   },
 ];
 
-const categoryColors: Record<string, string> = {
-  time: 'border-info/40 hover:border-info/70',
-  hints: 'border-warning/40 hover:border-warning/70',
-  control: 'border-primary/40 hover:border-primary/70',
-  score: 'border-success/40 hover:border-success/70',
-  wild: 'border-accent-foreground/40 hover:border-accent-foreground/70',
+const categoryAccents: Record<string, { border: string; bg: string; text: string; glow: string }> = {
+  time: {
+    border: 'border-info/40 group-hover:border-info/70',
+    bg: 'bg-info/10',
+    text: 'text-info',
+    glow: 'group-hover:shadow-info/20',
+  },
+  hints: {
+    border: 'border-warning/40 group-hover:border-warning/70',
+    bg: 'bg-warning/10',
+    text: 'text-warning',
+    glow: 'group-hover:shadow-warning/20',
+  },
+  control: {
+    border: 'border-primary/40 group-hover:border-primary/70',
+    bg: 'bg-primary/10',
+    text: 'text-primary',
+    glow: 'group-hover:shadow-primary/20',
+  },
+  score: {
+    border: 'border-success/40 group-hover:border-success/70',
+    bg: 'bg-success/10',
+    text: 'text-success',
+    glow: 'group-hover:shadow-success/20',
+  },
+  wild: {
+    border: 'border-accent-foreground/40 group-hover:border-accent-foreground/70',
+    bg: 'bg-accent/20',
+    text: 'text-accent-foreground',
+    glow: 'group-hover:shadow-accent/20',
+  },
 };
 
-const categoryBgColors: Record<string, string> = {
-  time: 'bg-info/10',
-  hints: 'bg-warning/10',
-  control: 'bg-primary/10',
-  score: 'bg-success/10',
-  wild: 'bg-accent/20',
-};
-
-// Map card type to translation key for card name
 const cardNameKeys: Record<CardType, string> = {
   timeBoost: 'cardTimeBoost',
   timeSteal: 'cardTimeSteal',
@@ -56,7 +78,6 @@ const cardNameKeys: Record<CardType, string> = {
   joker: 'cardJoker',
 };
 
-// Map card type to translation key for card description on landing page
 const cardDescKeys: Record<CardType, string> = {
   timeBoost: 'cardTimeBoostLandingDesc',
   timeSteal: 'cardTimeStealLandingDesc',
@@ -71,7 +92,6 @@ const cardDescKeys: Record<CardType, string> = {
   joker: 'cardJokerLandingDesc',
 };
 
-// Map category name to translation key
 const categoryNameKeys: Record<string, string> = {
   time: 'cardCategoryTime',
   hints: 'cardCategoryHints',
@@ -89,68 +109,93 @@ export const CardSystemSection: React.FC = () => {
         <h2 className="text-4xl md:text-5xl font-display text-foreground text-center mb-4">
           {t('cardSystemTitle' as any)}
         </h2>
-        <p className="text-center text-muted-foreground mb-4">
+        <p className="text-center text-muted-foreground mb-4 max-w-2xl mx-auto">
           {t('cardSystemSubtitle' as any)}
         </p>
-        <p className="text-center text-sm text-muted-foreground mb-12 max-w-2xl mx-auto">
+        <p className="text-center text-sm text-muted-foreground mb-14 max-w-2xl mx-auto">
           {t('cardSystemHow' as any)}
         </p>
 
-        {/* Card categories */}
-        <div className="space-y-8">
-          {cardCategories.map((cat) => (
-            <div key={cat.category}>
-              <div className="flex items-center gap-3 mb-4">
-                <div className={`px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider ${categoryBgColors[cat.category]} text-foreground border ${categoryColors[cat.category].split(' ')[0]}`}>
-                  {t(categoryNameKeys[cat.category] as any)}
+        {/* Card categories - each as a distinct chapter */}
+        <div className="space-y-14">
+          {cardCategories.map((cat, catIndex) => {
+            const accent = categoryAccents[cat.category];
+            const Icon = cat.icon;
+
+            return (
+              <div key={cat.category}>
+                {/* Chapter header */}
+                <div className="flex items-center gap-3 mb-6">
+                  <div className={`w-10 h-10 rounded-xl ${accent.bg} border ${accent.border.split(' ')[0]} flex items-center justify-center`}>
+                    <Icon className={`h-5 w-5 ${accent.text}`} />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-display text-foreground">
+                      {t(categoryNameKeys[cat.category] as any)}
+                    </h3>
+                  </div>
+                  <div className="flex-1 h-px bg-gradient-to-r from-border/60 to-transparent ml-4" />
                 </div>
-              </div>
-              
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {cat.cards.map((cardType) => {
-                  const def = CARD_DEFINITIONS[cardType];
-                  return (
-                    <div
-                      key={cardType}
-                      className={`group relative bg-gradient-to-br from-card/80 via-card/60 to-card/40 backdrop-blur-xl rounded-xl p-4 border transition-all duration-300 hover:shadow-md ${categoryColors[cat.category]}`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className={`w-10 h-10 rounded-lg ${categoryBgColors[cat.category]} flex items-center justify-center shrink-0 text-xl`}>
-                          {def.icon}
-                        </div>
-                        <div className="min-w-0">
-                          <h4 className="font-semibold text-foreground text-sm mb-1">
-                            {t(cardNameKeys[cardType] as any)}
-                          </h4>
-                          <p className="text-xs text-muted-foreground leading-relaxed">
-                            {t(cardDescKeys[cardType] as any)}
-                          </p>
-                          <div className="mt-2 flex items-center gap-2">
-                            <span className="text-xs font-medium text-primary">
+
+                {/* Cards grid */}
+                <div className="grid sm:grid-cols-2 gap-4">
+                  {cat.cards.map((cardType, cardIndex) => {
+                    const def = CARD_DEFINITIONS[cardType];
+                    return (
+                      <div
+                        key={cardType}
+                        className={`group relative bg-gradient-to-br from-card/90 via-card/70 to-card/50 backdrop-blur-xl rounded-2xl p-5 border transition-all duration-300 hover:scale-[1.02] hover:shadow-lg ${accent.border} ${accent.glow}`}
+                        style={{ animationDelay: `${(catIndex * 2 + cardIndex) * 80}ms` }}
+                      >
+                        {/* Hover glow overlay */}
+                        <div className={`absolute inset-0 rounded-2xl bg-gradient-to-br from-transparent via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${accent.bg}`} />
+
+                        <div className="relative flex items-start gap-4">
+                          {/* Card icon */}
+                          <div className={`w-12 h-12 rounded-xl ${accent.bg} border ${accent.border.split(' ')[0]} flex items-center justify-center shrink-0 text-2xl`}>
+                            {def.icon}
+                          </div>
+
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 mb-1.5">
+                              <h4 className="font-semibold text-foreground text-base">
+                                {t(cardNameKeys[cardType] as any)}
+                              </h4>
+                              {def.requiresInput && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-secondary text-muted-foreground border border-border/50">
+                                  {t('cardRequiresInput' as any)}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground leading-relaxed mb-2">
+                              {t(cardDescKeys[cardType] as any)}
+                            </p>
+                            <span className={`text-sm font-bold ${accent.text}`}>
                               {def.cost} {t('cardPoints')}
                             </span>
-                            {def.requiresInput && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">
-                                {t('cardRequiresInput' as any)}
-                              </span>
-                            )}
                           </div>
                         </div>
+
+                        {/* Bottom accent line */}
+                        <div className={`absolute bottom-0 left-4 right-4 h-[2px] rounded-full bg-gradient-to-r from-transparent via-current to-transparent opacity-20 ${accent.text}`} />
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Fusion & Joker info */}
-        <div className="mt-10 bg-gradient-to-br from-accent/50 via-card/50 to-accent/20 border border-accent-foreground/20 rounded-2xl p-6 text-center">
-          <p className="text-lg font-display text-foreground mb-2">
+        <div className="mt-14 bg-gradient-to-br from-accent/50 via-card/50 to-accent/20 border border-accent-foreground/20 rounded-2xl p-8 text-center">
+          <div className="w-14 h-14 rounded-full bg-accent/30 border border-accent-foreground/20 flex items-center justify-center mx-auto mb-4">
+            <Sparkles className="h-7 w-7 text-accent-foreground" />
+          </div>
+          <p className="text-xl font-display text-foreground mb-3">
             {t('cardFusionTitle' as any)}
           </p>
-          <p className="text-sm text-muted-foreground max-w-xl mx-auto">
+          <p className="text-sm text-muted-foreground max-w-xl mx-auto leading-relaxed">
             {t('cardFusionDesc' as any)}
           </p>
         </div>
