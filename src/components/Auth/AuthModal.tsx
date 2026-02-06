@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToastContext } from '@/contexts/ToastContext';
-import { auth, googleProvider, signInWithPopup } from '@/lib/firebase';
+import { auth, googleProvider, signInWithPopup, sendPasswordResetEmail } from '@/lib/firebase';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -60,7 +60,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
       if (code === 'auth/email-already-in-use') {
         addToast('error', 'This email is already registered. Please sign in instead.');
       } else if (code === 'auth/invalid-credential' || code === 'auth/wrong-password' || code === 'auth/user-not-found') {
-        addToast('error', t('invalidCredentials'));
+        addToast('error', t('invalidCredentialsGoogleHint') || 'Invalid credentials. If you previously signed in with Google, please use "Continue with Google" or reset your password.');
+      } else if (code === 'auth/invalid-email') {
       } else if (code === 'auth/invalid-email') {
         addToast('error', 'Invalid email address');
       } else if (code === 'auth/weak-password') {
@@ -221,6 +222,27 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
             <button
               type="button"
               className="w-full text-sm text-primary hover:underline"
+              onClick={async () => {
+                if (!email) {
+                  addToast('error', t('enterEmailFirst') || 'Please enter your email address first.');
+                  return;
+                }
+                if (!auth) {
+                  addToast('error', 'Firebase not initialized');
+                  return;
+                }
+                try {
+                  await sendPasswordResetEmail(auth, email);
+                  addToast('success', t('passwordResetSent') || 'Password reset email sent! Check your inbox.');
+                } catch (error: any) {
+                  console.error('Password reset error:', error);
+                  if (error?.code === 'auth/user-not-found') {
+                    addToast('error', t('noAccountWithEmail') || 'No account found with this email.');
+                  } else {
+                    addToast('error', error?.message || 'Failed to send reset email.');
+                  }
+                }
+              }}
             >
               {t('forgotPassword')}
             </button>
