@@ -28,17 +28,68 @@ let app: FirebaseApp | null = null;
 let database: Database | null = null;
 let auth: Auth | null = null;
 let googleProvider: GoogleAuthProvider | null = null;
+let initPromise: Promise<void> | null = null;
 
-try {
-  app = initializeApp(firebaseConfig);
-  database = getDatabase(app);
-  auth = getAuth(app);
-  googleProvider = new GoogleAuthProvider();
-  console.log('Firebase initialized successfully');
-} catch (error) {
-  console.error('Failed to initialize Firebase:', error);
+// Lazy initialization - only init Firebase when first needed
+const initFirebase = (): Promise<void> => {
+  if (initPromise) return initPromise;
+  
+  initPromise = new Promise((resolve) => {
+    // Use requestIdleCallback or setTimeout to defer initialization
+    const init = () => {
+      try {
+        if (!app) {
+          app = initializeApp(firebaseConfig);
+          database = getDatabase(app);
+          auth = getAuth(app);
+          googleProvider = new GoogleAuthProvider();
+        }
+        resolve();
+      } catch (error) {
+        console.error('Failed to initialize Firebase:', error);
+        resolve();
+      }
+    };
+
+    if ('requestIdleCallback' in window) {
+      (window as any).requestIdleCallback(init, { timeout: 2000 });
+    } else {
+      setTimeout(init, 100);
+    }
+  });
+
+  return initPromise;
+};
+
+// Start initialization after initial paint
+if (typeof window !== 'undefined') {
+  // Defer Firebase init to after LCP
+  if (document.readyState === 'complete') {
+    initFirebase();
+  } else {
+    window.addEventListener('load', () => {
+      initFirebase();
+    }, { once: true });
+  }
 }
 
+// Getters that ensure initialization
+export const getFirebaseAuth = async (): Promise<Auth | null> => {
+  await initFirebase();
+  return auth;
+};
+
+export const getFirebaseDatabase = async (): Promise<Database | null> => {
+  await initFirebase();
+  return database;
+};
+
+export const getGoogleProvider = async (): Promise<GoogleAuthProvider | null> => {
+  await initFirebase();
+  return googleProvider;
+};
+
+// Synchronous exports for backward compatibility (may be null initially)
 export {
   database,
   auth,
@@ -58,5 +109,6 @@ export {
   signInWithPopup,
   onDisconnect
 };
-export type { DatabaseReference, FirebaseUser };
+export type { DatabaseReference, FirebaseUser, Auth };
 export const isFirebaseReady = () => database !== null && auth !== null;
+export { initFirebase };
