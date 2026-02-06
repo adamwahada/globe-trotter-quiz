@@ -1150,7 +1150,13 @@ const GamePage = () => {
       {/* Guess Modal - Only for active player */}
       <GuessModal
         isOpen={guessModalOpen && isMyTurn}
-        onClose={() => setGuessModalOpen(false)}
+        onClose={() => {
+          setGuessModalOpen(false);
+          // Also clear modalOpen in turn state so the sync useEffect doesn't reopen it
+          if (currentTurnState?.modalOpen) {
+            updateTurnState({ ...currentTurnState, modalOpen: false });
+          }
+        }}
         onSubmit={handleSubmitGuess}
         onSkip={handleSkip}
         onUseHint={handleUseHint}
