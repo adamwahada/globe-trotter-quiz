@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToastContext } from '@/contexts/ToastContext';
-import { auth, googleProvider, signInWithPopup } from '@/lib/firebase';
+import { getFirebaseAuth, getGoogleProvider, signInWithPopup } from '@/lib/firebase';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -165,11 +165,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
             variant="outline"
             className="w-full py-6 gap-3"
             onClick={async () => {
-              if (!auth || !googleProvider) {
-                addToast('error', 'Firebase not initialized');
-                return;
-              }
               try {
+                const auth = await getFirebaseAuth();
+                const googleProvider = await getGoogleProvider();
+                if (!auth || !googleProvider) {
+                  addToast('error', 'Firebase not initialized');
+                  return;
+                }
                 await signInWithPopup(auth, googleProvider);
                 addToast('success', t('welcomeBack'));
                 onClose();
