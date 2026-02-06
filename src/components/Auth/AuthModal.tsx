@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToastContext } from '@/contexts/ToastContext';
-import { lovable } from '@/integrations/lovable/index';
+import { auth, googleProvider, signInWithPopup } from '@/lib/firebase';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -165,10 +165,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
             variant="outline"
             className="w-full py-6 gap-3"
             onClick={async () => {
-              const { error } = await lovable.auth.signInWithOAuth("google", {
-                redirect_uri: window.location.origin,
-              });
-              if (error) {
+              if (!auth || !googleProvider) {
+                addToast('error', 'Firebase not initialized');
+                return;
+              }
+              try {
+                await signInWithPopup(auth, googleProvider);
+                addToast('success', t('welcomeBack'));
+                onClose();
+              } catch (error: any) {
+                console.error('Google sign-in error:', error);
                 addToast('error', error.message || 'Google sign-in failed');
               }
             }}
