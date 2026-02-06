@@ -53,8 +53,25 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
         addToast('success', 'Welcome back!');
       }
       onClose();
-    } catch (error) {
-      addToast('error', t('invalidCredentials'));
+    } catch (error: any) {
+      console.error('Auth error:', error?.code, error?.message);
+      const code = error?.code || '';
+      
+      if (code === 'auth/email-already-in-use') {
+        addToast('error', 'This email is already registered. Please sign in instead.');
+      } else if (code === 'auth/invalid-credential' || code === 'auth/wrong-password' || code === 'auth/user-not-found') {
+        addToast('error', t('invalidCredentials'));
+      } else if (code === 'auth/invalid-email') {
+        addToast('error', 'Invalid email address');
+      } else if (code === 'auth/weak-password') {
+        addToast('error', 'Password must be at least 6 characters');
+      } else if (code === 'auth/too-many-requests') {
+        addToast('error', 'Too many attempts. Please try again later.');
+      } else if (code === 'auth/account-exists-with-different-credential') {
+        addToast('error', 'An account already exists with this email using a different sign-in method (e.g., Google). Try signing in with Google.');
+      } else {
+        addToast('error', error?.message || t('invalidCredentials'));
+      }
     }
   };
 
