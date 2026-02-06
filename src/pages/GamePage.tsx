@@ -27,7 +27,7 @@ import { useToastContext } from '@/contexts/ToastContext';
 import { useSound } from '@/contexts/SoundContext';
 import { useLocalizedCountry } from '@/hooks/useLocalizedCountry';
 import { isCorrectGuess } from '@/utils/scoring';
-import { getRandomUnplayedCountry, getFamousPerson, getMapCountryName, getCountryFlag, preloadCountryFlag, preloadAllCountryFlags } from '@/utils/countryData';
+import { getRandomUnplayedCountry, getFamousPerson, getMapCountryName, getCountryFlag, preloadCountryFlag, preloadAllCountryFlags, getRandomUnplayedCountryFromContinent } from '@/utils/countryData';
 import { hasExtendedHints, getFamousPlayer, getFamousSinger, getCountryCapital, getHintAvailability, HintAvailability } from '@/utils/countryHints';
 import { GuidedHintType } from '@/components/Guess/GuessModal';
 import { TURN_TIME_SECONDS, COUNTDOWN_SECONDS, playersMapToArray, PlayersMap } from '@/types/game';
@@ -75,7 +75,23 @@ const GamePage = () => {
   // quickly incrementing inactiveTurns multiple times and kicking too early.
   const handledTimeoutKeyRef = useRef<string | null>(null);
 
-   // Card system hook
+  // Card effects state for current turn
+  const [currentCardEffects, setCurrentCardEffects] = useState<{
+    extraHints: number;
+    hintsBlocked: boolean;
+    doublePoints: boolean;
+    pointStrike?: { targetPlayerId: string; penalty: number };
+  }>({
+    extraHints: 0,
+    hintsBlocked: false,
+    doublePoints: false,
+  });
+
+  // Card effects for continent/country forcing (persists across turn)
+  const forcedContinentRef = useRef<string | null>(null);
+  const forcedCountryRef = useRef<string | null>(null);
+
+  // Card system hook
    const {
      isCardModeEnabled,
      cardPoints,
@@ -86,6 +102,7 @@ const GamePage = () => {
      activateCard,
      fuseCards,
      hasEffect,
+     applyCardEffects,
      cleanupExpiredEffects,
    } = useCardSystem();
 
@@ -163,7 +180,7 @@ const GamePage = () => {
   useEffect(() => {
     if (isAgainstTheClock) return;
     if (session?.status !== 'playing' || isSoloMode) return;
-    
+
     // Only show toast once per turn index change
     if (isMyTurn && lastToastTurnRef.current !== currentTurnIndex) {
       lastToastTurnRef.current = currentTurnIndex;
@@ -171,6 +188,33 @@ const GamePage = () => {
       playToastSound('game');
     }
   }, [currentTurnIndex, session?.status, isSoloMode, isAgainstTheClock, isMyTurn, addToast, t, playToastSound]);
+
+  // Sync card effects when turn changes
+  useEffect(() => {
+    if (!isCardModeEnabled || !isMyTurn || !currentPlayer) {
+      setCurrentCardEffects({
+        extraHints: 0,
+        hintsBlocked: false,
+        doublePoints: false,
+      });
+      forcedContinentRef.current = null;
+      forcedCountryRef.current = null;
+      return;
+    }
+
+    // Apply card effects at the start of the player's turn
+    applyCardEffects(currentPlayer.id).then((effects) => {
+      setCurrentCardEffects({
+        extraHints: effects.extraHints,
+        hintsBlocked: effects.hintsBlocked,
+        doublePoints: effects.doublePoints,
+        pointStrike: effects.pointStrike,
+      });
+      // Set forced continent/country refs
+      forcedContinentRef.current = effects.forcedContinent || null;
+      forcedCountryRef.current = effects.forcedCountry || null;
+    });
+  }, [currentTurnIndex, isCardModeEnabled, isMyTurn, currentPlayer, applyCardEffects]);
 
   // Sync modal state with session
   useEffect(() => {
@@ -209,14 +253,34 @@ const GamePage = () => {
   const handleRollDice = useCallback(async () => {
     // Use ref-based lock to prevent race condition between auto-roll and manual click
     if (!isMyTurn || isRolling || currentCountry || rollingLockRef.current) return;
-    
+
     // Immediately lock to prevent any concurrent calls
     rollingLockRef.current = true;
     setIsRolling(true);
     playDiceSound();
 
     setTimeout(async () => {
-      const country = getRandomUnplayedCountry(guessedCountries);
+      // Check for forced country from card effects
+      let country: string | null = null;
+
+      if (forcedCountryRef.current) {
+        // Pick Your Country card - use the selected country
+        country = forcedCountryRef.current;
+        forcedCountryRef.current = null; // Clear after use
+        addToast('info', '🎯 Using selected country from card!');
+      } else if (forcedContinentRef.current) {
+        // Pick Your Continent or Forced Continent card - get random country from that continent
+        const continent = forcedContinentRef.current;
+        forcedContinentRef.current = null; // Clear after use
+        country = getRandomUnplayedCountryFromContinent(continent, guessedCountries);
+        if (country) {
+          addToast('info', `🌍 Country from ${continent}!`);
+        }
+      } else {
+        // Normal random country
+        country = getRandomUnplayedCountry(guessedCountries);
+      }
+
       if (!country) {
         addToast('info', 'All countries have been guessed!');
         rollingLockRef.current = false;
@@ -332,15 +396,44 @@ const GamePage = () => {
 
   const moveToNextTurn = useCallback(async () => {
     const nextTurn = (currentTurnIndex + 1) % players.length;
+    const nextPlayerId = players[nextTurn]?.id;
+
+    if (!nextPlayerId) return;
+
+    // Apply card effects for the next player if card mode is enabled
+    let turnStartTime = Date.now();
+    if (isCardModeEnabled && nextPlayerId) {
+      const cardEffects = await applyCardEffects(nextPlayerId);
+
+      // Handle time bonus from cards
+      if (cardEffects.timeBonusSeconds > 0) {
+        turnStartTime -= cardEffects.timeBonusSeconds * 1000;
+        addToast('info', `⏱️ +${cardEffects.timeBonusSeconds}s from cards!`);
+      }
+
+      // Handle skip turn effect - if the player should be skipped, immediately advance
+      if (cardEffects.skipTurn) {
+        // Recursively move to the next player
+        const followingTurn = (nextTurn + 1) % players.length;
+        const followingPlayerId = players[followingTurn]?.id;
+        await updateGameState({
+          currentTurn: followingTurn,
+          currentTurnState: null,
+          turnStartTime: Date.now(),
+        });
+        addToast('info', '⏭️ Turn skipped by card!');
+        return;
+      }
+    }
 
     // IMPORTANT: Set turnStartTime immediately when turn changes
     // This ensures timer starts right away, preventing infinite wait if player doesn't roll dice
     await updateGameState({
       currentTurn: nextTurn,
       currentTurnState: null,
-      turnStartTime: Date.now(), // Start timer immediately for the next player
+      turnStartTime,
     });
-  }, [players.length, currentTurnIndex, updateGameState]);
+  }, [players.length, currentTurnIndex, updateGameState, isCardModeEnabled, applyCardEffects, addToast]);
 
   const handleTurnTimeout = useCallback(async () => {
     if (!isMyTurn || !currentPlayer || !session) return;
@@ -504,6 +597,20 @@ const GamePage = () => {
       ? [...wrongCountries, countryToGuess]
       : wrongCountries;
 
+    // Apply card effects to points
+    let finalPoints = result.points;
+    if (result.correct && currentCardEffects.doublePoints) {
+      finalPoints *= 2;
+      addToast('info', '✖️ Double Points applied!');
+    }
+
+    // Handle point strike on wrong answer
+    let pointStrikePenalty = 0;
+    if (!result.correct && currentCardEffects.pointStrike) {
+      pointStrikePenalty = currentCardEffects.pointStrike.penalty;
+      addToast('warning', `💣 Point Strike: -${pointStrikePenalty} points!`);
+    }
+
     // Close modal immediately
     setGuessModalOpen(false);
 
@@ -512,13 +619,13 @@ const GamePage = () => {
       await updateTurnState({
         ...currentTurnState,
         submittedAnswer: guess,
-        pointsEarned: result.points,
+        pointsEarned: finalPoints,
         isCorrect: result.correct,
         modalOpen: false,
       });
     }
 
-    setFloatingScore({ points: result.points, show: true });
+    setFloatingScore({ points: finalPoints, show: true });
     setTimeout(() => setFloatingScore({ points: 0, show: false }), 2000);
 
     // Build updated players map - reset inactivity on active participation
@@ -531,12 +638,15 @@ const GamePage = () => {
       const newCountriesGuessed = existingCountriesGuessed.includes(countryToGuess)
         ? existingCountriesGuessed
         : [...existingCountriesGuessed, countryToGuess];
-      
+
+      // Calculate new score with points penalty from point strike
+      const newScore = Math.max(0, currentPlayerData.score + finalPoints - pointStrikePenalty);
+
       const updatedPlayers: PlayersMap = {
         ...session.players,
         [currentPlayerUid]: {
           ...currentPlayerData,
-          score: currentPlayerData.score + result.points,
+          score: newScore,
           countriesGuessed: newCountriesGuessed,
           turnsPlayed: (currentPlayerData.turnsPlayed || 0) + 1,
           inactiveTurns: 0, // Reset inactivity on active participation
@@ -552,7 +662,7 @@ const GamePage = () => {
     }
 
     if (result.correct) {
-      addToast('success', `+${result.points} ${t('points')} - Correct!`);
+      addToast('success', `+${finalPoints} ${t('points')} - Correct!`);
       playToastSound('success');
     } else {
       addToast('error', t('wrongGuess', { player: '' }));
@@ -563,7 +673,7 @@ const GamePage = () => {
      if (isCardModeEnabled) {
        await updateStreak(result.correct);
      }
-    
+
     // Reset solo clicked country and timer after submission
     if (isSoloMode && soloClickedCountry) {
       setSoloClickedCountry(null);
@@ -577,7 +687,7 @@ const GamePage = () => {
       // In multiplayer, wait then move to next turn
       setTimeout(() => moveToNextTurn(), 2000);
     }
-   }, [currentPlayer, isMyTurn, currentTurnState, updateTurnState, guessedCountries, correctCountries, wrongCountries, session, updateGameState, addToast, t, moveToNextTurn, playToastSound, isSoloMode, soloClickedCountry, currentCountry, isCardModeEnabled, updateStreak]);
+   }, [currentPlayer, isMyTurn, currentTurnState, updateTurnState, guessedCountries, correctCountries, wrongCountries, session, updateGameState, addToast, t, moveToNextTurn, playToastSound, isSoloMode, soloClickedCountry, currentCountry, isCardModeEnabled, updateStreak, currentCardEffects]);
 
   const handleSkip = useCallback(async () => {
     if (!isMyTurn || !currentPlayer || !session) return;
@@ -1176,6 +1286,8 @@ const GamePage = () => {
         hasExtendedHints={hasExtendedHints(activeCountry || '')}
         hintAvailability={getHintAvailability(activeCountry || '')}
         isSoloClickMode={isSoloMode && !currentTurnState?.diceRolled}
+        extraHints={currentCardEffects.extraHints}
+        hintsBlocked={currentCardEffects.hintsBlocked}
       />
 
       {/* Ranking Modal */}

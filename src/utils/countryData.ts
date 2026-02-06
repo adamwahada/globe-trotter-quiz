@@ -1064,3 +1064,33 @@ export const getRandomUnplayedCountry = (guessedCountries: string[]): string | n
   if (countries.length === 0) return null;
   return countries[Math.floor(Math.random() * countries.length)];
 };
+
+// Continent ID mapping (from CardInputModal) to continent names in countryData
+const CONTINENT_ID_MAP: Record<string, string> = {
+  'africa': 'Africa',
+  'asia': 'Asia',
+  'europe': 'Europe',
+  'north-america': 'North America',
+  'south-america': 'South America',
+  'oceania': 'Oceania',
+};
+
+// Get random unplayed country from a specific continent
+// continentId should match the IDs used in CardInputModal (africa, asia, europe, etc.)
+export const getRandomUnplayedCountryFromContinent = (
+  continentId: string,
+  guessedCountries: string[]
+): string | null => {
+  const continentName = CONTINENT_ID_MAP[continentId];
+  if (!continentName) return null;
+
+  const allCountries = getAllCountries();
+  const countriesFromContinent = allCountries.filter(c => {
+    if (guessedCountries.includes(c)) return false;
+    const countryContinent = countryContinent[c];
+    return countryContinent === continentName;
+  });
+
+  if (countriesFromContinent.length === 0) return null;
+  return countriesFromContinent[Math.floor(Math.random() * countriesFromContinent.length)];
+};

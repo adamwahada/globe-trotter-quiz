@@ -32,6 +32,9 @@ interface GuessModalProps {
   hintAvailability?: HintAvailability;
   isSoloClickMode?: boolean; // For solo mode without dice roll
   enableWarningSound?: boolean; // Enable/disable timer warning sounds
+  // Card effects
+  extraHints?: number; // Extra hints from cards (e.g., Extra Hint card)
+  hintsBlocked?: boolean; // Whether hints are blocked by a card (e.g., Hint Block card)
 }
 
 const defaultHintAvailability: HintAvailability = {
@@ -56,8 +59,13 @@ export const GuessModal: React.FC<GuessModalProps> = ({
   hintAvailability = defaultHintAvailability,
   isSoloClickMode = false,
   enableWarningSound = true,
+  extraHints = 0,
+  hintsBlocked = false,
 }) => {
   const { t } = useLanguage();
+
+  // Calculate effective max hints based on card effects
+  const effectiveMaxHints = MAX_TOTAL_HINTS + extraHints;
   const [guess, setGuess] = useState('');
   const [hintUsed, setHintUsed] = useState(false);
   const [famousPersonUsed, setFamousPersonUsed] = useState(false);
@@ -134,11 +142,16 @@ export const GuessModal: React.FC<GuessModalProps> = ({
 
   if (!isOpen) return null;
 
-  // Check if max hints reached (2 total per round)
-  const maxHintsReached = totalHintsUsed >= MAX_TOTAL_HINTS;
+  // Check if max hints reached (2 + extra hints from cards total per round)
+  const maxHintsReached = totalHintsUsed >= effectiveMaxHints;
+
+  // Check if hints are blocked by card effect
+  const hintsAreBlocked = hintsBlocked;
 
   // Check if a specific hint can be used
   const canUseHint = (type: 'letter' | 'famous' | 'flag' | GuidedHintType): boolean => {
+    // Hints blocked by card effect
+    if (hintsAreBlocked) return false;
     if (maxHintsReached) return false;
     
     // Check if already used
@@ -404,7 +417,7 @@ export const GuessModal: React.FC<GuessModalProps> = ({
             {/* Hints remaining indicator */}
             {totalHintsUsed > 0 && (
               <p className="text-xs text-muted-foreground text-center">
-                {t('hintsRemaining')}: {MAX_TOTAL_HINTS - totalHintsUsed}/{MAX_TOTAL_HINTS}
+                {t('hintsRemaining')}: {effectiveMaxHints - totalHintsUsed}/{effectiveMaxHints}
               </p>
             )}
 
