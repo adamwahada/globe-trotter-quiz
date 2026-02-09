@@ -136,16 +136,18 @@
          ? currentTurnIndex + 1 // After next player's turn
          : currentTurnIndex + players.length; // Default
 
-     newEffect = {
-       cardType: cardToActivate.cardType,
-       sourcePlayerId: currentPlayer.id,
-       targetPlayerId,
-       expiresAfterTurn,
-       appliedAt: Date.now(),
-       targetContinent: targetData?.targetContinent,
-       targetCountry: targetData?.targetCountry,
-       targetCardId: targetData?.targetCardId,
-     };
+      // Build effect object, excluding undefined values (Firebase rejects undefined)
+      const effectBase: ActiveCardEffect = {
+        cardType: cardToActivate.cardType,
+        sourcePlayerId: currentPlayer.id,
+        targetPlayerId,
+        expiresAfterTurn,
+        appliedAt: Date.now(),
+      };
+      if (targetData?.targetContinent) effectBase.targetContinent = targetData.targetContinent;
+      if (targetData?.targetCountry) effectBase.targetCountry = targetData.targetCountry;
+      if (targetData?.targetCardId) effectBase.targetCardId = targetData.targetCardId;
+      newEffect = effectBase;
 
      // Handle Joker (steal card) immediately
      if (cardToActivate.cardType === 'joker' && targetData?.targetPlayerId && targetData?.targetCardId) {

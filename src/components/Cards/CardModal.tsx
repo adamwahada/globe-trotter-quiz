@@ -33,6 +33,7 @@ interface CardModalProps {
     targetCardId?: string;
   }) => Promise<void>;
   onFuseCards: (cardId1: string, cardId2: string) => Promise<void>;
+  onRequestMapSelection?: (cardId: string) => void;
 }
 
 // Category config
@@ -68,6 +69,7 @@ export const CardModal: React.FC<CardModalProps> = ({
   onBuyCard,
   onActivateCard,
   onFuseCards,
+  onRequestMapSelection,
 }) => {
   const { t } = useLanguage();
   const { session, currentPlayer, getPlayersArray } = useGame();
@@ -115,7 +117,13 @@ export const CardModal: React.FC<CardModalProps> = ({
     
     const cardDef = CARD_DEFINITIONS[playerCard.cardType];
     
-    // If card requires input, show input modal instead of activating directly
+    // If card requires country input, use map selection instead of modal
+    if (cardDef.requiresInput === 'country' && onRequestMapSelection) {
+      onRequestMapSelection(cardId);
+      return;
+    }
+    
+    // If card requires other input, show input modal instead of activating directly
     if (cardDef.requiresInput) {
       setPendingActivation({ cardId, cardType: playerCard.cardType });
       return;
