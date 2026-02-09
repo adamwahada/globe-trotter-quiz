@@ -93,12 +93,17 @@ const GamePage = () => {
     doublePoints: false,
   });
 
-  // Card effects for continent/country forcing (persists across turn)
-  const forcedContinentRef = useRef<string | null>(null);
-  const forcedCountryRef = useRef<string | null>(null);
+   // Card effects for continent/country forcing (persists across turn)
+   const forcedContinentRef = useRef<string | null>(null);
+   const forcedCountryRef = useRef<string | null>(null);
+
+   // Guard: process card effects only once per turn
+   const processedEffectsTurnRef = useRef<number>(-1);
+   // Track previous turn index for skip detection
+   const prevTurnIndexRef = useRef<number>(-1);
 
   // Card system hook
-   const {
+    const {
      isCardModeEnabled,
      cardPoints,
      playerCards,
@@ -108,7 +113,6 @@ const GamePage = () => {
      activateCard,
      fuseCards,
      hasEffect,
-     applyCardEffects,
      cleanupExpiredEffects,
    } = useCardSystem();
 
@@ -195,7 +199,8 @@ const GamePage = () => {
     }
   }, [currentTurnIndex, session?.status, isSoloMode, isAgainstTheClock, isMyTurn, addToast, t, playToastSound]);
 
-  // Sync card effects when turn changes
+  // Sync card effects when turn changes — process effects targeting the current player
+  // This runs ONLY on the affected player's client, so toasts are private
   useEffect(() => {
     if (!isCardModeEnabled || !isMyTurn || !currentPlayer) {
       setCurrentCardEffects({
@@ -208,19 +213,131 @@ const GamePage = () => {
       return;
     }
 
-    // Apply card effects at the start of the player's turn
-    applyCardEffects(currentPlayer.id).then((effects) => {
+    if (!session?.activeCardEffects?.length) {
       setCurrentCardEffects({
-        extraHints: effects.extraHints,
-        hintsBlocked: effects.hintsBlocked,
-        doublePoints: effects.doublePoints,
-        pointStrike: effects.pointStrike,
+        extraHints: 0,
+        hintsBlocked: false,
+        doublePoints: false,
       });
-      // Set forced continent/country refs
-      forcedContinentRef.current = effects.forcedContinent || null;
-      forcedCountryRef.current = effects.forcedCountry || null;
-    });
-  }, [currentTurnIndex, isCardModeEnabled, isMyTurn, currentPlayer, applyCardEffects]);
+      forcedContinentRef.current = null;
+      forcedCountryRef.current = null;
+      return;
+    }
+
+    // Only process effects once per turn to avoid loops
+    if (processedEffectsTurnRef.current === currentTurnIndex) return;
+    processedEffectsTurnRef.current = currentTurnIndex;
+
+    const currentTurn = session.currentTurn || 0;
+    const myEffects = session.activeCardEffects.filter(
+      e => e.targetPlayerId === currentPlayer.id && e.expiresAfterTurn >= currentTurn
+    );
+
+    if (myEffects.length === 0) return;
+
+    const effectKeysToRemove: string[] = [];
+    let extraHints = 0;
+    let hintsBlocked = false;
+    let doublePoints = false;
+    let pointStrike: { targetPlayerId: string; penalty: number } | undefined;
+    let timeDelta = 0;
+
+    for (const effect of myEffects) {
+      const effectKey = `${effect.sourcePlayerId}-${effect.cardType}-${effect.appliedAt}`;
+      switch (effect.cardType) {
+        case 'timeBoost':
+          timeDelta += 15;
+          effectKeysToRemove.push(effectKey);
+          addToast('info', '⏱️ +15s Time Boost!');
+          playToastSound('info');
+          break;
+        case 'timeSteal':
+          timeDelta -= 15;
+          effectKeysToRemove.push(effectKey);
+          addToast('error', '⏳ -15s Time Stolen!');
+          playToastSound('error');
+          break;
+        case 'extraHint':
+          extraHints += 1;
+          effectKeysToRemove.push(effectKey);
+          addToast('info', '💡 Extra hint available this turn!');
+          playToastSound('info');
+          break;
+        case 'hintBlock':
+          hintsBlocked = true;
+          effectKeysToRemove.push(effectKey);
+          addToast('error', '🚫 Your hints are blocked this turn!');
+          playToastSound('error');
+          break;
+        case 'doublePoints':
+          doublePoints = true;
+          effectKeysToRemove.push(effectKey);
+          addToast('info', '✖️2️⃣ Double points active this turn!');
+          playToastSound('info');
+          break;
+        case 'pointStrike':
+          pointStrike = { targetPlayerId: currentPlayer.id, penalty: 10 };
+          effectKeysToRemove.push(effectKey);
+          addToast('error', '💣 Point Strike: -10 pts if you answer wrong!');
+          playToastSound('error');
+          break;
+        case 'forcedContinent':
+        case 'pickYourContinent':
+          forcedContinentRef.current = effect.targetContinent || null;
+          effectKeysToRemove.push(effectKey);
+          addToast('info', `🌍 Country from ${effect.targetContinent}!`);
+          playToastSound('info');
+          break;
+        case 'pickYourCountry':
+          forcedCountryRef.current = effect.targetCountry || null;
+          effectKeysToRemove.push(effectKey);
+          addToast('info', '📍 Your chosen country is ready!');
+          playToastSound('info');
+          break;
+        // skipNextPlayer is handled in moveToNextTurn before the turn starts
+      }
+    }
+
+    setCurrentCardEffects({ extraHints, hintsBlocked, doublePoints, pointStrike });
+
+    // Apply time adjustment and remove consumed effects in a single update
+    const gameStateUpdate: Record<string, unknown> = {};
+    if (timeDelta !== 0 && session.turnStartTime) {
+      gameStateUpdate.turnStartTime = session.turnStartTime - (timeDelta * 1000);
+    }
+    if (effectKeysToRemove.length > 0) {
+      gameStateUpdate.activeCardEffects = session.activeCardEffects.filter(
+        e => !effectKeysToRemove.includes(`${e.sourcePlayerId}-${e.cardType}-${e.appliedAt}`)
+      );
+    }
+    if (Object.keys(gameStateUpdate).length > 0) {
+      updateGameState(gameStateUpdate as any);
+    }
+  }, [currentTurnIndex, isCardModeEnabled, isMyTurn, currentPlayer, session]);
+
+  // Detect when the current player's turn was skipped by a card
+  useEffect(() => {
+    if (!isCardModeEnabled || !currentPlayer || isSoloMode || isAgainstTheClock) {
+      prevTurnIndexRef.current = currentTurnIndex;
+      return;
+    }
+
+    const prevTurn = prevTurnIndexRef.current;
+    prevTurnIndexRef.current = currentTurnIndex;
+
+    // Don't trigger on initial render
+    if (prevTurn === -1 || prevTurn === currentTurnIndex) return;
+
+    const myIndex = players.findIndex(p => p.id === currentPlayer.id);
+    if (myIndex === -1) return;
+
+    // Check if my index was the expected next but got skipped
+    const expectedNext = (prevTurn + 1) % players.length;
+    if (expectedNext === myIndex && currentTurnIndex !== myIndex) {
+      addToast('error', '⏭️ Your turn was skipped by a card!');
+      playToastSound('error');
+    }
+  }, [currentTurnIndex, isCardModeEnabled, currentPlayer, players, isSoloMode, isAgainstTheClock, addToast, playToastSound]);
 
   // Sync modal state with session
   useEffect(() => {
@@ -375,7 +492,7 @@ const GamePage = () => {
     if (!pendingCountryCardId || !selectedCountryForCard) return;
     try {
       await activateCard(pendingCountryCardId, { targetCountry: selectedCountryForCard });
-      addToast('success', `📍 ${selectedCountryForCard} selected for your next turn!`);
+      addToast('success', '📍 Country locked in for your next turn!');
     } catch (error) {
       addToast('error', 'Failed to activate card');
     }
@@ -443,40 +560,46 @@ const GamePage = () => {
 
     if (!nextPlayerId) return;
 
-    // Apply card effects for the next player if card mode is enabled
-    let turnStartTime = Date.now();
-    if (isCardModeEnabled && nextPlayerId) {
-      const cardEffects = await applyCardEffects(nextPlayerId);
+    // Check for skip effect targeting the next player
+    if (isCardModeEnabled && session?.activeCardEffects?.length) {
+      const currentTurn = session.currentTurn || 0;
+      const nextPlayerEffects = session.activeCardEffects.filter(
+        e => e.targetPlayerId === nextPlayerId && e.expiresAfterTurn >= currentTurn
+      );
 
-      // Handle time bonus from cards
-      if (cardEffects.timeBonusSeconds > 0) {
-        turnStartTime -= cardEffects.timeBonusSeconds * 1000;
-        addToast('info', `⏱️ +${cardEffects.timeBonusSeconds}s from cards!`);
-      }
+      const hasSkip = nextPlayerEffects.some(e => e.cardType === 'skipNextPlayer');
 
-      // Handle skip turn effect - if the player should be skipped, immediately advance
-      if (cardEffects.skipTurn) {
-        // Recursively move to the next player
+      if (hasSkip) {
+        // Remove ALL effects targeting the skipped player (they won't get a turn)
+        const remainingEffects = session.activeCardEffects.filter(
+          e => !(e.targetPlayerId === nextPlayerId &&
+            e.expiresAfterTurn >= currentTurn &&
+            nextPlayerEffects.some(ne =>
+              ne.sourcePlayerId === e.sourcePlayerId &&
+              ne.cardType === e.cardType &&
+              ne.appliedAt === e.appliedAt
+            ))
+        );
+
         const followingTurn = (nextTurn + 1) % players.length;
-        const followingPlayerId = players[followingTurn]?.id;
         await updateGameState({
           currentTurn: followingTurn,
           currentTurnState: null,
           turnStartTime: Date.now(),
+          activeCardEffects: remainingEffects,
         });
-        addToast('info', '⏭️ Turn skipped by card!');
         return;
       }
     }
 
-    // IMPORTANT: Set turnStartTime immediately when turn changes
-    // This ensures timer starts right away, preventing infinite wait if player doesn't roll dice
+    // Normal turn advancement — card effects (time, hints, etc.) are processed
+    // by the next player's client via the card effects useEffect
     await updateGameState({
       currentTurn: nextTurn,
       currentTurnState: null,
-      turnStartTime,
+      turnStartTime: Date.now(),
     });
-  }, [players.length, currentTurnIndex, updateGameState, isCardModeEnabled, applyCardEffects, addToast]);
+  }, [players.length, currentTurnIndex, updateGameState, isCardModeEnabled, session]);
 
   const handleTurnTimeout = useCallback(async () => {
     if (!isMyTurn || !currentPlayer || !session) return;
