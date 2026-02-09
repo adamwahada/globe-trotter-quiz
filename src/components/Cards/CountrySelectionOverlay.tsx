@@ -1,7 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { getCountryFlag } from '@/utils/countryData';
 import { X, Check, MapPin } from 'lucide-react';
 
 interface CountrySelectionOverlayProps {
@@ -48,17 +47,20 @@ export const CountrySelectionOverlay: React.FC<CountrySelectionOverlayProps> = (
 
       {/* Confirmation card when a country is selected */}
       {selectedCountry && (
-        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[60] bg-card border-2 border-primary rounded-2xl p-5 shadow-2xl animate-fade-in min-w-[300px]">
-          <div className="flex items-center gap-4 mb-4">
-            <span className="text-4xl">{getCountryFlag(selectedCountry)}</span>
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[60] bg-card border-2 border-primary rounded-2xl p-5 shadow-2xl animate-fade-in min-w-[280px]">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+              <MapPin className="h-5 w-5 text-primary animate-pulse" />
+            </div>
             <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Selected Country</p>
-              <p className="text-xl font-display text-foreground">{selectedCountry}</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider font-bold">
+                {t('selectCountry') || 'Country Selection'}
+              </p>
+              <p className="text-sm font-display text-foreground">
+                ✅ Country selected
+              </p>
             </div>
           </div>
-          <p className="text-sm text-muted-foreground mb-4">
-            This country will be your next turn's target. You'll need to guess it!
-          </p>
           <div className="flex gap-3">
             <Button variant="outline" onClick={onCancel} className="flex-1 gap-2">
               <X className="h-4 w-4" />
