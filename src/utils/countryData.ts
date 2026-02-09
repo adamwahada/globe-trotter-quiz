@@ -1047,20 +1047,55 @@ export const getCountryCoordinates = (country: string): { coordinates: [number, 
   return countryCoordinates[country] || null;
 };
 
+// Countries excluded from random dice selection (too small/obscure for map identification)
+const EXCLUDED_FROM_DICE: Set<string> = new Set([
+  'Tuvalu',
+  'Nauru',
+  'Kiribati',
+  'São Tomé and Príncipe',
+  'Comoros',
+  'Timor-Leste',
+  'Brunei',
+  'Solomon Islands',
+  'Vanuatu',
+  'Palau',
+  'Marshall Islands',
+  'Micronesia',
+  'Seychelles',
+  'Equatorial Guinea',
+  'Malta',
+  'Maldives',
+  'Fiji',
+  'Samoa',
+  'Tonga',
+  'Barbados',
+  'Trinidad and Tobago',
+  'Antigua and Barbuda',
+  'Saint Lucia',
+  'Saint Vincent and the Grenadines',
+  'Grenada',
+  'Saint Kitts and Nevis',
+]);
+
 // Get all countries
 export const getAllCountries = (): string[] => {
   return Object.keys(countryFamousPeople);
 };
 
+// Get all countries eligible for random dice selection
+export const getDiceEligibleCountries = (): string[] => {
+  return getAllCountries().filter(c => !EXCLUDED_FROM_DICE.has(c));
+};
+
 // Get random country
 export const getRandomCountry = (): string => {
-  const countries = getAllCountries();
+  const countries = getDiceEligibleCountries();
   return countries[Math.floor(Math.random() * countries.length)];
 };
 
 // Get random unplayed country
 export const getRandomUnplayedCountry = (guessedCountries: string[]): string | null => {
-  const countries = getAllCountries().filter(c => !guessedCountries.includes(c));
+  const countries = getDiceEligibleCountries().filter(c => !guessedCountries.includes(c));
   if (countries.length === 0) return null;
   return countries[Math.floor(Math.random() * countries.length)];
 };
@@ -1084,8 +1119,8 @@ export const getRandomUnplayedCountryFromContinent = (
   const continentName = CONTINENT_ID_MAP[continentId];
   if (!continentName) return null;
 
-  const allCountries = getAllCountries();
-  const countriesFromContinent = allCountries.filter(c => {
+  const eligible = getDiceEligibleCountries();
+  const countriesFromContinent = eligible.filter(c => {
     if (guessedCountries.includes(c)) return false;
     const continent = countryContinent[c];
     return continent === continentName;
