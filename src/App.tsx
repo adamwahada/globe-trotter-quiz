@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ToastProvider } from "@/contexts/ToastContext";
+import { ActivityTracker } from "@/components/Auth/ActivityTracker";
 import { GameProvider } from "@/contexts/GameContext";
 import { SoundProvider } from "@/contexts/SoundContext";
 import { ToastContainer } from "@/components/Toast/ToastContainer";
@@ -21,6 +22,7 @@ const App = () => (
     <LanguageProvider>
       <ToastProvider>
         <AuthProvider>
+          <ActivityTracker />
           <SoundProvider>
             <GameProvider>
               <TooltipProvider>
