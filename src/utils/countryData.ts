@@ -1087,8 +1087,8 @@ export const getRandomUnplayedCountryFromContinent = (
   const allCountries = getAllCountries();
   const countriesFromContinent = allCountries.filter(c => {
     if (guessedCountries.includes(c)) return false;
-    const countryContinent = countryContinent[c];
-    return countryContinent === continentName;
+    const continent = countryContinent[c];
+    return continent === continentName;
   });
 
   if (countriesFromContinent.length === 0) return null;

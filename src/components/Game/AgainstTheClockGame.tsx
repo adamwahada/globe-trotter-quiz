@@ -4,6 +4,7 @@ import { Logo } from '@/components/Logo/Logo';
 import { Button } from '@/components/ui/button';
 import { WorldMap } from '@/components/Map/WorldMap';
 import { LiveLeaderboard } from '@/components/Leaderboard/LiveLeaderboard';
+import { validateGuess } from '@/utils/inputValidation';
 import { RankingModal } from '@/components/Ranking/RankingModal';
 import { GuessModal } from '@/components/Guess/GuessModal';
 import { GameResults } from '@/components/Results/GameResults';
@@ -125,6 +126,10 @@ export const AgainstTheClockGame: React.FC<AgainstTheClockGameProps> = ({ onShow
   // Handle guess submission
   const handleSubmitGuess = useCallback(async (guess: string) => {
     if (!selectedCountry || !currentPlayer || !session) return;
+
+    // Validate guess input
+    const validation = validateGuess(guess);
+    if (!validation.valid) return;
 
     const result = isCorrectGuess(guess, selectedCountry, language);
 

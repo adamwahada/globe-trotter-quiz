@@ -9,6 +9,7 @@ import { useToastContext } from '@/contexts/ToastContext';
 import { useNavigate } from 'react-router-dom';
 import { GameTooltip } from '@/components/Tooltip/GameTooltip';
 import { GameModeSelector } from './GameModeSelector';
+import { validateSessionCode, validateUsername, MAX_USERNAME_LENGTH } from '@/utils/inputValidation';
 
 interface GameSettingsModalProps {
   isOpen: boolean;
@@ -75,8 +76,24 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
   };
 
   const handleJoin = async () => {
+    // Validate session code
+    const codeValidation = validateSessionCode(sessionCode);
+    if (!codeValidation.valid) {
+      addToast('error', codeValidation.error || t('invalidCode'));
+      return;
+    }
+
+    // Validate guest name if not authenticated
+    if (!isAuthenticated) {
+      const nameValidation = validateUsername(guestName);
+      if (!nameValidation.valid) {
+        addToast('error', nameValidation.error || 'Invalid name');
+        return;
+      }
+    }
+
     try {
-      const success = await joinSession(sessionCode, isAuthenticated ? undefined : guestName);
+      const success = await joinSession(sessionCode.trim().toUpperCase(), isAuthenticated ? undefined : guestName.trim());
       if (success) {
         navigate('/waiting-room');
         onClose();
@@ -410,9 +427,10 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
                 <input
                   type="text"
                   value={sessionCode}
-                  onChange={(e) => setSessionCode(e.target.value.toUpperCase())}
-                  placeholder={t('enterCode')}
-                  maxLength={6}
+                 onChange={(e) => setSessionCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+                 placeholder={t('enterCode')}
+                 maxLength={6}
+                 pattern="[A-Z0-9]{6}"
                   className="w-full px-4 py-4 bg-secondary border border-border rounded-lg text-center text-2xl font-display tracking-[0.2em] focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-foreground placeholder:text-muted-foreground"
                 />
               </div>
@@ -426,8 +444,9 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
                   <input
                     type="text"
                     value={guestName}
-                    onChange={(e) => setGuestName(e.target.value)}
+                    onChange={(e) => setGuestName(e.target.value.slice(0, MAX_USERNAME_LENGTH))}
                     placeholder="Enter your name"
+                    maxLength={MAX_USERNAME_LENGTH}
                     className="w-full px-4 py-3 bg-secondary border border-border rounded-lg focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-foreground"
                   />
                 </div>

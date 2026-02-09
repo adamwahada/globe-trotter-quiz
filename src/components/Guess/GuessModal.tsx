@@ -5,6 +5,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { GameTooltip } from '@/components/Tooltip/GameTooltip';
 import { TimerProgress } from '@/components/Timer/TimerProgress';
 import type { HintAvailability } from '@/utils/countryHints';
+import { validateGuess, MAX_GUESS_LENGTH } from '@/utils/inputValidation';
 
 // Hint costs
 const HINT_COST_LETTER = 1;
@@ -273,8 +274,10 @@ export const GuessModal: React.FC<GuessModalProps> = ({
   };
 
   const handleSubmit = () => {
-    if (guess.trim()) {
-      onSubmit(guess.trim());
+    const trimmed = guess.trim();
+    const validation = validateGuess(trimmed);
+    if (validation.valid) {
+      onSubmit(trimmed);
     }
   };
 
@@ -407,9 +410,10 @@ export const GuessModal: React.FC<GuessModalProps> = ({
             <input
               type="text"
               value={guess}
-              onChange={(e) => setGuess(e.target.value)}
+              onChange={(e) => setGuess(e.target.value.slice(0, MAX_GUESS_LENGTH))}
               placeholder={t('enterGuess')}
               onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+              maxLength={MAX_GUESS_LENGTH}
               className="w-full px-4 py-4 bg-secondary border border-border rounded-lg text-lg focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-foreground placeholder:text-muted-foreground"
               autoFocus
             />
