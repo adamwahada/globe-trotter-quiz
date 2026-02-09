@@ -5,6 +5,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToastContext } from '@/contexts/ToastContext';
 import { auth, googleProvider, signInWithPopup, sendPasswordResetEmail } from '@/lib/firebase';
+import { validateUsername, MAX_USERNAME_LENGTH } from '@/utils/inputValidation';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -42,11 +43,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
     
     try {
       if (mode === 'signup') {
+        // Validate username
+        const usernameValidation = validateUsername(username);
+        if (!usernameValidation.valid) {
+          addToast('error', usernameValidation.error || 'Invalid username');
+          return;
+        }
         if (password !== confirmPassword) {
           addToast('error', 'Passwords do not match');
           return;
         }
-        await signUp(email, password, username);
+        await signUp(email, password, username.trim());
         addToast('success', 'Account created successfully!');
       } else {
         await signIn(email, password);
@@ -111,9 +118,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
               <input
                 type="text"
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder={t('username')}
-                required
+               onChange={(e) => setUsername(e.target.value.slice(0, MAX_USERNAME_LENGTH))}
+               placeholder={t('username')}
+               required
+               maxLength={MAX_USERNAME_LENGTH}
                 className="w-full pl-11 pr-4 py-3 bg-secondary border border-border rounded-lg focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-foreground placeholder:text-muted-foreground"
               />
             </div>

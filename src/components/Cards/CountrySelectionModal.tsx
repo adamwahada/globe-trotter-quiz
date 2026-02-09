@@ -66,7 +66,7 @@ export const CountrySelectionModal: React.FC<CountrySelectionModalProps> = ({
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t('searchCountries')}
+              placeholder={'Search countries...'}
               className="pl-10"
             />
           </div>
@@ -75,7 +75,7 @@ export const CountrySelectionModal: React.FC<CountrySelectionModalProps> = ({
           <div className="flex-1 overflow-y-auto border border-border rounded-lg bg-secondary/30">
             {filteredCountries.length === 0 ? (
               <div className="flex items-center justify-center h-40 text-muted-foreground">
-                {searchQuery ? t('noCountriesFound') : t('noCountriesAvailable')}
+                {searchQuery ? 'No countries found' : 'No countries available'}
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 p-3">
@@ -99,7 +99,7 @@ export const CountrySelectionModal: React.FC<CountrySelectionModalProps> = ({
                 })}
                 {filteredCountries.length > 50 && (
                   <div className="col-span-full text-center text-xs text-muted-foreground py-2">
-                    {t('showingFirstN', { n: 50, total: filteredCountries.length })}
+                    {`Showing first 50 of ${filteredCountries.length} countries`}
                   </div>
                 )}
               </div>

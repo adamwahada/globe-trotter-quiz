@@ -286,7 +286,16 @@
        e => e.targetPlayerId === playerId && e.expiresAfterTurn >= currentTurn
      );
 
-     const result = {
+     const result: {
+       timeBonusSeconds: number;
+       extraHints: number;
+       skipTurn: boolean;
+       hintsBlocked: boolean;
+       doublePoints: boolean;
+       forcedContinent?: string;
+       forcedCountry?: string;
+       pointStrike?: { targetPlayerId: string; penalty: number };
+     } = {
        timeBonusSeconds: 0,
        extraHints: 0,
        skipTurn: false,

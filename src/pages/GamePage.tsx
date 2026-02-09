@@ -35,6 +35,7 @@ import { Trophy, LogOut, Volume2, VolumeX, Users, Clock } from 'lucide-react';
  import { Sparkles } from 'lucide-react';
 import { removePlayerFromSession, clearRecoveryData } from '@/services/gameSessionService';
 import { supabase } from '@/integrations/supabase/client';
+import { validateGuess } from '@/utils/inputValidation';
 
 const GamePage = () => {
   const { t, language } = useLanguage();
@@ -583,6 +584,10 @@ const GamePage = () => {
     const countryToGuess = isSoloMode && soloClickedCountry ? soloClickedCountry : currentCountry;
     if (!countryToGuess || !currentPlayer || !isMyTurn || !session) return;
 
+    // Validate guess input
+    const validation = validateGuess(guess);
+    if (!validation.valid) return;
+
     const result = isCorrectGuess(guess, countryToGuess, language);
 
     const nextGuessedCountries = guessedCountries.includes(countryToGuess)
@@ -608,7 +613,7 @@ const GamePage = () => {
     let pointStrikePenalty = 0;
     if (!result.correct && currentCardEffects.pointStrike) {
       pointStrikePenalty = currentCardEffects.pointStrike.penalty;
-      addToast('warning', `💣 Point Strike: -${pointStrikePenalty} points!`);
+      addToast('error', `💣 Point Strike: -${pointStrikePenalty} points!`);
     }
 
     // Close modal immediately
