@@ -18,7 +18,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
   const { signIn, signUp, isLoading } = useAuth();
   const { addToast } = useToastContext();
   
-  const [mode, setMode] = useState<'signin' | 'signup'>(initialMode);
+  const [mode, setMode] = useState<'signin' | 'signup' | 'reset'>(initialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
@@ -103,14 +103,86 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
           </button>
           
           <h2 className="text-3xl font-display text-foreground text-center mb-2">
-            {mode === 'signin' ? t('welcomeBack') : t('joinUs')}
+            {mode === 'reset' 
+              ? (t('resetPassword') || 'Reset Password')
+              : mode === 'signin' ? t('welcomeBack') : t('joinUs')}
           </h2>
           <p className="text-muted-foreground text-center text-sm">
-            {mode === 'signin' ? t('signIn') : t('createAccount')}
+            {mode === 'reset'
+              ? (t('resetPasswordDescription') || 'Enter your email to receive a password reset link')
+              : mode === 'signin' ? t('signIn') : t('createAccount')}
           </p>
         </div>
 
-        {/* Form */}
+        {/* Reset Password Form */}
+        {mode === 'reset' ? (
+          <div className="p-6 space-y-4">
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder={t('email')}
+                required
+                className="w-full pl-11 pr-4 py-3 bg-secondary border border-border rounded-lg focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-foreground placeholder:text-muted-foreground"
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1 py-6"
+                onClick={() => setMode('signin')}
+              >
+                {t('cancel') || 'Cancel'}
+              </Button>
+              <Button
+                variant="netflix"
+                className="flex-1 py-6"
+                disabled={isLoading || !email}
+                onClick={async () => {
+                  if (!email) {
+                    addToast('error', t('enterEmailFirst') || 'Please enter your email address.');
+                    return;
+                  }
+                  if (!auth) {
+                    addToast('error', 'Firebase not initialized');
+                    return;
+                  }
+                  try {
+                    await sendPasswordResetEmail(auth, email);
+                    addToast('success', t('passwordResetSent') || 'Password reset email sent! Check your inbox.');
+                    setMode('signin');
+                  } catch (error: any) {
+                    console.error('Password reset error:', error);
+                    if (error?.code === 'auth/user-not-found') {
+                      addToast('error', t('noAccountWithEmail') || 'No account found with this email.');
+                    } else {
+                      addToast('error', error?.message || 'Failed to send reset email.');
+                    }
+                  }
+                }}
+              >
+                {isLoading ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  t('confirm') || 'Confirm'
+                )}
+              </Button>
+            </div>
+
+            <div className="pt-2 text-center">
+              <button
+                onClick={() => setMode('signin')}
+                className="text-primary text-sm font-medium hover:underline"
+              >
+                {t('backToSignIn') || 'Back to Sign In'}
+              </button>
+            </div>
+          </div>
+        ) : (
+        /* Sign In / Sign Up Form */
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {mode === 'signup' && (
             <div className="relative">
@@ -230,34 +302,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
             <button
               type="button"
               className="w-full text-sm text-primary hover:underline"
-              onClick={async () => {
-                if (!email) {
-                  addToast('error', t('enterEmailFirst') || 'Please enter your email address first.');
-                  return;
-                }
-                if (!auth) {
-                  addToast('error', 'Firebase not initialized');
-                  return;
-                }
-                try {
-                  await sendPasswordResetEmail(auth, email);
-                  addToast('success', t('passwordResetSent') || 'Password reset email sent! Check your inbox.');
-                } catch (error: any) {
-                  console.error('Password reset error:', error);
-                  if (error?.code === 'auth/user-not-found') {
-                    addToast('error', t('noAccountWithEmail') || 'No account found with this email.');
-                  } else {
-                    addToast('error', error?.message || 'Failed to send reset email.');
-                  }
-                }
-              }}
+              onClick={() => setMode('reset')}
             >
               {t('forgotPassword')}
             </button>
           )}
         </form>
+        )}
 
-        {/* Footer */}
+        {/* Footer - only show for signin/signup */}
+        {mode !== 'reset' && (
         <div className="p-6 pt-0 text-center">
           <p className="text-muted-foreground text-sm">
             {mode === 'signin' ? t('noAccount') : t('hasAccount')}
@@ -270,6 +324,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
             </button>
           </p>
         </div>
+        )}
       </div>
     </div>
   );
