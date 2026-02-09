@@ -1,1 +1,7 @@
 project_id = "dzzeaesctendsggfdxra"
+
+[functions.validate-guess]
+verify_jwt = false
+
+[functions.save-game-history]
+verify_jwt = false

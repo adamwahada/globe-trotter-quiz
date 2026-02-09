@@ -32,6 +32,7 @@ interface WorldMapProps {
   onCountryClick: (countryName: string) => void;
   disabled?: boolean;
   isSoloMode?: boolean;
+  countrySelectionMode?: boolean;
 }
 
 export const WorldMap: React.FC<WorldMapProps> = ({
@@ -42,6 +43,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
   onCountryClick,
   disabled = false,
   isSoloMode = false,
+  countrySelectionMode = false,
 }) => {
   const { t, language } = useLanguage();
   const [position, setPosition] = useState({ coordinates: [0, 20] as [number, number], zoom: 1 });
@@ -217,7 +219,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
     return 'hsl(0 0% 20%)';
   };
 
-  // Tooltip should NEVER reveal unplayed country names
+  // Tooltip should NEVER reveal unplayed country names (except in country selection mode)
   // For guessed countries, show the localized name
   const getTooltipContent = (countryName: string) => {
     const normalizedName = getMapCountryName(countryName);
@@ -233,6 +235,10 @@ export const WorldMap: React.FC<WorldMapProps> = ({
     if (isCorrect) return `✓ ${localizedName}`;
     if (isWrong) return `✗ ${localizedName}`;
     if (isCurrent) return disabled ? `🎯 ${t('mapTooltipHighlighted')}` : `🎯 ${t('mapTooltipCountryToGuess')}`;
+    // In country selection mode, show country names for unguessed countries
+    if (countrySelectionMode && !normalizedGuessed.includes(normalizedName)) {
+      return `📍 ${localizedName}`;
+    }
     return '???';
   };
 
@@ -306,8 +312,15 @@ export const WorldMap: React.FC<WorldMapProps> = ({
 
         {/* Current Country Indicator - DELETED - NEVER show the country name or selection */}
 
+        {/* Country Selection Mode indicator */}
+        {countrySelectionMode && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 px-4 py-2 bg-primary/90 border border-primary rounded-lg">
+            <span className="text-sm text-primary-foreground font-bold">📍 Click a country to select it</span>
+          </div>
+        )}
+
         {/* Spectator indicator */}
-        {disabled && currentCountry && (
+        {disabled && currentCountry && !countrySelectionMode && (
           <div className="absolute top-4 right-4 z-20 px-3 py-1 bg-muted/80 border border-border rounded-lg">
             <span className="text-xs text-muted-foreground">👁️ Spectating</span>
           </div>
@@ -336,9 +349,11 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                   const isCorrect = normalizedCorrect.includes(normalizedGeoName);
                   const isWrong = normalizedWrong.includes(normalizedGeoName);
                   const isCurrent = normalizedCurrent === normalizedGeoName;
+                  // In country selection mode, any unguessed country is clickable
+                  const isCountrySelectionClickable = countrySelectionMode && !isGuessed;
                   // In solo mode without dice roll, any unguessed country is clickable
                   const isSoloClickable = isSoloMode && !disabled && !isGuessed && !currentCountry;
-                  const isClickable = (!disabled && isCurrent && !isGuessed) || isSoloClickable;
+                  const isClickable = (!disabled && isCurrent && !isGuessed) || isSoloClickable || isCountrySelectionClickable;
 
                   const getHoverFill = () => {
                     if (isCurrent) return 'hsl(60 100% 60%)';

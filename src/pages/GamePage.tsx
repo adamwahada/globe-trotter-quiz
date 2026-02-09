@@ -20,6 +20,7 @@ import { AgainstTheClockGame } from '@/components/Game/AgainstTheClockGame';
  import { CardButton } from '@/components/Cards/CardButton';
  import { CardModal } from '@/components/Cards/CardModal';
  import { CardEffectIndicator } from '@/components/Cards/CardEffectIndicator';
+ import { CountrySelectionOverlay } from '@/components/Cards/CountrySelectionOverlay';
  import { useCardSystem } from '@/hooks/useCardSystem';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useGame, TurnState, Player } from '@/contexts/GameContext';
@@ -64,6 +65,10 @@ const GamePage = () => {
   const [floatingScore, setFloatingScore] = useState<{ points: number; show: boolean }>({ points: 0, show: false });
   const [isRolling, setIsRolling] = useState(false);
    const [showCardModal, setShowCardModal] = useState(false);
+  // Country selection mode for "Pick Your Country" card
+  const [countrySelectionMode, setCountrySelectionMode] = useState(false);
+  const [pendingCountryCardId, setPendingCountryCardId] = useState<string | null>(null);
+  const [selectedCountryForCard, setSelectedCountryForCard] = useState<string | null>(null);
 
   // Ref-based rolling lock to prevent race conditions between auto-roll and manual click
   const rollingLockRef = useRef(false);
@@ -358,7 +363,44 @@ const GamePage = () => {
     }
   }, [isAgainstTheClock, isMyTurn, currentCountry, isRolling, session?.status, autoRollCountdown, handleRollDice, isSoloMode]);
 
+  // Handle "Pick Your Country" card requesting map selection
+  const handleRequestMapSelection = useCallback((cardId: string) => {
+    setShowCardModal(false);
+    setCountrySelectionMode(true);
+    setPendingCountryCardId(cardId);
+    setSelectedCountryForCard(null);
+  }, []);
+
+  const handleCountrySelectionConfirm = useCallback(async () => {
+    if (!pendingCountryCardId || !selectedCountryForCard) return;
+    try {
+      await activateCard(pendingCountryCardId, { targetCountry: selectedCountryForCard });
+      addToast('success', `📍 ${selectedCountryForCard} selected for your next turn!`);
+    } catch (error) {
+      addToast('error', 'Failed to activate card');
+    }
+    setCountrySelectionMode(false);
+    setPendingCountryCardId(null);
+    setSelectedCountryForCard(null);
+  }, [pendingCountryCardId, selectedCountryForCard, activateCard, addToast]);
+
+  const handleCountrySelectionCancel = useCallback(() => {
+    setCountrySelectionMode(false);
+    setPendingCountryCardId(null);
+    setSelectedCountryForCard(null);
+  }, []);
+
   const handleCountryClick = useCallback(async (countryName: string) => {
+    // Country selection mode for Pick Your Country card
+    if (countrySelectionMode) {
+      if (guessedCountries.includes(countryName)) {
+        addToast('info', 'This country was already guessed!');
+        return;
+      }
+      setSelectedCountryForCard(countryName);
+      return;
+    }
+
     if (!isMyTurn) return;
     
     // Solo mode: click any unguessed country to guess it
@@ -1253,8 +1295,9 @@ const GamePage = () => {
             wrongCountries={wrongCountries}
             currentCountry={activeCountry || undefined}
             onCountryClick={handleCountryClick}
-            disabled={!isMyTurn || (!activeCountry && !isSoloMode)}
+            disabled={countrySelectionMode ? false : (!isMyTurn || (!activeCountry && !isSoloMode))}
             isSoloMode={isSoloMode}
+            countrySelectionMode={countrySelectionMode}
           />
         </div>
 
@@ -1327,8 +1370,17 @@ const GamePage = () => {
            onBuyCard={buyCard}
            onActivateCard={(cardId, targetData) => activateCard(cardId, targetData)}
            onFuseCards={fuseCards}
+           onRequestMapSelection={handleRequestMapSelection}
          />
        )}
+
+       {/* Country Selection Overlay for Pick Your Country card */}
+       <CountrySelectionOverlay
+         isActive={countrySelectionMode}
+         selectedCountry={selectedCountryForCard}
+         onConfirm={handleCountrySelectionConfirm}
+         onCancel={handleCountrySelectionCancel}
+       />
     </div>
   );
 };
