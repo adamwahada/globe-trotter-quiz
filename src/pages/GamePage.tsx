@@ -26,7 +26,7 @@ import { useGame, TurnState, Player } from '@/contexts/GameContext';
 import { useToastContext } from '@/contexts/ToastContext';
 import { useSound } from '@/contexts/SoundContext';
 import { useLocalizedCountry } from '@/hooks/useLocalizedCountry';
-import { isCorrectGuess } from '@/utils/scoring';
+import { validateGuessServer, saveGameHistoryServer } from '@/services/scoringService';
 import { getRandomUnplayedCountry, getFamousPerson, getMapCountryName, getCountryFlag, preloadCountryFlag, preloadAllCountryFlags, getRandomUnplayedCountryFromContinent } from '@/utils/countryData';
 import { hasExtendedHints, getFamousPlayer, getFamousSinger, getCountryCapital, getHintAvailability, HintAvailability } from '@/utils/countryHints';
 import { GuidedHintType } from '@/components/Guess/GuessModal';
@@ -588,7 +588,8 @@ const GamePage = () => {
     const validation = validateGuess(guess);
     if (!validation.valid) return;
 
-    const result = isCorrectGuess(guess, countryToGuess, language);
+    // Server-side scoring validation (prevents client-side score manipulation)
+    const result = await validateGuessServer(guess, countryToGuess, language);
 
     const nextGuessedCountries = guessedCountries.includes(countryToGuess)
       ? guessedCountries
@@ -919,16 +920,13 @@ const GamePage = () => {
       const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
       const winnerScore = sortedPlayers[0]?.score || 0;
       
-      // Get correct and wrong counts for each player based on their countriesGuessed
-      const savePromises = players.map(async (player) => {
-        // Count how many of this player's guessed countries are in correctCountries vs wrongCountries
+      // Save game results via server-validated endpoint
+      const entries = players.map((player) => {
         const playerCorrect = player.countriesGuessed.filter(c => correctCountries.includes(c)).length;
         const playerWrong = player.countriesGuessed.filter(c => wrongCountries.includes(c)).length;
-        
-        // Total turns = all countries attempted (countriesGuessed.length) for both modes
         const totalTurns = player.countriesGuessed.length;
         
-        const { error } = await supabase.from('game_history').insert({
+        return {
           user_id: player.id,
           session_code: session.code,
           score: player.score,
@@ -939,15 +937,15 @@ const GamePage = () => {
           player_count: players.length,
           game_duration_minutes: session.duration,
           is_solo_mode: session.isSoloMode || false,
-        });
-        
-        if (error) {
-          console.error('Failed to save game history for player:', player.id, error);
-        }
+        };
       });
-      
-      await Promise.all(savePromises);
-      console.log('Game history saved successfully');
+
+      const { success, error: saveError } = await saveGameHistoryServer(entries);
+      if (!success) {
+        console.error('Failed to save game history:', saveError);
+      } else {
+        console.log('Game history saved successfully via server');
+      }
     } catch (err) {
       console.error('Error saving game history:', err);
     }
