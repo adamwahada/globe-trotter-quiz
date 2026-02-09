@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { WorldMap } from '@/components/Map/WorldMap';
 import { LiveLeaderboard } from '@/components/Leaderboard/LiveLeaderboard';
 import { validateGuess } from '@/utils/inputValidation';
+import { validateGuessServer, saveGameHistoryServer } from '@/services/scoringService';
 import { RankingModal } from '@/components/Ranking/RankingModal';
 import { GuessModal } from '@/components/Guess/GuessModal';
 import { GameResults } from '@/components/Results/GameResults';
@@ -19,14 +20,14 @@ import { useGame, Player, PlayersMap } from '@/contexts/GameContext';
 import { useToastContext } from '@/contexts/ToastContext';
 import { useSound } from '@/contexts/SoundContext';
 import { useLocalizedCountry } from '@/hooks/useLocalizedCountry';
-import { isCorrectGuess } from '@/utils/scoring';
+import { isCorrectGuess as localIsCorrectGuess } from '@/utils/scoring';
 import { getCountryFlag, preloadCountryFlag, preloadAllCountryFlags, getFamousPerson } from '@/utils/countryData';
 import { hasExtendedHints, getFamousPlayer, getFamousSinger, getCountryCapital, getHintAvailability } from '@/utils/countryHints';
 import { GuidedHintType } from '@/components/Guess/GuessModal';
 import { playersMapToArray, TURN_TIME_SECONDS } from '@/types/game';
 import { Trophy, LogOut, Volume2, VolumeX, Clock, Zap } from 'lucide-react';
 import { clearRecoveryData } from '@/services/gameSessionService';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client'; // kept for other uses
 
 interface AgainstTheClockGameProps {
   onShowResults: () => void;
@@ -131,7 +132,8 @@ export const AgainstTheClockGame: React.FC<AgainstTheClockGameProps> = ({ onShow
     const validation = validateGuess(guess);
     if (!validation.valid) return;
 
-    const result = isCorrectGuess(guess, selectedCountry, language);
+    // Server-side scoring validation
+    const result = await validateGuessServer(guess, selectedCountry, language);
 
     // Close modal immediately
     setGuessModalOpen(false);
@@ -363,14 +365,12 @@ export const AgainstTheClockGame: React.FC<AgainstTheClockGameProps> = ({ onShow
       const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
       const winnerScore = sortedPlayers[0]?.score || 0;
       
-      const savePromises = players.map(async (player) => {
-        // Estimate correct/wrong based on score (3 pts = correct, 2 pts = close, 0 = wrong)
-        // This is an approximation since we don't track globally anymore
+      const entries = players.map((player) => {
         const totalTurns = player.countriesGuessed.length;
-        const estimatedCorrect = Math.floor(player.score / 2.5); // Average between 2 and 3
+        const estimatedCorrect = Math.floor(player.score / 2.5);
         const estimatedWrong = Math.max(0, totalTurns - estimatedCorrect);
         
-        const { error } = await supabase.from('game_history').insert({
+        return {
           user_id: player.id,
           session_code: session.code,
           score: player.score,
@@ -381,15 +381,15 @@ export const AgainstTheClockGame: React.FC<AgainstTheClockGameProps> = ({ onShow
           player_count: players.length,
           game_duration_minutes: session.duration,
           is_solo_mode: false,
-        });
-        
-        if (error) {
-          console.error('Failed to save game history for player:', player.id, error);
-        }
+        };
       });
-      
-      await Promise.all(savePromises);
-      console.log('Game history saved successfully');
+
+      const { success, error: saveError } = await saveGameHistoryServer(entries);
+      if (!success) {
+        console.error('Failed to save game history:', saveError);
+      } else {
+        console.log('Game history saved successfully via server');
+      }
     } catch (err) {
       console.error('Error saving game history:', err);
     }
