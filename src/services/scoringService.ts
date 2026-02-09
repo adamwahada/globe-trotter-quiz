@@ -4,6 +4,7 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
+import { getFirebaseIdToken } from '@/utils/firebaseToken';
 import { Language } from '@/i18n/translations';
 
 interface ScoreResult {
@@ -36,8 +37,15 @@ export const validateGuessServer = async (
   language: Language
 ): Promise<ScoreResult> => {
   try {
+    const token = await getFirebaseIdToken();
+    if (!token) {
+      console.error('No Firebase token available for guess validation');
+      return { correct: false, points: 0, matchType: 'wrong' as const };
+    }
+
     const { data, error } = await supabase.functions.invoke('validate-guess', {
       body: { guess, correctCountry, language },
+      headers: { Authorization: `Bearer ${token}` },
     });
 
     if (error) {
@@ -75,8 +83,14 @@ export const saveGameHistoryServer = async (
   entries: GameHistoryEntry[]
 ): Promise<{ success: boolean; error?: string }> => {
   try {
+    const token = await getFirebaseIdToken();
+    if (!token) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
     const { data, error } = await supabase.functions.invoke('save-game-history', {
       body: { entries },
+      headers: { Authorization: `Bearer ${token}` },
     });
 
     if (error) {

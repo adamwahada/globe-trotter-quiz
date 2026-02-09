@@ -42,6 +42,10 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const avatars = ['🦁', '🐯', '🐘', '🦒', '🦊', '🐨', '🐼', '🦓', '🦄', '🐲', '🐙', '🐢', '🐧', '🦉'];
 const colors = ['#E50914', '#1DB954', '#4169E1', '#FF6B35', '#9B59B6', '#00CED1', '#F1C40F', '#E67E22'];
 
+// 6 hours inactivity timeout for session expiry
+const INACTIVITY_TIMEOUT_MS = 6 * 60 * 60 * 1000;
+const ACTIVITY_STORAGE_KEY = 'worldquiz_last_activity';
+
 // Convert Firebase user to our User type
 const mapFirebaseUser = (firebaseUser: FirebaseUser): User => {
   // Try to get stored user data from localStorage
@@ -83,8 +87,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
+        // Check if session expired due to inactivity (6 hours since last use)
+        const lastActivity = localStorage.getItem(ACTIVITY_STORAGE_KEY);
+        if (lastActivity) {
+          const elapsed = Date.now() - parseInt(lastActivity, 10);
+          if (elapsed >= INACTIVITY_TIMEOUT_MS) {
+            console.warn('[Security] Session expired due to 6h inactivity');
+            await firebaseSignOut(auth!);
+            setUser(null);
+            setIsLoading(false);
+            localStorage.removeItem(ACTIVITY_STORAGE_KEY);
+            return;
+          }
+        }
+
         const mappedUser = mapFirebaseUser(firebaseUser);
         setUser(mappedUser);
+
+        // Update activity timestamp on session restore/login
+        localStorage.setItem(ACTIVITY_STORAGE_KEY, Date.now().toString());
 
         // Reset presence flag before registering
         presenceRegisteredRef.current = false;
@@ -125,6 +146,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }));
       } else {
         setUser(null);
+        localStorage.removeItem(ACTIVITY_STORAGE_KEY);
         presenceRegisteredRef.current = false;
         if (presenceUnsubscribeRef.current) {
           presenceUnsubscribeRef.current();
@@ -181,6 +203,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (user?.id) {
         await clearUserPresence(user.id);
       }
+      localStorage.removeItem(ACTIVITY_STORAGE_KEY);
       await firebaseSignOut(auth);
       setUser(null);
     } catch (error) {
