@@ -5,7 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToastContext } from '@/contexts/ToastContext';
-import { database, ref, push } from '@/lib/firebase';
+import { supabase } from '@/integrations/supabase/client';
 
 interface FeedbackSectionProps {
   onLoginRequest: () => void;
@@ -41,16 +41,13 @@ export const FeedbackSection: React.FC<FeedbackSectionProps> = ({ onLoginRequest
 
     setIsSubmitting(true);
     try {
-      if (database) {
-        const feedbackRef = ref(database, 'feedback');
-        await push(feedbackRef, {
-          userId: user?.id,
-          username: user?.username,
-          rating,
-          comment: comment.trim().slice(0, 500),
-          createdAt: new Date().toISOString(),
-        });
-      }
+      const { error } = await supabase.from('feedback' as any).insert({
+        user_id: user?.id || '',
+        username: user?.username || '',
+        rating,
+        comment: comment.trim().slice(0, 500) || null,
+      });
+      if (error) throw error;
       setSubmitted(true);
     } catch (error) {
       console.error('Failed to submit feedback:', error);
