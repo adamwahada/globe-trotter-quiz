@@ -296,6 +296,17 @@ export const translations = {
     ctaTitle: 'Ready to Test Your Knowledge?',
     ctaSubtitle: 'Join thousands of players from around the world in the ultimate geography challenge.',
 
+    // Feedback
+    feedbackTitle: 'Your Feedback',
+    feedbackSubtitle: 'Help us improve by sharing your experience',
+    feedbackRateUs: 'How would you rate your experience?',
+    feedbackPlaceholder: 'Tell us what you think... (optional)',
+    feedbackLoginRequired: 'Sign in to leave feedback',
+    feedbackSelectRating: 'Please select a star rating',
+    feedbackSubmit: 'Submit Feedback',
+    feedbackThankYou: 'Thank You!',
+    feedbackThankYouDesc: 'Your feedback helps us improve the game.',
+
     // Footer
     footerText: '© 2024 World Quiz. Test your geography knowledge.',
 
@@ -711,6 +722,17 @@ export const translations = {
     ctaTitle: 'Prêt à Tester Vos Connaissances ?',
     ctaSubtitle: 'Rejoignez des milliers de joueurs du monde entier dans le défi ultime de géographie.',
 
+    // Feedback
+    feedbackTitle: 'Votre Avis',
+    feedbackSubtitle: 'Aidez-nous à nous améliorer en partageant votre expérience',
+    feedbackRateUs: 'Comment évaluez-vous votre expérience ?',
+    feedbackPlaceholder: 'Dites-nous ce que vous en pensez... (optionnel)',
+    feedbackLoginRequired: 'Connectez-vous pour laisser un avis',
+    feedbackSelectRating: 'Veuillez sélectionner une note',
+    feedbackSubmit: 'Envoyer',
+    feedbackThankYou: 'Merci !',
+    feedbackThankYouDesc: 'Votre avis nous aide à améliorer le jeu.',
+
     // Footer
     footerText: '© 2024 Quiz Mondial. Testez vos connaissances en géographie.',
 
@@ -1125,6 +1147,17 @@ export const translations = {
     // CTA Section
     ctaTitle: 'مستعد لاختبار معرفتك؟',
     ctaSubtitle: 'انضم إلى آلاف اللاعبين من حول العالم في تحدي الجغرافيا النهائي.',
+
+    // Feedback
+    feedbackTitle: 'رأيك يهمنا',
+    feedbackSubtitle: 'ساعدنا على التحسين من خلال مشاركة تجربتك',
+    feedbackRateUs: 'كيف تقيّم تجربتك؟',
+    feedbackPlaceholder: 'أخبرنا برأيك... (اختياري)',
+    feedbackLoginRequired: 'سجّل الدخول لترك تعليق',
+    feedbackSelectRating: 'يرجى اختيار تقييم بالنجوم',
+    feedbackSubmit: 'إرسال',
+    feedbackThankYou: 'شكراً لك!',
+    feedbackThankYouDesc: 'رأيك يساعدنا على تحسين اللعبة.',
 
     // Footer
     footerText: '© 2024 مسابقة العالم. اختبر معرفتك الجغرافية.',
