@@ -11,6 +11,9 @@ interface FeedbackSectionProps {
   onLoginRequest: () => void;
 }
 
+const FEEDBACK_COOLDOWN_KEY = 'worldquiz_feedback_submitted';
+const COOLDOWN_DAYS = 3;
+
 export const FeedbackSection: React.FC<FeedbackSectionProps> = ({ onLoginRequest }) => {
   const { t } = useLanguage();
   const { isAuthenticated, user } = useAuth();
@@ -18,8 +21,19 @@ export const FeedbackSection: React.FC<FeedbackSectionProps> = ({ onLoginRequest
   const [rating, setRating] = useState(0);
   const [hoveredStar, setHoveredStar] = useState(0);
   const [comment, setComment] = useState('');
-  const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Check if user submitted feedback recently (within 3 days)
+  const isCoolingDown = () => {
+    const submitted = localStorage.getItem(FEEDBACK_COOLDOWN_KEY);
+    if (!submitted) return false;
+    const elapsed = Date.now() - parseInt(submitted, 10);
+    return elapsed < COOLDOWN_DAYS * 24 * 60 * 60 * 1000;
+  };
+
+  const [hidden, setHidden] = useState(isCoolingDown());
+
+  if (hidden) return null;
 
   const handleStarClick = (star: number) => {
     if (!isAuthenticated) {
@@ -48,7 +62,9 @@ export const FeedbackSection: React.FC<FeedbackSectionProps> = ({ onLoginRequest
         comment: comment.trim().slice(0, 500) || null,
       });
       if (error) throw error;
-      setSubmitted(true);
+      localStorage.setItem(FEEDBACK_COOLDOWN_KEY, Date.now().toString());
+      addToast('success', t('feedbackThankYou'));
+      setHidden(true);
     } catch (error) {
       console.error('Failed to submit feedback:', error);
       addToast('error', 'Failed to submit feedback');
@@ -56,20 +72,6 @@ export const FeedbackSection: React.FC<FeedbackSectionProps> = ({ onLoginRequest
       setIsSubmitting(false);
     }
   };
-
-  if (submitted) {
-    return (
-      <section className="relative z-10 py-20 px-4">
-        <div className="max-w-xl mx-auto text-center">
-          <div className="bg-gradient-to-br from-card/90 via-card/70 to-card/50 backdrop-blur-xl rounded-2xl p-8 border border-primary/30">
-            <div className="text-5xl mb-4">🎉</div>
-            <h2 className="text-3xl font-display text-foreground mb-2">{t('feedbackThankYou')}</h2>
-            <p className="text-muted-foreground">{t('feedbackThankYouDesc')}</p>
-          </div>
-        </div>
-      </section>
-    );
-  }
 
   return (
     <section className="relative z-10 py-20 px-4">
