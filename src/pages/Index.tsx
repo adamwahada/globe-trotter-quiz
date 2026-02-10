@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { GameRuleCard } from "@/components/RuleCards/GameRuleCard";
 import { GameModesSection } from "@/components/LandingPage/GameModesSection";
 import { CardSystemSection } from "@/components/LandingPage/CardSystemSection";
+import { FeedbackSection } from "@/components/Feedback/FeedbackSection";
+import { AuthModal } from "@/components/Auth/AuthModal";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useGame } from "@/contexts/GameContext";
@@ -53,6 +55,7 @@ const Index = () => {
   const [gameModalOpen, setGameModalOpen] = useState(false);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [inviteCode, setInviteCode] = useState<string | null>(null);
+  const [feedbackAuthOpen, setFeedbackAuthOpen] = useState(false);
 
   // Check for active session on mount
   useEffect(() => {
@@ -484,6 +487,9 @@ const Index = () => {
         </div>
       </section>
 
+      {/* Feedback Section */}
+      <FeedbackSection onLoginRequest={() => setFeedbackAuthOpen(true)} />
+
       {/* CTA Section */}
       <section className="relative z-10 py-20 px-4 text-center">
         <div className="max-w-2xl mx-auto">
@@ -515,6 +521,12 @@ const Index = () => {
           setInviteCode(null);
         }}
         initialJoinCode={inviteCode}
+      />
+
+      <AuthModal
+        isOpen={feedbackAuthOpen}
+        onClose={() => setFeedbackAuthOpen(false)}
+        initialMode="signin"
       />
     </div>
   );
