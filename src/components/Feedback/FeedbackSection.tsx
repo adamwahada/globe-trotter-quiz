@@ -5,7 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToastContext } from '@/contexts/ToastContext';
-import { supabase } from '@/integrations/supabase/client';
+import { getFirebaseIdToken } from '@/utils/firebaseToken';
 
 interface FeedbackSectionProps {
   onLoginRequest: () => void;
@@ -55,13 +55,26 @@ export const FeedbackSection: React.FC<FeedbackSectionProps> = ({ onLoginRequest
 
     setIsSubmitting(true);
     try {
-      const { error } = await supabase.from('feedback' as any).insert({
-        user_id: user?.id || '',
-        username: user?.username || '',
-        rating,
-        comment: comment.trim().slice(0, 500) || null,
+      const token = await getFirebaseIdToken();
+      if (!token) throw new Error('Not authenticated');
+
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const response = await fetch(`${supabaseUrl}/functions/v1/submit-feedback`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          rating,
+          comment: comment.trim().slice(0, 500) || null,
+        }),
       });
-      if (error) throw error;
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to submit feedback');
+      }
       localStorage.setItem(FEEDBACK_COOLDOWN_KEY, Date.now().toString());
       addToast('success', t('feedbackThankYou'));
       setHidden(true);

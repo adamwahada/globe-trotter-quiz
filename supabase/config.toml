@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.save-game-history]
 verify_jwt = false
+
+[functions.submit-feedback]
+verify_jwt = false
