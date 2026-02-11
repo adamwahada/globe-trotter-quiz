@@ -119,6 +119,14 @@ export default {
           "0%, 100%": { filter: "drop-shadow(0 0 15px rgba(220, 38, 38, 0.5))" },
           "50%": { filter: "drop-shadow(0 0 25px rgba(220, 38, 38, 0.8))" },
         },
+        "marquee-left": {
+          "0%": { transform: "translateX(0)" },
+          "100%": { transform: "translateX(-50%)" },
+        },
+        "marquee-right": {
+          "0%": { transform: "translateX(-50%)" },
+          "100%": { transform: "translateX(0)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -127,6 +135,8 @@ export default {
         "bounce-subtle": "bounce-subtle 2s ease-in-out infinite",
         shimmer: "shimmer 2s linear infinite",
         "logo-glow": "logo-glow 2s ease-in-out infinite",
+        "marquee-left": "marquee-left 40s linear infinite",
+        "marquee-right": "marquee-right 40s linear infinite",
       },
       backgroundImage: {
         "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
