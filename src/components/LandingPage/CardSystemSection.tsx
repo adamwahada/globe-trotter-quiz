@@ -1,13 +1,68 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { CARD_DEFINITIONS, CardType } from '@/types/cards';
-import { Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Clock, Lightbulb, Settings2, Trophy, Sparkles } from 'lucide-react';
 
-const allCards: CardType[] = [
-  'timeBoost', 'timeSteal', 'extraHint', 'hintBlock',
-  'forcedContinent', 'pickYourCountry', 'pickYourContinent',
-  'skipNextPlayer', 'doublePoints', 'pointStrike', 'joker',
+const cardCategories = [
+  {
+    category: 'time' as const,
+    cards: ['timeBoost', 'timeSteal'] as CardType[],
+    icon: Clock,
+  },
+  {
+    category: 'hints' as const,
+    cards: ['extraHint', 'hintBlock'] as CardType[],
+    icon: Lightbulb,
+  },
+  {
+    category: 'control' as const,
+    cards: ['skipNextPlayer', 'pickYourCountry', 'pickYourContinent', 'forcedContinent'] as CardType[],
+    icon: Settings2,
+  },
+  {
+    category: 'score' as const,
+    cards: ['doublePoints', 'pointStrike'] as CardType[],
+    icon: Trophy,
+  },
+  {
+    category: 'wild' as const,
+    cards: ['joker'] as CardType[],
+    icon: Sparkles,
+  },
 ];
+
+const categoryAccents: Record<string, { border: string; bg: string; text: string; glow: string }> = {
+  time: {
+    border: 'border-info/40 group-hover:border-info/70',
+    bg: 'bg-info/10',
+    text: 'text-info',
+    glow: 'group-hover:shadow-info/20',
+  },
+  hints: {
+    border: 'border-warning/40 group-hover:border-warning/70',
+    bg: 'bg-warning/10',
+    text: 'text-warning',
+    glow: 'group-hover:shadow-warning/20',
+  },
+  control: {
+    border: 'border-primary/40 group-hover:border-primary/70',
+    bg: 'bg-primary/10',
+    text: 'text-primary',
+    glow: 'group-hover:shadow-primary/20',
+  },
+  score: {
+    border: 'border-success/40 group-hover:border-success/70',
+    bg: 'bg-success/10',
+    text: 'text-success',
+    glow: 'group-hover:shadow-success/20',
+  },
+  wild: {
+    border: 'border-accent-foreground/40 group-hover:border-accent-foreground/70',
+    bg: 'bg-accent/20',
+    text: 'text-accent-foreground',
+    glow: 'group-hover:shadow-accent/20',
+  },
+};
 
 const cardNameKeys: Record<CardType, string> = {
   timeBoost: 'cardTimeBoost',
@@ -37,124 +92,96 @@ const cardDescKeys: Record<CardType, string> = {
   joker: 'cardJokerLandingDesc',
 };
 
-const MinimalCard: React.FC<{ cardType: CardType; t: (key: any) => string }> = ({ cardType, t }) => {
-  const def = CARD_DEFINITIONS[cardType];
-
-  return (
-    <div className="group relative flex-shrink-0 w-[220px] bg-card/50 backdrop-blur-sm rounded-2xl border border-border/30 p-5 transition-all duration-500 hover:scale-[1.06] hover:-translate-y-3 hover:border-primary/40 hover:shadow-[0_24px_60px_-12px_hsl(var(--primary)/0.2)] cursor-default">
-      {/* Large centered icon */}
-      <div className="flex items-center justify-center h-24 mb-4">
-        <span className="text-5xl transition-transform duration-500 group-hover:scale-125 group-hover:-rotate-6 select-none">
-          {def.icon}
-        </span>
-      </div>
-
-      {/* Title */}
-      <h4 className="font-display text-lg text-foreground text-center mb-2 tracking-wide">
-        {t(cardNameKeys[cardType] as any)}
-      </h4>
-
-      {/* Description */}
-      <p className="text-xs text-muted-foreground leading-relaxed text-center">
-        {t(cardDescKeys[cardType] as any)}
-      </p>
-
-      {/* Subtle bottom accent on hover */}
-      <div className="absolute bottom-0 left-5 right-5 h-[2px] rounded-full bg-primary/0 transition-all duration-500 group-hover:bg-primary/40" />
-    </div>
-  );
+const categoryNameKeys: Record<string, string> = {
+  time: 'cardCategoryTime',
+  hints: 'cardCategoryHints',
+  control: 'cardCategoryControl',
+  score: 'cardCategoryScore',
+  wild: 'cardCategoryWild',
 };
 
 export const CardSystemSection: React.FC = () => {
   const { t } = useLanguage();
-  const scrollRef1 = useRef<HTMLDivElement>(null);
-  const scrollRef2 = useRef<HTMLDivElement>(null);
-
-  const scroll = (ref: React.RefObject<HTMLDivElement | null>, dir: 'left' | 'right') => {
-    ref.current?.scrollBy({ left: dir === 'left' ? -260 : 260, behavior: 'smooth' });
-  };
-
-  // Duplicate for infinite marquee
-  const row1 = [...allCards, ...allCards];
-  const row2 = [...[...allCards].reverse(), ...[...allCards].reverse()];
 
   return (
-    <section id="card-system" className="relative z-10 py-20 overflow-hidden">
-      {/* Header */}
-      <div className="max-w-4xl mx-auto text-center px-4 mb-12">
-        <h2 className="text-4xl md:text-5xl font-display text-foreground mb-4">
+    <section id="card-system" className="relative z-10 py-20 px-4">
+      <div className="max-w-6xl mx-auto">
+        <h2 className="text-4xl md:text-5xl font-display text-foreground text-center mb-4">
           {t('cardSystemTitle' as any)}
         </h2>
-        <p className="text-muted-foreground max-w-xl mx-auto">
+        <p className="text-center text-muted-foreground mb-4 max-w-2xl mx-auto">
           {t('cardSystemSubtitle' as any)}
         </p>
-      </div>
+        <p className="text-center text-sm text-muted-foreground mb-14 max-w-2xl mx-auto">
+          {t('cardSystemHow' as any)}
+        </p>
 
-      {/* Row 1 - scrollable + auto-marquee */}
-      <div className="relative mb-5 group/row">
-        {/* Scroll buttons */}
-        <button
-          onClick={() => scroll(scrollRef1, 'left')}
-          className="absolute left-2 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-card/80 backdrop-blur border border-border/50 flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors opacity-0 group-hover/row:opacity-100"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </button>
-        <button
-          onClick={() => scroll(scrollRef1, 'right')}
-          className="absolute right-2 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-card/80 backdrop-blur border border-border/50 flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors opacity-0 group-hover/row:opacity-100"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </button>
+        <div className="space-y-14">
+          {cardCategories.map((cat) => {
+            const accent = categoryAccents[cat.category];
+            const Icon = cat.icon;
 
-        <div
-          ref={scrollRef1}
-          className="flex gap-5 overflow-x-auto scrollbar-hide px-6 py-2 animate-marquee-left hover:[animation-play-state:paused]"
-        >
-          {row1.map((cardType, i) => (
-            <MinimalCard key={`r1-${i}`} cardType={cardType} t={t} />
-          ))}
+            return (
+              <div key={cat.category}>
+                {/* Chapter header */}
+                <div className="flex items-center gap-3 mb-6">
+                  <div className={`w-10 h-10 rounded-xl ${accent.bg} border ${accent.border.split(' ')[0]} flex items-center justify-center`}>
+                    <Icon className={`h-5 w-5 ${accent.text}`} />
+                  </div>
+                  <h3 className="text-2xl font-display text-foreground">
+                    {t(categoryNameKeys[cat.category] as any)}
+                  </h3>
+                  <div className="flex-1 h-px bg-gradient-to-r from-border/60 to-transparent ml-4" />
+                </div>
+
+                {/* Cards grid */}
+                <div className="grid sm:grid-cols-2 gap-4">
+                  {cat.cards.map((cardType) => {
+                    const def = CARD_DEFINITIONS[cardType];
+                    return (
+                      <div
+                        key={cardType}
+                        className={`group relative bg-gradient-to-br from-card/90 via-card/70 to-card/50 backdrop-blur-xl rounded-2xl p-6 border transition-all duration-300 hover:scale-[1.02] hover:shadow-lg ${accent.border} ${accent.glow}`}
+                      >
+                        {/* Hover glow overlay */}
+                        <div className={`absolute inset-0 rounded-2xl bg-gradient-to-br from-transparent via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${accent.bg}`} />
+
+                        <div className="relative flex flex-col items-center text-center gap-3">
+                          {/* Large centered icon */}
+                          <div className={`w-16 h-16 rounded-xl ${accent.bg} border ${accent.border.split(' ')[0]} flex items-center justify-center text-4xl transition-transform duration-300 group-hover:scale-110`}>
+                            {def.icon}
+                          </div>
+
+                          <div>
+                            <h4 className="font-semibold text-foreground text-base mb-1">
+                              {t(cardNameKeys[cardType] as any)}
+                            </h4>
+                            <p className="text-sm text-muted-foreground leading-relaxed">
+                              {t(cardDescKeys[cardType] as any)}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Bottom accent line */}
+                        <div className={`absolute bottom-0 left-4 right-4 h-[2px] rounded-full bg-gradient-to-r from-transparent via-current to-transparent opacity-20 ${accent.text}`} />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
         </div>
-      </div>
 
-      {/* Row 2 - scrollable + auto-marquee (reverse) */}
-      <div className="relative group/row">
-        <button
-          onClick={() => scroll(scrollRef2, 'left')}
-          className="absolute left-2 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-card/80 backdrop-blur border border-border/50 flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors opacity-0 group-hover/row:opacity-100"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </button>
-        <button
-          onClick={() => scroll(scrollRef2, 'right')}
-          className="absolute right-2 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-card/80 backdrop-blur border border-border/50 flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors opacity-0 group-hover/row:opacity-100"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </button>
-
-        <div
-          ref={scrollRef2}
-          className="flex gap-5 overflow-x-auto scrollbar-hide px-6 py-2 animate-marquee-right hover:[animation-play-state:paused]"
-        >
-          {row2.map((cardType, i) => (
-            <MinimalCard key={`r2-${i}`} cardType={cardType} t={t} />
-          ))}
-        </div>
-      </div>
-
-      {/* Edge fades */}
-      <div className="pointer-events-none absolute inset-y-0 left-0 w-20 bg-gradient-to-r from-background to-transparent z-10" />
-      <div className="pointer-events-none absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-background to-transparent z-10" />
-
-      {/* Fusion info */}
-      <div className="max-w-2xl mx-auto mt-14 px-4">
-        <div className="bg-card/40 backdrop-blur-sm border border-border/30 rounded-2xl p-8 text-center">
-          <div className="w-12 h-12 rounded-full bg-secondary/50 flex items-center justify-center mx-auto mb-4">
-            <Sparkles className="h-6 w-6 text-primary" />
+        {/* Fusion & Joker info */}
+        <div className="mt-14 bg-gradient-to-br from-accent/50 via-card/50 to-accent/20 border border-accent-foreground/20 rounded-2xl p-8 text-center">
+          <div className="w-14 h-14 rounded-full bg-accent/30 border border-accent-foreground/20 flex items-center justify-center mx-auto mb-4">
+            <Sparkles className="h-7 w-7 text-accent-foreground" />
           </div>
-          <p className="text-lg font-display text-foreground mb-2">
+          <p className="text-xl font-display text-foreground mb-3">
             {t('cardFusionTitle' as any)}
           </p>
-          <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
+          <p className="text-sm text-muted-foreground max-w-xl mx-auto leading-relaxed">
             {t('cardFusionDesc' as any)}
           </p>
         </div>

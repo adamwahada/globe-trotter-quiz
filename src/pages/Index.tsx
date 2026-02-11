@@ -350,8 +350,41 @@ const Index = () => {
       {/* Game Modes Section */}
       <GameModesSection />
 
-      {/* Card System Section */}
-      <CardSystemSection />
+      {/* Features Section - moved up */}
+      <section className="relative z-10 py-20 px-4">
+        <div className="max-w-5xl mx-auto">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 text-center">
+            <div className="space-y-4">
+              <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto">
+                <UserCircle className="h-8 w-8 text-primary" />
+              </div>
+              <h3 className="text-2xl font-display text-foreground">{t("featureSoloMode")}</h3>
+              <p className="text-muted-foreground">{t("featureSoloModeDesc")}</p>
+            </div>
+            <div className="space-y-4">
+              <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto">
+                <Users className="h-8 w-8 text-primary" />
+              </div>
+              <h3 className="text-2xl font-display text-foreground">{t("featureMultiplayer")}</h3>
+              <p className="text-muted-foreground">{t("featureMultiplayerDesc")}</p>
+            </div>
+            <div className="space-y-4">
+              <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto">
+                <Target className="h-8 w-8 text-primary" />
+              </div>
+              <h3 className="text-2xl font-display text-foreground">{t("featureInteractiveMap")}</h3>
+              <p className="text-muted-foreground">{t("featureInteractiveMapDesc")}</p>
+            </div>
+            <div className="space-y-4">
+              <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto">
+                <Trophy className="h-8 w-8 text-primary" />
+              </div>
+              <h3 className="text-2xl font-display text-foreground">{t("featureLeaderboard")}</h3>
+              <p className="text-muted-foreground">{t("featureLeaderboardDesc")}</p>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Hints Section */}
       <section className="relative z-10 py-20 px-4">
@@ -448,46 +481,8 @@ const Index = () => {
         </div>
       </section>
 
-      {/* (Card System moved up) */}
-
-      {/* Features Section */}
-      <section className="relative z-10 py-20 px-4">
-        <div className="max-w-5xl mx-auto">
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 text-center">
-            <div className="space-y-4">
-              <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto">
-                <UserCircle className="h-8 w-8 text-primary" />
-              </div>
-              <h3 className="text-2xl font-display text-foreground">{t("featureSoloMode")}</h3>
-              <p className="text-muted-foreground">{t("featureSoloModeDesc")}</p>
-            </div>
-
-            <div className="space-y-4">
-              <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto">
-                <Users className="h-8 w-8 text-primary" />
-              </div>
-              <h3 className="text-2xl font-display text-foreground">{t("featureMultiplayer")}</h3>
-              <p className="text-muted-foreground">{t("featureMultiplayerDesc")}</p>
-            </div>
-
-            <div className="space-y-4">
-              <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto">
-                <Target className="h-8 w-8 text-primary" />
-              </div>
-              <h3 className="text-2xl font-display text-foreground">{t("featureInteractiveMap")}</h3>
-              <p className="text-muted-foreground">{t("featureInteractiveMapDesc")}</p>
-            </div>
-
-            <div className="space-y-4">
-              <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto">
-                <Trophy className="h-8 w-8 text-primary" />
-              </div>
-              <h3 className="text-2xl font-display text-foreground">{t("featureLeaderboard")}</h3>
-              <p className="text-muted-foreground">{t("featureLeaderboardDesc")}</p>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Card System Section */}
+      <CardSystemSection />
 
       {/* Feedback Section */}
       <FeedbackSection onLoginRequest={() => setFeedbackAuthOpen(true)} />
