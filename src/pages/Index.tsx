@@ -350,6 +350,9 @@ const Index = () => {
       {/* Game Modes Section */}
       <GameModesSection />
 
+      {/* Card System Section */}
+      <CardSystemSection />
+
       {/* Hints Section */}
       <section className="relative z-10 py-20 px-4">
         <div className="max-w-5xl mx-auto">
@@ -445,8 +448,7 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Card System Section */}
-      <CardSystemSection />
+      {/* (Card System moved up) */}
 
       {/* Features Section */}
       <section className="relative z-10 py-20 px-4">
