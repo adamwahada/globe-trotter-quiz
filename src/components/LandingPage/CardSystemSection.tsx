@@ -36,31 +36,31 @@ const cardDescKeys: Record<CardType, string> = {
   joker: 'cardJokerLandingDesc',
 };
 
-const GlassCard: React.FC<{ cardType: CardType; t: any }> = ({ cardType, t }) => {
+const GlassCard: React.FC<{ cardType: CardType; t: any; isRTL: boolean }> = ({ cardType, t, isRTL }) => {
   const def = CARD_DEFINITIONS[cardType];
 
   return (
-    <div className="group relative flex-shrink-0 w-[220px] sm:w-[260px] cursor-default select-none">
+    <div className="group relative flex-shrink-0 w-[220px] sm:w-[260px] cursor-default select-none" dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Outer glow on hover */}
       <div className="absolute -inset-[1px] rounded-3xl bg-gradient-to-br from-white/20 via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 blur-sm" />
 
-      <div className="relative h-[280px] sm:h-[320px] rounded-3xl border border-white/[0.08] bg-white/[0.04] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.25)] overflow-hidden transition-all duration-500 ease-out group-hover:scale-[1.03] group-hover:shadow-[0_16px_48px_rgba(0,0,0,0.35)] group-hover:border-white/[0.15]">
+      <div className="relative h-[300px] sm:h-[340px] rounded-3xl border border-white/[0.08] bg-white/[0.04] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.25)] overflow-hidden transition-all duration-500 ease-out group-hover:scale-[1.03] group-hover:shadow-[0_16px_48px_rgba(0,0,0,0.35)] group-hover:border-white/[0.15]">
         {/* Inner subtle gradient */}
         <div className="absolute inset-0 bg-gradient-to-br from-white/[0.06] via-transparent to-white/[0.02] pointer-events-none" />
 
         {/* Content */}
-        <div className="relative h-full flex flex-col items-center justify-center px-6 text-center gap-4">
+        <div className="relative h-full flex flex-col items-center justify-center px-5 sm:px-6 text-center gap-4">
           {/* Icon */}
           <div className="text-6xl sm:text-7xl transition-transform duration-500 ease-out group-hover:scale-110 group-hover:-translate-y-1">
             {def.icon}
           </div>
 
           {/* Text */}
-          <div className="space-y-2">
-            <h4 className="text-base sm:text-lg font-semibold text-foreground/90 tracking-tight">
+          <div className="space-y-2 w-full">
+            <h4 className={`text-base sm:text-lg font-semibold text-foreground/90 tracking-tight ${isRTL ? 'font-sans' : ''}`}>
               {t(cardNameKeys[cardType] as any)}
             </h4>
-            <p className="text-xs sm:text-sm text-muted-foreground/70 leading-relaxed line-clamp-2">
+            <p className={`text-[11px] sm:text-xs text-muted-foreground/70 leading-relaxed line-clamp-3 ${isRTL ? 'font-sans leading-loose' : ''}`}>
               {t(cardDescKeys[cardType] as any)}
             </p>
           </div>
@@ -78,7 +78,7 @@ const row1Cards: CardType[] = allCards.slice(0, 6);
 const row2Cards: CardType[] = allCards.slice(6).concat(allCards.slice(0, 4));
 
 export const CardSystemSection: React.FC = () => {
-  const { t } = useLanguage();
+  const { t, isRTL } = useLanguage();
 
   return (
     <section
@@ -108,7 +108,7 @@ export const CardSystemSection: React.FC = () => {
         <div className="group/row overflow-hidden">
           <div className="flex gap-5 w-max animate-marquee-right hover:[animation-play-state:paused]">
             {[...row1Cards, ...row1Cards, ...row1Cards].map((cardType, i) => (
-              <GlassCard key={`r1-${i}`} cardType={cardType} t={t} />
+              <GlassCard key={`r1-${i}`} cardType={cardType} t={t} isRTL={isRTL} />
             ))}
           </div>
         </div>
@@ -117,7 +117,7 @@ export const CardSystemSection: React.FC = () => {
         <div className="group/row overflow-hidden">
           <div className="flex gap-5 w-max animate-marquee-left hover:[animation-play-state:paused]">
             {[...row2Cards, ...row2Cards, ...row2Cards].map((cardType, i) => (
-              <GlassCard key={`r2-${i}`} cardType={cardType} t={t} />
+              <GlassCard key={`r2-${i}`} cardType={cardType} t={t} isRTL={isRTL} />
             ))}
           </div>
         </div>
