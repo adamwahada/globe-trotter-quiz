@@ -107,7 +107,7 @@ export const CardSystemSection: React.FC = () => {
         {/* Row 1 — left to right */}
         <div className="group/row overflow-hidden">
           <div className="flex gap-5 w-max animate-marquee-right hover:[animation-play-state:paused]">
-            {[...row1Cards, ...row1Cards, ...row1Cards].map((cardType, i) => (
+            {[...row1Cards, ...row1Cards, ...row1Cards, ...row1Cards, ...row1Cards].map((cardType, i) => (
               <GlassCard key={`r1-${i}`} cardType={cardType} t={t} isRTL={isRTL} />
             ))}
           </div>
@@ -116,7 +116,7 @@ export const CardSystemSection: React.FC = () => {
         {/* Row 2 — right to left */}
         <div className="group/row overflow-hidden">
           <div className="flex gap-5 w-max animate-marquee-left hover:[animation-play-state:paused]">
-            {[...row2Cards, ...row2Cards, ...row2Cards].map((cardType, i) => (
+            {[...row2Cards, ...row2Cards, ...row2Cards, ...row2Cards, ...row2Cards].map((cardType, i) => (
               <GlassCard key={`r2-${i}`} cardType={cardType} t={t} isRTL={isRTL} />
             ))}
           </div>
