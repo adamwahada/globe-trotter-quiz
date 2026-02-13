@@ -6,6 +6,7 @@ import { GameRuleCard } from "@/components/RuleCards/GameRuleCard";
 import { GameModesSection } from "@/components/LandingPage/GameModesSection";
 import { CardSystemSection } from "@/components/LandingPage/CardSystemSection";
 import { FeedbackSection } from "@/components/Feedback/FeedbackSection";
+import { FAQSection } from "@/components/LandingPage/FAQSection";
 import { AuthModal } from "@/components/Auth/AuthModal";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -483,6 +484,9 @@ const Index = () => {
 
       {/* Card System Section */}
       <CardSystemSection />
+
+      {/* FAQ Section */}
+      <FAQSection />
 
       {/* Feedback Section */}
       <FeedbackSection onLoginRequest={() => setFeedbackAuthOpen(true)} />
