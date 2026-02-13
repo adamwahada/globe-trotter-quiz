@@ -121,10 +121,10 @@ export default {
         },
         "marquee-left": {
           "0%": { transform: "translateX(0)" },
-          "100%": { transform: "translateX(-33.333%)" },
+          "100%": { transform: "translateX(-20%)" },
         },
         "marquee-right": {
-          "0%": { transform: "translateX(-33.333%)" },
+          "0%": { transform: "translateX(-20%)" },
           "100%": { transform: "translateX(0)" },
         },
       },
