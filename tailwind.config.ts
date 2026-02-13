@@ -121,10 +121,10 @@ export default {
         },
         "marquee-left": {
           "0%": { transform: "translateX(0)" },
-          "100%": { transform: "translateX(-50%)" },
+          "100%": { transform: "translateX(-33.333%)" },
         },
         "marquee-right": {
-          "0%": { transform: "translateX(-50%)" },
+          "0%": { transform: "translateX(-33.333%)" },
           "100%": { transform: "translateX(0)" },
         },
       },
@@ -135,8 +135,8 @@ export default {
         "bounce-subtle": "bounce-subtle 2s ease-in-out infinite",
         shimmer: "shimmer 2s linear infinite",
         "logo-glow": "logo-glow 2s ease-in-out infinite",
-        "marquee-left": "marquee-left 40s linear infinite",
-        "marquee-right": "marquee-right 40s linear infinite",
+        "marquee-left": "marquee-left 50s linear infinite",
+        "marquee-right": "marquee-right 50s linear infinite",
       },
       backgroundImage: {
         "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
