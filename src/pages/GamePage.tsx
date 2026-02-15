@@ -1059,9 +1059,36 @@ const GamePage = () => {
   }, [isSoloMode, soloClickedCountry, currentCountry, currentPlayer, session, updatePlayerMetadata, updateGameState, addToast, t, getLocalizedHints]);
 
   const handleLeave = useCallback(async () => {
+    // Save partial game history on mid-game leave
+    if (session && currentPlayer && session.status === 'playing') {
+      try {
+        const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
+        const playerCorrect = currentPlayer.countriesGuessed.filter(c => correctCountries.includes(c)).length;
+        const playerWrong = currentPlayer.countriesGuessed.filter(c => wrongCountries.includes(c)).length;
+        const totalTurns = playerCorrect + playerWrong;
+        const playerRank = sortedPlayers.findIndex(p => p.id === currentPlayer.id) + 1;
+        const winnerScore = sortedPlayers[0]?.score || 0;
+
+        await saveGameHistoryServer([{
+          user_id: currentPlayer.id,
+          session_code: session.code,
+          score: currentPlayer.score,
+          countries_correct: playerCorrect,
+          countries_wrong: playerWrong,
+          total_turns: totalTurns,
+          is_winner: currentPlayer.score === winnerScore && winnerScore > 0,
+          player_count: players.length,
+          game_duration_minutes: session.duration,
+          is_solo_mode: session.isSoloMode || false,
+          rank: playerRank,
+        }]);
+      } catch (err) {
+        console.error('Error saving mid-game history:', err);
+      }
+    }
     await leaveSession();
     navigate('/');
-  }, [leaveSession, navigate]);
+  }, [leaveSession, navigate, session, currentPlayer, players, correctCountries, wrongCountries]);
 
   const handleEndGame = useCallback(async () => {
     if (!session) return;
@@ -1080,43 +1107,45 @@ const GamePage = () => {
 
     await endGame();
 
-    // Save game results to Supabase for each player
+    // Save current user's game results to server
     try {
       const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
       const winnerScore = sortedPlayers[0]?.score || 0;
       
-      // Save game results via server-validated endpoint
-      const entries = players.map((player) => {
-        const playerCorrect = player.countriesGuessed.filter(c => correctCountries.includes(c)).length;
-        const playerWrong = player.countriesGuessed.filter(c => wrongCountries.includes(c)).length;
-        const totalTurns = player.countriesGuessed.length;
+      // Only save the current user's entry
+      if (currentPlayer) {
+        const playerCorrect = currentPlayer.countriesGuessed.filter(c => correctCountries.includes(c)).length;
+        const playerWrong = currentPlayer.countriesGuessed.filter(c => wrongCountries.includes(c)).length;
+        const totalTurns = playerCorrect + playerWrong;
+        const playerRank = sortedPlayers.findIndex(p => p.id === currentPlayer.id) + 1;
         
-        return {
-          user_id: player.id,
+        const entries = [{
+          user_id: currentPlayer.id,
           session_code: session.code,
-          score: player.score,
+          score: currentPlayer.score,
           countries_correct: playerCorrect,
           countries_wrong: playerWrong,
           total_turns: totalTurns,
-          is_winner: player.score === winnerScore && winnerScore > 0,
+          is_winner: currentPlayer.score === winnerScore && winnerScore > 0,
           player_count: players.length,
           game_duration_minutes: session.duration,
           is_solo_mode: session.isSoloMode || false,
-        };
-      });
+          rank: playerRank,
+        }];
 
-      const { success, error: saveError } = await saveGameHistoryServer(entries);
-      if (!success) {
-        console.error('Failed to save game history:', saveError);
-      } else {
-        console.log('Game history saved successfully via server');
+        const { success, error: saveError } = await saveGameHistoryServer(entries);
+        if (!success) {
+          console.error('Failed to save game history:', saveError);
+        } else {
+          console.log('Game history saved successfully via server');
+        }
       }
     } catch (err) {
       console.error('Error saving game history:', err);
     }
 
     setShowResults(true);
-  }, [session, players, endGame, updateGameState, addToast, t, playToastSound, correctCountries, wrongCountries]);
+  }, [session, currentPlayer, players, endGame, updateGameState, addToast, t, playToastSound, correctCountries, wrongCountries]);
 
   const handlePlayAgain = useCallback(async () => {
     setShowResults(false);

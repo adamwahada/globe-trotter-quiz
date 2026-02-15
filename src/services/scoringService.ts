@@ -24,6 +24,7 @@ interface GameHistoryEntry {
   player_count: number;
   game_duration_minutes: number;
   is_solo_mode: boolean;
+  rank: number;
 }
 
 /**
@@ -107,5 +108,32 @@ export const saveGameHistoryServer = async (
   } catch (err) {
     console.error('Error saving game history:', err);
     return { success: false, error: 'Network error' };
+  }
+};
+
+/**
+ * Fetch game history via server-validated endpoint.
+ * Uses Firebase auth token verified server-side, bypasses Supabase RLS.
+ */
+export const fetchGameHistoryServer = async (): Promise<{ data: any[]; error?: string }> => {
+  try {
+    const token = await getFirebaseIdToken();
+    if (!token) {
+      return { data: [], error: 'Not authenticated' };
+    }
+
+    const { data, error } = await supabase.functions.invoke('get-game-history', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (error) {
+      console.error('Failed to fetch game history:', error);
+      return { data: [], error: error.message };
+    }
+
+    return { data: data?.data || [] };
+  } catch (err) {
+    console.error('Error fetching game history:', err);
+    return { data: [], error: 'Network error' };
   }
 };

@@ -24,6 +24,7 @@ interface GameHistoryEntry {
   player_count: number;
   game_duration_minutes: number;
   is_solo_mode: boolean;
+  rank: number;
 }
 
 function validateEntry(entry: GameHistoryEntry): string | null {
@@ -152,19 +153,18 @@ serve(async (req) => {
       }
     }
 
-    // Verify all entries belong to the authenticated user
-    for (const entry of entries) {
-      if (entry.user_id !== authUser.uid) {
-        return new Response(
-          JSON.stringify({ error: 'Cannot save history for other users' }),
-          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+    // Filter to only the authenticated user's entries (ignore others silently)
+    const userEntries = entries.filter(e => e.user_id === authUser.uid);
+    if (userEntries.length === 0) {
+      return new Response(
+        JSON.stringify({ error: 'No entries for authenticated user' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // All entries must share the same session_code
-    const sessionCode = entries[0].session_code;
-    if (!entries.every(e => e.session_code === sessionCode)) {
+    const sessionCode = userEntries[0].session_code;
+    if (!userEntries.every(e => e.session_code === sessionCode)) {
       return new Response(
         JSON.stringify({ error: 'All entries must share the same session_code' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -176,11 +176,12 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Check for duplicate session_code entries to prevent double-saving
+    // Check for duplicate: same user + same session_code
     const { data: existing, error: checkError } = await supabase
       .from('game_history')
       .select('id')
       .eq('session_code', sessionCode)
+      .eq('user_id', authUser.uid)
       .limit(1);
 
     if (checkError) {
@@ -198,10 +199,10 @@ serve(async (req) => {
       );
     }
 
-    // Insert all entries
+    // Insert only the authenticated user's entries
     const { error: insertError } = await supabase
       .from('game_history')
-      .insert(entries);
+      .insert(userEntries);
 
     if (insertError) {
       console.error('Error inserting game history:', insertError);
