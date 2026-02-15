@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.submit-feedback]
 verify_jwt = false
+
+[functions.get-game-history]
+verify_jwt = false

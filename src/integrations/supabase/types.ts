@@ -51,6 +51,7 @@ export type Database = {
           is_solo_mode: boolean
           is_winner: boolean
           player_count: number
+          rank: number
           score: number
           session_code: string
           total_turns: number
@@ -65,6 +66,7 @@ export type Database = {
           is_solo_mode?: boolean
           is_winner?: boolean
           player_count?: number
+          rank?: number
           score?: number
           session_code: string
           total_turns?: number
@@ -79,6 +81,7 @@ export type Database = {
           is_solo_mode?: boolean
           is_winner?: boolean
           player_count?: number
+          rank?: number
           score?: number
           session_code?: string
           total_turns?: number

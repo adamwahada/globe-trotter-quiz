@@ -350,52 +350,80 @@ export const AgainstTheClockGame: React.FC<AgainstTheClockGameProps> = ({ onShow
   }, [selectedCountry, currentPlayer, session, countrySelectTime, updateGameState, addToast, t, getLocalizedHints]);
 
   const handleLeave = useCallback(async () => {
+    // Save partial game history on mid-game leave
+    if (session && currentPlayer && session.status === 'playing') {
+      try {
+        const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
+        const totalTurns = currentPlayer.countriesGuessed.length;
+        const estimatedCorrect = Math.floor(currentPlayer.score / 2.5);
+        const estimatedWrong = Math.max(0, totalTurns - estimatedCorrect);
+        const playerRank = sortedPlayers.findIndex(p => p.id === currentPlayer.id) + 1;
+        const winnerScore = sortedPlayers[0]?.score || 0;
+
+        await saveGameHistoryServer([{
+          user_id: currentPlayer.id,
+          session_code: session.code,
+          score: currentPlayer.score,
+          countries_correct: estimatedCorrect,
+          countries_wrong: estimatedWrong,
+          total_turns: totalTurns,
+          is_winner: currentPlayer.score === winnerScore && winnerScore > 0,
+          player_count: players.length,
+          game_duration_minutes: session.duration,
+          is_solo_mode: false,
+          rank: playerRank,
+        }]);
+      } catch (err) {
+        console.error('Error saving mid-game history:', err);
+      }
+    }
     await leaveSession();
     navigate('/');
-  }, [leaveSession, navigate]);
+  }, [leaveSession, navigate, session, currentPlayer, players]);
 
   const handleEndGame = useCallback(async () => {
     if (!session) return;
 
     await endGame();
 
-    // Save game results to Supabase for each player
-    // Note: In Against the Clock, we calculate correct/wrong from scores
+    // Save current user's game results
     try {
       const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
       const winnerScore = sortedPlayers[0]?.score || 0;
       
-      const entries = players.map((player) => {
-        const totalTurns = player.countriesGuessed.length;
-        const estimatedCorrect = Math.floor(player.score / 2.5);
+      if (currentPlayer) {
+        const totalTurns = currentPlayer.countriesGuessed.length;
+        const estimatedCorrect = Math.floor(currentPlayer.score / 2.5);
         const estimatedWrong = Math.max(0, totalTurns - estimatedCorrect);
+        const playerRank = sortedPlayers.findIndex(p => p.id === currentPlayer.id) + 1;
         
-        return {
-          user_id: player.id,
+        const entries = [{
+          user_id: currentPlayer.id,
           session_code: session.code,
-          score: player.score,
+          score: currentPlayer.score,
           countries_correct: estimatedCorrect,
           countries_wrong: estimatedWrong,
           total_turns: totalTurns,
-          is_winner: player.score === winnerScore && winnerScore > 0,
+          is_winner: currentPlayer.score === winnerScore && winnerScore > 0,
           player_count: players.length,
           game_duration_minutes: session.duration,
           is_solo_mode: false,
-        };
-      });
+          rank: playerRank,
+        }];
 
-      const { success, error: saveError } = await saveGameHistoryServer(entries);
-      if (!success) {
-        console.error('Failed to save game history:', saveError);
-      } else {
-        console.log('Game history saved successfully via server');
+        const { success, error: saveError } = await saveGameHistoryServer(entries);
+        if (!success) {
+          console.error('Failed to save game history:', saveError);
+        } else {
+          console.log('Game history saved successfully via server');
+        }
       }
     } catch (err) {
       console.error('Error saving game history:', err);
     }
 
     onShowResults();
-  }, [session, players, endGame, onShowResults]);
+  }, [session, currentPlayer, players, endGame, onShowResults]);
 
   if (!session) return null;
 
