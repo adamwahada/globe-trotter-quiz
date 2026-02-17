@@ -1,13 +1,17 @@
 import React, { useState } from 'react';
-import { User, Settings, History, Trophy, LogOut, ChevronDown } from 'lucide-react';
+import { User, Settings, History, Trophy, LogOut, ChevronDown, Shield } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAdmin } from '@/contexts/AdminContext';
 import { GameTooltip } from '@/components/Tooltip/GameTooltip';
 import { GameHistoryModal } from '@/components/History/GameHistoryModal';
 
 export const UserMenu: React.FC = () => {
   const { t } = useLanguage();
   const { user, signOut } = useAuth();
+  const { isAdmin } = useAdmin();
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
 
@@ -104,6 +108,22 @@ export const UserMenu: React.FC = () => {
                 </button>
               ))}
               
+              {isAdmin && (
+                <>
+                  <hr className="my-2 border-border" />
+                  <button
+                    onClick={() => {
+                      navigate('/admin');
+                      setIsOpen(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-primary/10 transition-colors text-primary"
+                  >
+                    <Shield className="h-5 w-5" />
+                    <span className="text-sm font-medium">Admin Dashboard</span>
+                  </button>
+                </>
+              )}
+
               <hr className="my-2 border-border" />
               
               <button
