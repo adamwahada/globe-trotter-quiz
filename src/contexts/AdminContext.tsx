@@ -15,21 +15,20 @@ export const AdminProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const checkAdmin = async () => {
-      if (!isAuthenticated || !user) {
-        setIsAdmin(false);
-        setIsLoading(false);
-        return;
-      }
-
-      try {
         const token = await getFirebaseIdToken();
-        if (!token) { setIsAdmin(false); setIsLoading(false); return; }
-
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-        const res = await fetch(`${supabaseUrl}/functions/v1/admin-check-role`, {
-          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        if (!token) { 
+          setIsAdmin(false); 
+          setIsLoading(false); 
+          return; 
+        }
+        
+        const res = await fetch(`/functions/v1/admin-check-role`, {
+          headers: { 
+            'Authorization': `Bearer ${token}`, 
+            'Content-Type': 'application/json' 
+          },
         });
+
 
         if (res.ok) {
           const data = await res.json();
