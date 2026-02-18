@@ -10,6 +10,26 @@ const corsHeaders = {
 const FIREBASE_PROJECT_ID = 'lovable-quiz-map';
 const GOOGLE_CERTS_URL = 'https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com';
 
+// Characters allowed in comments (block script injection patterns)
+const DANGEROUS_PATTERNS = [
+  /<script[\s\S]*?>[\s\S]*?<\/script>/gi,
+  /<[^>]*on\w+\s*=\s*["'][^"']*["'][^>]*>/gi,
+  /javascript\s*:/gi,
+  /vbscript\s*:/gi,
+  /data\s*:\s*text\/html/gi,
+];
+
+function sanitizeText(input: string): string {
+  let sanitized = input.trim();
+  // Strip dangerous patterns
+  for (const pattern of DANGEROUS_PATTERNS) {
+    sanitized = sanitized.replace(pattern, '');
+  }
+  // Strip any HTML tags
+  sanitized = sanitized.replace(/<[^>]*>/g, '');
+  return sanitized;
+}
+
 let cachedCerts: Record<string, string> | null = null;
 let certsCacheExpiry = 0;
 
@@ -22,7 +42,7 @@ async function getGoogleCerts(): Promise<Record<string, string>> {
   return cachedCerts!;
 }
 
-async function verifyFirebaseToken(authHeader: string | null): Promise<{ uid: string; displayName?: string } | null> {
+async function verifyFirebaseToken(authHeader: string | null): Promise<{ uid: string; displayName?: string; email?: string } | null> {
   if (!authHeader?.startsWith('Bearer ')) return null;
   const token = authHeader.replace('Bearer ', '');
   try {
@@ -37,7 +57,11 @@ async function verifyFirebaseToken(authHeader: string | null): Promise<{ uid: st
       audience: FIREBASE_PROJECT_ID,
     });
     if (!payload.sub) return null;
-    return { uid: payload.sub, displayName: (payload as any).name || undefined };
+    return { 
+      uid: payload.sub, 
+      displayName: (payload as any).name || undefined,
+      email: (payload as any).email || undefined,
+    };
   } catch {
     return null;
   }
@@ -55,7 +79,6 @@ serve(async (req) => {
       });
     }
 
-    // Verify Firebase authentication
     const authUser = await verifyFirebaseToken(req.headers.get('Authorization'));
     if (!authUser) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
@@ -73,10 +96,13 @@ serve(async (req) => {
       });
     }
 
-    // Validate comment
-    const sanitizedComment = typeof comment === 'string' ? comment.trim().slice(0, 500) : null;
+    // Validate & sanitize comment (strip scripts and HTML)
+    let sanitizedComment: string | null = null;
+    if (typeof comment === 'string' && comment.trim().length > 0) {
+      sanitizedComment = sanitizeText(comment).slice(0, 500);
+      if (sanitizedComment.length === 0) sanitizedComment = null;
+    }
 
-    // Insert using service role (bypasses RLS)
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
@@ -85,6 +111,7 @@ serve(async (req) => {
     const { error } = await supabase.from('feedback').insert({
       user_id: authUser.uid,
       username: authUser.displayName || null,
+      email: authUser.email || null,
       rating,
       comment: sanitizedComment || null,
     });
