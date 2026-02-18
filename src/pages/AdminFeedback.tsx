@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Star, ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Star, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getFirebaseIdToken } from '@/utils/firebaseToken';
 
@@ -24,7 +24,7 @@ export const AdminFeedback: React.FC = () => {
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  const fetchFeedbacks = async (p: number) => {
+  const fetchFeedbacks = useCallback(async (p: number) => {
     setLoading(true);
     try {
       const token = await getFirebaseIdToken();
@@ -42,22 +42,36 @@ export const AdminFeedback: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchFeedbacks(page);
-  }, [page]);
+  }, [page, fetchFeedbacks]);
 
   const totalPages = data ? Math.ceil(data.total / 20) : 0;
 
   return (
     <div>
-      <h1 className="text-3xl font-display text-foreground mb-2">Feedback</h1>
-      <p className="text-muted-foreground mb-8">User reviews and ratings</p>
+      <div className="flex items-start justify-between mb-2">
+        <div>
+          <h1 className="text-3xl font-display text-foreground">Feedback</h1>
+          <p className="text-muted-foreground mt-1">User reviews and ratings</p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => fetchFeedbacks(page)}
+          disabled={loading}
+          className="gap-2 mt-1"
+        >
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
+      </div>
 
       {/* Stats bar */}
       {data && (
-        <div className="flex gap-6 mb-8">
+        <div className="flex gap-6 mb-8 mt-6">
           <div className="bg-card rounded-xl border border-border px-6 py-4 flex items-center gap-3">
             <Star className="h-5 w-5 text-warning fill-warning" />
             <div>

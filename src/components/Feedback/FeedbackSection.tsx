@@ -58,8 +58,7 @@ export const FeedbackSection: React.FC<FeedbackSectionProps> = ({ onLoginRequest
       const token = await getFirebaseIdToken();
       if (!token) throw new Error('Not authenticated');
 
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const response = await fetch(`${supabaseUrl}/functions/v1/submit-feedback`, {
+      const response = await fetch(`https://dzzeaesctendsggfdxra.supabase.co/functions/v1/submit-feedback`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
