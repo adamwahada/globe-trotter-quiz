@@ -13,6 +13,9 @@ import {
   linkWithCredential,
   signInWithEmailAndPassword,
   GoogleAuthProvider,
+  setPersistence,
+  browserLocalPersistence,
+  browserSessionPersistence,
 } from '@/lib/firebase';
 import type { AuthCredential } from '@/lib/firebase';
 import { validateUsername, MAX_USERNAME_LENGTH } from '@/utils/inputValidation';
@@ -75,6 +78,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
     }
     setIsGoogleLoading(true);
     try {
+      // Google sign-in: always session-only (no "remember me" for OAuth popup)
+      await setPersistence(auth, browserSessionPersistence);
       await signInWithPopup(auth, googleProvider);
       addToast('success', t('welcomeBack'));
       onClose();
@@ -145,6 +150,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
         await signUp(email, password, username.trim());
         addToast('success', 'Account created successfully!');
       } else {
+        // Set Firebase persistence BEFORE signing in
+        if (auth) {
+          await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
+        }
         await signIn(email, password);
         // Save or clear remembered email
         localStorage.setItem('worldquiz_remember_me', rememberMe ? 'true' : 'false');
