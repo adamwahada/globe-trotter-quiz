@@ -34,8 +34,7 @@ export const AdminProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           return;
         }
 
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-        const res = await fetch(`${supabaseUrl}/functions/v1/admin-check-role`, {
+        const res = await fetch(`https://dzzeaesctendsggfdxra.supabase.co/functions/v1/admin-check-role`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
