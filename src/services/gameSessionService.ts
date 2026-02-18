@@ -32,18 +32,25 @@ export const createSessionInFirebase = async (
   await set(sessionRef, sessionData);
 };
 
-// Get session by code
+// Get session by code — works for both authenticated and guest (unauthenticated) users
 export const getSessionByCode = async (code: string): Promise<GameSession | null> => {
   if (!isFirebaseReady() || !database) {
     const localSession = localStorage.getItem(`session_${code}`);
     return localSession ? JSON.parse(localSession) : null;
   }
-  const sessionRef = ref(database, `${SESSIONS_PATH}/${code}`);
-  const snapshot = await get(sessionRef);
-  return snapshot.exists() ? snapshot.val() as GameSession : null;
+  try {
+    const sessionRef = ref(database, `${SESSIONS_PATH}/${code}`);
+    const snapshot = await get(sessionRef);
+    return snapshot.exists() ? snapshot.val() as GameSession : null;
+  } catch (err: any) {
+    // Firebase permission denied can happen if the session is not in 'waiting' status
+    // and the reader is unauthenticated. Return null gracefully.
+    console.warn('[Firebase] getSessionByCode error:', err?.code, err?.message);
+    return null;
+  }
 };
 
-// Subscribe to session changes
+// Subscribe to session changes — works for both authenticated and guest users
 export const subscribeToSession = (
   code: string,
   callback: (session: GameSession | null) => void
@@ -56,6 +63,9 @@ export const subscribeToSession = (
   const sessionRef = ref(database, `${SESSIONS_PATH}/${code}`);
   const unsubscribe = onValue(sessionRef, (snapshot) => {
     callback(snapshot.exists() ? snapshot.val() as GameSession : null);
+  }, (error) => {
+    console.warn('[Firebase] subscribeToSession error:', (error as any)?.code, error?.message);
+    callback(null);
   });
   return unsubscribe;
 };

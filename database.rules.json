@@ -4,7 +4,7 @@
         ".write": false,
         "sessions": {
             "$sessionCode": {
-                ".read": "auth != null && (data.child('players').child(auth.uid).exists() || !data.exists() || data.child('status').val() === 'waiting')",
+                ".read": true,
                 ".write": "auth != null && (!data.exists() && newData.child('creatorId').val() === auth.uid || data.child('players').child(auth.uid).exists() || (data.child('status').val() === 'waiting' && newData.child('players').child(auth.uid).exists()))",
                 "creatorId": {
                     ".validate": "newData.isString() && newData.val().length > 0"
@@ -13,9 +13,9 @@
                     ".validate": "newData.isString() && newData.val().length === 6"
                 },
                 "players": {
-                    "$uid": {
-                        ".read": "auth != null && ($uid === auth.uid || data.parent().child(auth.uid).exists())",
-                        ".write": "auth != null && ($uid === auth.uid || (data.parent().parent().child('creatorId').val() === auth.uid && !newData.exists()))",
+                    "$playerId": {
+                        ".read": true,
+                        ".write": "auth != null && ($playerId === auth.uid || (data.parent().parent().child('creatorId').val() === auth.uid && !newData.exists())) || (auth == null && $playerId.beginsWith('guest_') && ((!data.exists() && data.parent().parent().child('status').val() === 'waiting') || (data.exists() && data.child('isGuest').val() === true)))",
                         ".validate": "newData.hasChildren(['username', 'avatar', 'color', 'score', 'isReady', 'isConnected'])",
                         "username": {
                             ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 20"
@@ -43,15 +43,18 @@
                         },
                         "lastSeen": {
                             ".validate": "newData.isNumber()"
+                        },
+                        "isGuest": {
+                            ".validate": "newData.isBoolean()"
                         }
                     }
                 },
                 "status": {
                     ".validate": "newData.isString() && (newData.val() === 'waiting' || newData.val() === 'countdown' || newData.val() === 'playing' || newData.val() === 'finished')"
                 },
-            "maxPlayers": {
-                ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 8"
-            },
+                "maxPlayers": {
+                    ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 8"
+                },
                 "duration": {
                     ".validate": "newData.isNumber() && newData.val() > 0"
                 },
