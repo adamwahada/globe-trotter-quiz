@@ -8,6 +8,7 @@ import { CardSystemSection } from "@/components/LandingPage/CardSystemSection";
 import { FeedbackSection } from "@/components/Feedback/FeedbackSection";
 import { FAQSection } from "@/components/LandingPage/FAQSection";
 import { AuthModal } from "@/components/Auth/AuthModal";
+import { GuestJoinModal } from "@/components/Auth/GuestJoinModal";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdmin } from "@/contexts/AdminContext";
@@ -60,6 +61,10 @@ const Index = () => {
   const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [inviteCode, setInviteCode] = useState<string | null>(null);
   const [feedbackAuthOpen, setFeedbackAuthOpen] = useState(false);
+  const [guestJoinOpen, setGuestJoinOpen] = useState(false);
+  const [pendingGuestCode, setPendingGuestCode] = useState<string | null>(null);
+  const [authForInviteOpen, setAuthForInviteOpen] = useState(false);
+  const { joinSessionAsGuest } = useGame();
 
   // Check for active session on mount
   useEffect(() => {
@@ -74,16 +79,36 @@ const Index = () => {
   useEffect(() => {
     const joinCode = searchParams.get("join");
     if (joinCode && !isCheckingSession) {
-      setInviteCode(joinCode.toUpperCase());
-      // Clear the URL parameter
+      const code = joinCode.toUpperCase();
+      setInviteCode(code);
       setSearchParams({});
-      // Open the game modal to join
+
       if (!hasActiveSession) {
-        setGameModalOpen(true);
-        addToast("info", `Joining session: ${joinCode.toUpperCase()}`);
+        if (isAuthenticated) {
+          // Authenticated users get the normal join modal
+          setGameModalOpen(true);
+          addToast("info", `Joining session: ${code}`);
+        } else {
+          // Non-authenticated users get the guest join modal
+          setPendingGuestCode(code);
+          setGuestJoinOpen(true);
+        }
       }
     }
-  }, [searchParams, setSearchParams, isCheckingSession, hasActiveSession, addToast]);
+  }, [searchParams, setSearchParams, isCheckingSession, hasActiveSession, isAuthenticated, addToast]);
+
+  const handleGuestJoin = async (username: string) => {
+    if (!pendingGuestCode) return;
+    const success = await joinSessionAsGuest(pendingGuestCode, username);
+    if (success) {
+      setGuestJoinOpen(false);
+      navigate('/waiting-room');
+    } else {
+      throw new Error('Could not join session. It may be full or already started.');
+    }
+  };
+
+
 
   const handleStartGame = () => {
     if (!isAuthenticated) {
@@ -543,6 +568,25 @@ const Index = () => {
         isOpen={feedbackAuthOpen}
         onClose={() => setFeedbackAuthOpen(false)}
         initialMode="signin"
+      />
+
+      {/* Auth modal triggered from guest modal "sign in" button */}
+      <AuthModal
+        isOpen={authForInviteOpen}
+        onClose={() => setAuthForInviteOpen(false)}
+        initialMode="signin"
+      />
+
+      {/* Guest join modal — shown for non-authenticated users with an invite link */}
+      <GuestJoinModal
+        isOpen={guestJoinOpen}
+        sessionCode={pendingGuestCode || ''}
+        onJoin={handleGuestJoin}
+        onClose={() => setGuestJoinOpen(false)}
+        onSignIn={() => {
+          setGuestJoinOpen(false);
+          setAuthForInviteOpen(true);
+        }}
       />
     </div>
   );

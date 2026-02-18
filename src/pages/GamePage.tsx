@@ -1503,6 +1503,7 @@ const GamePage = () => {
         isOpen={showResults}
         players={players}
         onPlayAgain={handlePlayAgain}
+        isGuest={!!currentPlayer?.isGuest}
       />
 
       {/* Lone Player Overlay - Not shown in solo mode */}

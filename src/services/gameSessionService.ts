@@ -85,11 +85,12 @@ export const updateSession = async (
 // Add player to session using auth.uid
 export const addPlayerToSession = async (
   code: string,
-  playerData: PlayerData
+  playerData: PlayerData,
+  explicitPlayerId?: string // used for guest joins
 ): Promise<boolean> => {
-  const uid = getCurrentUid();
+  const uid = explicitPlayerId || getCurrentUid();
   if (!uid) {
-    throw new Error('User must be authenticated to join a session');
+    throw new Error('Must provide a player ID to join a session');
   }
 
   const session = await getSessionByCode(code);
@@ -99,7 +100,7 @@ export const addPlayerToSession = async (
   if (currentPlayers.length >= session.maxPlayers) return false;
   if (session.status !== 'waiting') return false;
 
-  // Check if user already in session
+  // Check if player already in session
   if (session.players && session.players[uid]) {
     return false; // Already joined
   }
@@ -108,7 +109,7 @@ export const addPlayerToSession = async (
     return false;
   }
 
-  // Write player entry using auth.uid as the key
+  // Write player entry using uid as the key
   const playerRef = ref(database, `${SESSIONS_PATH}/${code}/players/${uid}`);
   await set(playerRef, playerData);
   return true;
@@ -120,19 +121,25 @@ export const removePlayerFromSession = async (
   playerId: string
 ): Promise<void> => {
   const uid = getCurrentUid();
-  if (!uid) {
+  const isGuestPlayer = playerId.startsWith('guest_');
+
+  // Allow guests to remove themselves; authenticated users must be self or creator
+  if (!isGuestPlayer && !uid) {
     throw new Error('User must be authenticated');
+  }
+
+  if (!isGuestPlayer && uid && playerId !== uid) {
+    const session = await getSessionByCode(code);
+    if (!session) return;
+    if (session.creatorId !== uid) {
+      throw new Error('Cannot remove other players');
+    }
   }
 
   const session = await getSessionByCode(code);
   if (!session) return;
 
   const playerUids = getPlayerUids(session.players);
-
-  // Can only remove yourself (or creator can remove others - handled by rules)
-  if (playerId !== uid && session.creatorId !== uid) {
-    throw new Error('Cannot remove other players');
-  }
 
   if (!isFirebaseReady() || !database) {
     return;
@@ -154,12 +161,14 @@ export const updatePlayerInSession = async (
   updates: Partial<PlayerData>
 ): Promise<void> => {
   const uid = getCurrentUid();
-  if (!uid) {
+  const isGuestPlayer = playerId.startsWith('guest_');
+
+  if (!isGuestPlayer && !uid) {
     throw new Error('User must be authenticated');
   }
 
   // Can only update your own player data
-  if (playerId !== uid) {
+  if (!isGuestPlayer && uid && playerId !== uid) {
     throw new Error('Cannot update other players');
   }
 
@@ -335,7 +344,9 @@ export const updatePlayerConnection = async (
   isConnected: boolean
 ): Promise<void> => {
   const uid = getCurrentUid();
-  if (!uid || playerId !== uid) {
+  const isGuestPlayer = playerId.startsWith('guest_');
+  // Guests use their guestId, authenticated users must match uid
+  if (!isGuestPlayer && (!uid || playerId !== uid)) {
     return; // Can only update own connection status
   }
 

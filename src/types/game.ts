@@ -18,6 +18,7 @@ export interface PlayerData {
   isConnected: boolean;
   lastSeen: number;
   inactiveTurns?: number; // Track consecutive inactive turns (timeout/skip)
+  isGuest?: boolean; // True for players who joined without an account
   // Against the Clock specific - tracks which country the player is currently guessing
   currentGuessCountry?: string | null;
    // Card system state

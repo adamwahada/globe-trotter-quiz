@@ -1,5 +1,5 @@
-import React from 'react';
-import { Trophy, Medal, Award, Home, RotateCcw, Target, Globe, TrendingUp } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Trophy, Medal, Award, Home, RotateCcw, Target, Globe, TrendingUp, Timer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Player } from '@/contexts/GameContext';
@@ -10,6 +10,7 @@ interface GameResultsProps {
   players: Player[];
   onPlayAgain: () => void;
   totalCountries?: number;
+  isGuest?: boolean;
 }
 
 // Calculate accuracy: (score earned / max possible score) * 100
@@ -21,9 +22,37 @@ const calculateAccuracy = (player: Player): number => {
   return Math.round((player.score / maxPossible) * 100);
 };
 
-export const GameResults: React.FC<GameResultsProps> = ({ isOpen, players, onPlayAgain, totalCountries = 195 }) => {
+const GUEST_CLOSE_SECONDS = 30;
+
+export const GameResults: React.FC<GameResultsProps> = ({ isOpen, players, onPlayAgain, totalCountries = 195, isGuest = false }) => {
   const { t } = useLanguage();
   const navigate = useNavigate();
+  const [countdown, setCountdown] = useState(GUEST_CLOSE_SECONDS);
+
+  // Auto-close countdown for guests
+  useEffect(() => {
+    if (!isOpen || !isGuest) return;
+    setCountdown(GUEST_CLOSE_SECONDS);
+    const interval = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          // Clear guest session data and close
+          sessionStorage.removeItem('guest_player_id');
+          sessionStorage.removeItem('guest_session_code');
+          sessionStorage.removeItem('guest_username');
+          localStorage.removeItem('gameSessionCode');
+          localStorage.removeItem('currentPlayerId');
+          window.close();
+          // Fallback: navigate home if window.close() doesn't work
+          navigate('/');
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isOpen, isGuest, navigate]);
 
   if (!isOpen) return null;
 
@@ -114,29 +143,57 @@ export const GameResults: React.FC<GameResultsProps> = ({ isOpen, players, onPla
             })}
           </div>
 
+          {/* Guest auto-close countdown */}
+          {isGuest && (
+            <div className="flex items-center gap-2 p-3 mb-3 rounded-lg bg-warning/10 border border-warning/20 text-sm text-foreground/80">
+              <Timer className="h-4 w-4 text-warning shrink-0" />
+              <p>
+                As a guest, this page will close in{' '}
+                <span className="font-display text-warning text-base">{countdown}s</span>. 
+                {' '}Sign up to save your history!
+              </p>
+            </div>
+          )}
+
           {/* Actions */}
           <div className="flex gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate('/')}
-              className="flex-1 gap-2"
-            >
-              <Home className="h-4 w-4" />
-              {t('backToHome')}
-            </Button>
-            <Button
-              variant="netflix"
-              size="sm"
-              onClick={onPlayAgain}
-              className="flex-1 gap-2"
-            >
-              <RotateCcw className="h-4 w-4" />
-              {t('playAgain')}
-            </Button>
+            {!isGuest && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate('/')}
+                  className="flex-1 gap-2"
+                >
+                  <Home className="h-4 w-4" />
+                  {t('backToHome')}
+                </Button>
+                <Button
+                  variant="netflix"
+                  size="sm"
+                  onClick={onPlayAgain}
+                  className="flex-1 gap-2"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  {t('playAgain')}
+                </Button>
+              </>
+            )}
+            {isGuest && (
+              <Button
+                variant="netflix"
+                size="sm"
+                onClick={() => navigate('/')}
+                className="flex-1 gap-2"
+              >
+                <Home className="h-4 w-4" />
+                Create an account to play again
+              </Button>
+            )}
           </div>
         </div>
       </div>
     </div>
   );
 };
+
