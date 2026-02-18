@@ -10,6 +10,10 @@ import {
   signInWithPopup,
   GoogleAuthProvider,
   sendPasswordResetEmail,
+  fetchSignInMethodsForEmail,
+  linkWithCredential,
+  OAuthCredential,
+  AuthCredential,
   Auth,
   User as FirebaseUser
 } from 'firebase/auth';
@@ -44,6 +48,7 @@ export {
   database,
   auth,
   googleProvider,
+  GoogleAuthProvider,
   ref,
   set,
   onValue,
@@ -58,7 +63,9 @@ export {
   updateProfile,
   signInWithPopup,
   sendPasswordResetEmail,
+  fetchSignInMethodsForEmail,
+  linkWithCredential,
   onDisconnect
 };
-export type { DatabaseReference, FirebaseUser };
+export type { DatabaseReference, FirebaseUser, OAuthCredential, AuthCredential };
 export const isFirebaseReady = () => database !== null && auth !== null;
