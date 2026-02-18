@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Mail, Lock, User, Loader2, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { X, Mail, Lock, User, Loader2, Eye, EyeOff, AlertCircle, CheckSquare, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -39,6 +39,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
   const [isSendingReset, setIsSendingReset] = useState(false);
   // When email/password fails and the account might be Google-only, show inline prompt
   const [showSetPasswordPrompt, setShowSetPasswordPrompt] = useState(false);
+  const [rememberMe, setRememberMe] = useState(() => localStorage.getItem('worldquiz_remember_me') === 'true');
 
   // Stored Google credential pending account linking
   const pendingGoogleCredential = useRef<AuthCredential | null>(null);
@@ -46,7 +47,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
   useEffect(() => {
     if (isOpen) {
       setMode(initialMode);
-      setEmail('');
+      // Pre-fill email if "remember me" was enabled
+      const saved = localStorage.getItem('worldquiz_remember_me') === 'true'
+        ? (localStorage.getItem('worldquiz_saved_email') || '')
+        : '';
+      setEmail(saved);
       setPassword('');
       setUsername('');
       setConfirmPassword('');
@@ -141,6 +146,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
         addToast('success', 'Account created successfully!');
       } else {
         await signIn(email, password);
+        // Save or clear remembered email
+        localStorage.setItem('worldquiz_remember_me', rememberMe ? 'true' : 'false');
+        if (rememberMe) {
+          localStorage.setItem('worldquiz_saved_email', email);
+        } else {
+          localStorage.removeItem('worldquiz_saved_email');
+        }
         addToast('success', 'Welcome back!');
       }
       onClose();
@@ -386,6 +398,27 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
                   {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
               </div>
+            )}
+
+            {/* Remember me - only for sign-in */}
+            {mode === 'signin' && (
+              <button
+                type="button"
+                onClick={() => {
+                  const next = !rememberMe;
+                  setRememberMe(next);
+                  localStorage.setItem('worldquiz_remember_me', next ? 'true' : 'false');
+                  if (!next) localStorage.removeItem('worldquiz_saved_email');
+                }}
+                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
+              >
+                {rememberMe ? (
+                  <CheckSquare className="h-4 w-4 text-primary" />
+                ) : (
+                  <Square className="h-4 w-4" />
+                )}
+                Remember me
+              </button>
             )}
 
             <Button type="submit" variant="netflix" className="w-full py-6" disabled={isLoading}>

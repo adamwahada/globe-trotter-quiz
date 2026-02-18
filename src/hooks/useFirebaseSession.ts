@@ -43,6 +43,9 @@ export const useFirebaseSession = () => {
   // half-authenticated state.
   useEffect(() => {
     if (user) return;
+    // Don't clear state for guest players (they have no Firebase auth user)
+    const guestId = sessionStorage.getItem('guest_player_id');
+    if (guestId) return;
 
     setSession(null);
     setCurrentPlayer(null);
@@ -397,6 +400,66 @@ export const useFirebaseSession = () => {
     }
   }, [user, tabSessionId, addToast]);
 
+  // Guest join — no Firebase auth required
+  const joinSessionAsGuest = useCallback(async (code: string, guestUsername: string): Promise<boolean> => {
+    // Generate a stable guest ID stored in sessionStorage so it survives page refreshes within the tab
+    let guestId = sessionStorage.getItem('guest_player_id');
+    if (!guestId) {
+      guestId = 'guest_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+      sessionStorage.setItem('guest_player_id', guestId);
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const existingSession = await getSessionByCode(code);
+      if (!existingSession) { setError('Session not found'); return false; }
+
+      const currentPlayers = playersMapToArray(existingSession.players);
+      if (currentPlayers.length >= existingSession.maxPlayers) { setError('Session is full'); return false; }
+      if (existingSession.status !== 'waiting') { setError('Session has already started'); return false; }
+      if (existingSession.players && existingSession.players[guestId]) { setError('Already in session'); return false; }
+
+      const avatars = ['🗺️', '🌍', '🌎', '🌏', '🧭', '🏔️', '🌊', '🏝️', '🌋', '🌵'];
+      const colors = ['#6366f1', '#f59e0b', '#10b981', '#3b82f6', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6'];
+
+      const playerData: PlayerData = {
+        username: guestUsername,
+        avatar: avatars[Math.floor(Math.random() * avatars.length)],
+        color: colors[Math.floor(Math.random() * colors.length)],
+        score: 0,
+        turnsPlayed: 0,
+        countriesGuessed: [],
+        isReady: false,
+        isConnected: true,
+        lastSeen: Date.now(),
+        isGuest: true,
+      };
+
+      const success = await addPlayerToSession(code, playerData, guestId);
+
+      if (success) {
+        setCurrentPlayer({ id: guestId, ...playerData });
+        const refreshedSession = await getSessionByCode(code);
+        setSession(refreshedSession || existingSession);
+        setHasActiveSession(true);
+
+        sessionStorage.setItem('guest_session_code', code);
+        sessionStorage.setItem('guest_username', guestUsername);
+        localStorage.setItem('gameSessionCode', code);
+        localStorage.setItem('currentPlayerId', guestId);
+      }
+
+      return success;
+    } catch (err) {
+      setError('Failed to join session');
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   const leaveSession = useCallback(async () => {
     if (!session?.code || !currentPlayer?.id) return;
 
@@ -542,6 +605,7 @@ export const useFirebaseSession = () => {
     hasActiveSession,
     createSession,
     joinSession,
+    joinSessionAsGuest,
     leaveSession,
     setReady,
     updatePlayerMetadata,
@@ -552,6 +616,6 @@ export const useFirebaseSession = () => {
     endGame,
     resumeSession,
     checkActiveSession,
-    getPlayersArray, // New helper for UI components
+    getPlayersArray,
   };
 };

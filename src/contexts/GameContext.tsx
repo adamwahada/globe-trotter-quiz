@@ -14,6 +14,7 @@ interface GameContextType {
   hasActiveSession: boolean;
    createSession: (maxPlayers: number, duration: number, isSoloMode?: boolean, gameMode?: GameMode, cardModeEnabled?: boolean) => Promise<string>;
   joinSession: (code: string, username?: string) => Promise<boolean>;
+  joinSessionAsGuest: (code: string, guestUsername: string) => Promise<boolean>;
   leaveSession: () => Promise<void>;
   setReady: (ready: boolean) => Promise<void>;
   updatePlayerMetadata: (metadata: Partial<PlayerData>) => Promise<void>;
@@ -48,6 +49,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     hasActiveSession,
     createSession,
     joinSession,
+    joinSessionAsGuest,
     leaveSession,
     setReady,
     updatePlayerMetadata,
@@ -70,6 +72,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       hasActiveSession,
       createSession,
       joinSession,
+      joinSessionAsGuest,
       leaveSession,
       setReady,
       updatePlayerMetadata,
