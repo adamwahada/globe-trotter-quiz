@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Star, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,7 +11,7 @@ interface FeedbackSectionProps {
   onLoginRequest: () => void;
 }
 
-const FEEDBACK_COOLDOWN_KEY = 'worldquiz_feedback_submitted';
+const FEEDBACK_COOLDOWN_PREFIX = 'worldquiz_feedback_submitted_';
 const COOLDOWN_DAYS = 3;
 
 export const FeedbackSection: React.FC<FeedbackSectionProps> = ({ onLoginRequest }) => {
@@ -23,15 +23,22 @@ export const FeedbackSection: React.FC<FeedbackSectionProps> = ({ onLoginRequest
   const [comment, setComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Check if user submitted feedback recently (within 3 days)
-  const isCoolingDown = () => {
-    const submitted = localStorage.getItem(FEEDBACK_COOLDOWN_KEY);
+  // Check if THIS user submitted feedback recently (per-user cooldown)
+  const isCoolingDown = (userId?: string) => {
+    if (!userId) return false;
+    const key = `${FEEDBACK_COOLDOWN_PREFIX}${userId}`;
+    const submitted = localStorage.getItem(key);
     if (!submitted) return false;
     const elapsed = Date.now() - parseInt(submitted, 10);
     return elapsed < COOLDOWN_DAYS * 24 * 60 * 60 * 1000;
   };
 
-  const [hidden, setHidden] = useState(isCoolingDown());
+  const [hidden, setHidden] = useState(() => isCoolingDown(user?.id));
+
+  // Re-evaluate when the logged-in user changes (e.g. switching accounts)
+  useEffect(() => {
+    setHidden(isCoolingDown(user?.id));
+  }, [user?.id]);
 
   if (hidden) return null;
 
@@ -74,7 +81,7 @@ export const FeedbackSection: React.FC<FeedbackSectionProps> = ({ onLoginRequest
         const data = await response.json();
         throw new Error(data.error || 'Failed to submit feedback');
       }
-      localStorage.setItem(FEEDBACK_COOLDOWN_KEY, Date.now().toString());
+      localStorage.setItem(`${FEEDBACK_COOLDOWN_PREFIX}${user?.id}`, Date.now().toString());
       addToast('success', t('feedbackThankYou'));
       setHidden(true);
     } catch (error) {
