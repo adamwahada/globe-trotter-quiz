@@ -208,29 +208,47 @@ const StatsView: React.FC = () => {
     if (dateFrom) series = series.filter((d) => d.date >= dateFrom);
     if (dateTo) series = series.filter((d) => d.date <= dateTo);
 
+    const fmt = (iso: string) => {
+      const [y, m, d] = iso.split('-');
+      return `${d}/${m}/${y}`;
+    };
+
     if (granularity === 'week') {
-      const weekMap: Record<string, { count: number; totalRating: number; entries: number }> = {};
+      const weekMap: Record<string, { count: number; totalRating: number; entries: number; monday: string }> = {};
       for (const d of series) {
-        const dt = new Date(d.date);
+        const dt = new Date(d.date + 'T00:00:00');
         const day = dt.getDay();
         const monday = new Date(dt);
         monday.setDate(dt.getDate() - ((day + 6) % 7));
+        const sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
         const weekKey = monday.toISOString().substring(0, 10);
-        if (!weekMap[weekKey]) weekMap[weekKey] = { count: 0, totalRating: 0, entries: 0 };
+        if (!weekMap[weekKey]) weekMap[weekKey] = { count: 0, totalRating: 0, entries: 0, monday: weekKey };
         weekMap[weekKey].count += d.count;
         weekMap[weekKey].totalRating += d.avgRating * d.count;
         weekMap[weekKey].entries += d.count;
       }
       return Object.entries(weekMap)
         .sort(([a], [b]) => a.localeCompare(b))
-        .map(([date, { count, totalRating, entries }]) => ({
-          date: `W ${date}`,
-          count,
-          avgRating: entries > 0 ? Math.round((totalRating / entries) * 10) / 10 : 0,
-        }));
+        .map(([mondayIso, { count, totalRating, entries }]) => {
+          const mondayDate = new Date(mondayIso + 'T00:00:00');
+          const sundayDate = new Date(mondayDate);
+          sundayDate.setDate(mondayDate.getDate() + 6);
+          const sundayIso = sundayDate.toISOString().substring(0, 10);
+          return {
+            date: fmt(mondayIso),
+            dateLabel: `${fmt(mondayIso)} – ${fmt(sundayIso)}`,
+            count,
+            avgRating: entries > 0 ? Math.round((totalRating / entries) * 10) / 10 : 0,
+          };
+        });
     }
 
-    return series.map((d) => ({ ...d, date: d.date.substring(5) })); // MM-DD
+    return series.map((d) => ({
+      ...d,
+      date: fmt(d.date),
+      dateLabel: fmt(d.date),
+    }));
   }, [stats, granularity, dateFrom, dateTo]);
 
   const filteredTotal = useMemo(() => chartData.reduce((s, d) => s + d.count, 0), [chartData]);
@@ -315,9 +333,9 @@ const StatsView: React.FC = () => {
         </ResponsiveContainer>
       </div>
 
-      {/* Time Series Chart */}
+      {/* Time Series Controls */}
       <div className="bg-card border border-border rounded-xl p-5">
-        <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+        <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
           <h3 className="font-display text-foreground flex items-center gap-2">
             <TrendingUp className="h-4 w-4 text-primary" />
             Evolution Over Time
@@ -352,7 +370,7 @@ const StatsView: React.FC = () => {
                   onClick={() => setGranularity(g)}
                   className={`px-3 py-1 text-xs transition-colors capitalize ${granularity === g ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'}`}
                 >
-                  {g}
+                  {g === 'day' ? 'Day' : 'Week'}
                 </button>
               ))}
             </div>
@@ -362,21 +380,90 @@ const StatsView: React.FC = () => {
         {chartData.length === 0 ? (
           <p className="text-muted-foreground text-center py-8 text-sm">No data for the selected period.</p>
         ) : (
-          <ResponsiveContainer width="100%" height={240}>
-            <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="date" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} interval="preserveStartEnd" />
-              <YAxis yAxisId="left" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} allowDecimals={false} />
-              <YAxis yAxisId="right" orientation="right" domain={[0, 5]} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} />
-              <Tooltip
-                contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8 }}
-                labelStyle={{ color: 'hsl(var(--foreground))' }}
-              />
-              <Legend wrapperStyle={{ color: 'hsl(var(--muted-foreground))', fontSize: 12 }} />
-              <Line yAxisId="left" type="monotone" dataKey="count" name="Reviews" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
-              <Line yAxisId="right" type="monotone" dataKey="avgRating" name="Avg Rating" stroke="hsl(var(--warning))" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
-            </LineChart>
-          </ResponsiveContainer>
+          <div className="space-y-8">
+            {/* Avg Rating Chart */}
+            <div>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Average Rating</p>
+              <ResponsiveContainer width="100%" height={220}>
+                <LineChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
+                    axisLine={{ stroke: 'hsl(var(--border))' }}
+                    tickLine={false}
+                    interval="preserveStartEnd"
+                  />
+                  <YAxis
+                    domain={[0, 5]}
+                    ticks={[0, 1, 2, 3, 4, 5]}
+                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
+                    axisLine={false}
+                    tickLine={false}
+                    width={28}
+                  />
+                  <Tooltip
+                    contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 12 }}
+                    labelStyle={{ color: 'hsl(var(--foreground))', fontWeight: 600, marginBottom: 4 }}
+                    formatter={(value: number) => [`${value} ★`, 'Avg Rating']}
+                    labelFormatter={(_: unknown, payload: unknown[]) => {
+                      const p = payload as Array<{ payload: { dateLabel: string } }>;
+                      return p?.[0]?.payload?.dateLabel ?? '';
+                    }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="avgRating"
+                    stroke="hsl(var(--primary))"
+                    strokeWidth={2.5}
+                    dot={{ r: 5, fill: 'hsl(var(--primary))', strokeWidth: 0 }}
+                    activeDot={{ r: 7, fill: 'hsl(var(--primary))', stroke: 'hsl(var(--background))', strokeWidth: 2 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Review Count Chart */}
+            <div>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Number of Reviews</p>
+              <ResponsiveContainer width="100%" height={220}>
+                <LineChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
+                    axisLine={{ stroke: 'hsl(var(--border))' }}
+                    tickLine={false}
+                    interval="preserveStartEnd"
+                  />
+                  <YAxis
+                    allowDecimals={false}
+                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
+                    axisLine={false}
+                    tickLine={false}
+                    width={28}
+                  />
+                  <Tooltip
+                    contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 12 }}
+                    labelStyle={{ color: 'hsl(var(--foreground))', fontWeight: 600, marginBottom: 4 }}
+                    formatter={(value: number) => [`${value}`, 'Reviews']}
+                    labelFormatter={(_: unknown, payload: unknown[]) => {
+                      const p = payload as Array<{ payload: { dateLabel: string } }>;
+                      return p?.[0]?.payload?.dateLabel ?? '';
+                    }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="count"
+                    stroke="hsl(var(--warning))"
+                    strokeWidth={2.5}
+                    dot={{ r: 5, fill: 'hsl(var(--warning))', strokeWidth: 0 }}
+                    activeDot={{ r: 7, fill: 'hsl(var(--warning))', stroke: 'hsl(var(--background))', strokeWidth: 2 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
         )}
       </div>
 
