@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           comment: string | null
           created_at: string
+          email: string | null
           id: string
           rating: number
           user_id: string
@@ -26,6 +27,7 @@ export type Database = {
         Insert: {
           comment?: string | null
           created_at?: string
+          email?: string | null
           id?: string
           rating: number
           user_id: string
@@ -34,6 +36,7 @@ export type Database = {
         Update: {
           comment?: string | null
           created_at?: string
+          email?: string | null
           id?: string
           rating?: number
           user_id?: string

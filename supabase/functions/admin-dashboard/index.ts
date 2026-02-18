@@ -82,7 +82,6 @@ serve(async (req) => {
     const action = url.searchParams.get('action');
 
     if (action === 'user-stats') {
-      // Count unique users from game_history
       const { data: allUsers } = await supabase
         .from('game_history')
         .select('user_id, created_at');
@@ -106,7 +105,6 @@ serve(async (req) => {
           .map((r: any) => r.user_id)
       ).size;
 
-      // Total games
       const totalGames = (allUsers || []).length;
 
       return new Response(JSON.stringify({
@@ -135,12 +133,10 @@ serve(async (req) => {
         });
       }
 
-      // Get total count
       const { count } = await supabase
         .from('feedback')
         .select('*', { count: 'exact', head: true });
 
-      // Average rating
       const { data: avgData } = await supabase
         .from('feedback')
         .select('rating');
@@ -156,6 +152,31 @@ serve(async (req) => {
         avgRating: Math.round(avgRating * 10) / 10,
         page,
       }), {
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (action === 'user-feedback-history') {
+      const userId = url.searchParams.get('user_id');
+      if (!userId) {
+        return new Response(JSON.stringify({ error: 'user_id required' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const { data: history, error } = await supabase
+        .from('feedback')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        return new Response(JSON.stringify({ error: 'Database error' }), {
+          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      return new Response(JSON.stringify({ history: history || [] }), {
         status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
