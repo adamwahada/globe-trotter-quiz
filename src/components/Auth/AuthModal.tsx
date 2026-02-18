@@ -57,17 +57,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
 
   // ── helpers ──────────────────────────────────────────────────────────────────
 
-  /** Returns true if the email is registered with Google only */
-  const isGoogleOnlyAccount = async (emailToCheck: string): Promise<boolean> => {
-    if (!auth) return false;
-    try {
-      const methods = await fetchSignInMethodsForEmail(auth, emailToCheck);
-      return methods.length > 0 && !methods.includes('password') && methods.includes('google.com');
-    } catch {
-      return false;
-    }
-  };
-
   // ── Google sign-in ────────────────────────────────────────────────────────────
 
   const handleGoogleSignIn = async () => {
@@ -162,17 +151,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
         code === 'auth/wrong-password' ||
         code === 'auth/user-not-found'
       ) {
-        // Check if this email is Google-only so we can give a precise hint
-        const googleOnly = await isGoogleOnlyAccount(email);
-        if (googleOnly) {
-          addToast(
-            'error',
-            'This account was created with Google. Please use "Continue with Google" to sign in, or reset your password to set one.',
-            8000
-          );
-        } else {
-          addToast('error', t('invalidCredentialsGoogleHint') || 'Invalid credentials. If you previously signed in with Google, please use "Continue with Google" or reset your password.');
-        }
+        addToast('error', 'Incorrect email or password. If you signed up with Google, use the button below.');
       } else if (code === 'auth/invalid-email') {
         addToast('error', 'Invalid email address');
       } else if (code === 'auth/weak-password') {
