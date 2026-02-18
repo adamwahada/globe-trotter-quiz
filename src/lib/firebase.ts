@@ -15,7 +15,10 @@ import {
   OAuthCredential,
   AuthCredential,
   Auth,
-  User as FirebaseUser
+  User as FirebaseUser,
+  setPersistence,
+  browserLocalPersistence,
+  browserSessionPersistence,
 } from 'firebase/auth';
 
 const firebaseConfig = {
@@ -39,6 +42,8 @@ try {
   database = getDatabase(app);
   auth = getAuth(app);
   googleProvider = new GoogleAuthProvider();
+  // Default to session-only persistence — credentials are NOT stored unless "Remember me" is checked
+  setPersistence(auth, browserSessionPersistence).catch(() => {});
   console.log('Firebase initialized successfully');
 } catch (error) {
   console.error('Failed to initialize Firebase:', error);
@@ -65,7 +70,10 @@ export {
   sendPasswordResetEmail,
   fetchSignInMethodsForEmail,
   linkWithCredential,
-  onDisconnect
+  onDisconnect,
+  setPersistence,
+  browserLocalPersistence,
+  browserSessionPersistence,
 };
 export type { DatabaseReference, FirebaseUser, OAuthCredential, AuthCredential };
 export const isFirebaseReady = () => database !== null && auth !== null;
