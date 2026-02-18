@@ -119,13 +119,13 @@ serve(async (req) => {
 
     if (action === 'feedbacks') {
       const page = parseInt(url.searchParams.get('page') || '0');
-      const limit = 20;
+      const pageSize = parseInt(url.searchParams.get('pageSize') || '10');
 
       const { data: feedbacks, error } = await supabase
         .from('feedback')
         .select('*')
         .order('created_at', { ascending: false })
-        .range(page * limit, (page + 1) * limit - 1);
+        .range(page * pageSize, (page + 1) * pageSize - 1);
 
       if (error) {
         return new Response(JSON.stringify({ error: 'Database error' }), {
@@ -151,6 +151,58 @@ serve(async (req) => {
         total: count || 0,
         avgRating: Math.round(avgRating * 10) / 10,
         page,
+      }), {
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (action === 'feedback-stats') {
+      // Fetch all feedbacks for stats computation
+      const { data: allFeedbacks, error } = await supabase
+        .from('feedback')
+        .select('id, rating, created_at')
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        return new Response(JSON.stringify({ error: 'Database error' }), {
+          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const feedbacks = allFeedbacks || [];
+      const total = feedbacks.length;
+      const avgRating = total > 0
+        ? Math.round((feedbacks.reduce((sum: number, f: any) => sum + f.rating, 0) / total) * 10) / 10
+        : 0;
+
+      // Distribution
+      const distribution: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+      for (const f of feedbacks) {
+        distribution[f.rating] = (distribution[f.rating] || 0) + 1;
+      }
+
+      // Build time-series data (group by day)
+      const dailyMap: Record<string, { count: number; totalRating: number }> = {};
+      for (const f of feedbacks) {
+        const day = f.created_at.substring(0, 10); // YYYY-MM-DD
+        if (!dailyMap[day]) dailyMap[day] = { count: 0, totalRating: 0 };
+        dailyMap[day].count++;
+        dailyMap[day].totalRating += f.rating;
+      }
+
+      const timeSeries = Object.entries(dailyMap)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([date, { count, totalRating }]) => ({
+          date,
+          count,
+          avgRating: Math.round((totalRating / count) * 10) / 10,
+        }));
+
+      return new Response(JSON.stringify({
+        total,
+        avgRating,
+        distribution,
+        timeSeries,
       }), {
         status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });

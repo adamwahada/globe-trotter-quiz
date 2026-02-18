@@ -1,8 +1,16 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Star, ChevronLeft, ChevronRight, RefreshCw, Copy, Check, Search, X, History, MessageSquare } from 'lucide-react';
+import {
+  Star, ChevronLeft, ChevronRight, RefreshCw, Copy, Check, Search, X,
+  History, MessageSquare, BarChart2, List, ChevronDown, TrendingUp,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getFirebaseIdToken } from '@/utils/firebaseToken';
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  BarChart, Bar, Legend,
+} from 'recharts';
 
+// ─── Types ────────────────────────────────────────────────────────────────────
 interface Feedback {
   id: string;
   rating: number;
@@ -20,14 +28,50 @@ interface FeedbackResponse {
   page: number;
 }
 
-type DateFilter = 'all' | 'day' | '3days' | 'week';
+interface StatsData {
+  total: number;
+  avgRating: number;
+  distribution: Record<number, number>;
+  timeSeries: { date: string; count: number; avgRating: number }[];
+}
+
 type RatingFilter = 'good' | 'average' | 'bad';
 
-// ─── Comment Modal ───────────────────────────────────────────────────────────
+const SUPABASE_FN = 'https://dzzeaesctendsggfdxra.supabase.co/functions/v1/admin-dashboard';
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+const StarRow: React.FC<{ rating: number; size?: string }> = ({ rating, size = 'h-4 w-4' }) => (
+  <div className="flex gap-0.5">
+    {[1, 2, 3, 4, 5].map((s) => (
+      <Star key={s} className={`${size} ${s <= rating ? 'text-warning fill-warning' : 'text-muted-foreground/30'}`} />
+    ))}
+  </div>
+);
+
+const CopyButton: React.FC<{ text: string }> = ({ text }) => {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+  return (
+    <button
+      onClick={handleCopy}
+      className="ml-1 p-1 rounded hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground flex-shrink-0"
+      title="Copy email"
+    >
+      {copied ? <Check className="h-3.5 w-3.5 text-primary" /> : <Copy className="h-3.5 w-3.5" />}
+    </button>
+  );
+};
+
+// ─── Comment Modal ─────────────────────────────────────────────────────────────
 const CommentModal: React.FC<{ comment: string; onClose: () => void }> = ({ comment, onClose }) => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center">
+  <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
     <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={onClose} />
-    <div className="relative bg-card border border-border rounded-2xl shadow-2xl max-w-lg w-full mx-4 p-6">
+    <div className="relative bg-card border border-border rounded-2xl shadow-2xl max-w-lg w-full p-6 max-h-[80vh] flex flex-col">
       <button onClick={onClose} className="absolute top-4 right-4 p-1 rounded-full hover:bg-secondary transition-colors">
         <X className="h-5 w-5 text-muted-foreground" />
       </button>
@@ -35,12 +79,14 @@ const CommentModal: React.FC<{ comment: string; onClose: () => void }> = ({ comm
         <MessageSquare className="h-5 w-5 text-primary" />
         <h3 className="font-display text-lg text-foreground">Full Comment</h3>
       </div>
-      <p className="text-foreground whitespace-pre-wrap leading-relaxed">{comment}</p>
+      <div className="overflow-y-auto flex-1">
+        <p className="text-foreground whitespace-pre-wrap leading-relaxed break-words">{comment}</p>
+      </div>
     </div>
   </div>
 );
 
-// ─── User History Modal ──────────────────────────────────────────────────────
+// ─── User History Modal ────────────────────────────────────────────────────────
 const UserHistoryModal: React.FC<{
   userId: string;
   username: string | null;
@@ -49,6 +95,7 @@ const UserHistoryModal: React.FC<{
 }> = ({ userId, username, email, onClose }) => {
   const [history, setHistory] = useState<Feedback[]>([]);
   const [loading, setLoading] = useState(true);
+  const [openComment, setOpenComment] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -56,7 +103,7 @@ const UserHistoryModal: React.FC<{
         const token = await getFirebaseIdToken();
         if (!token) return;
         const res = await fetch(
-          `https://dzzeaesctendsggfdxra.supabase.co/functions/v1/admin-dashboard?action=user-feedback-history&user_id=${encodeURIComponent(userId)}`,
+          `${SUPABASE_FN}?action=user-feedback-history&user_id=${encodeURIComponent(userId)}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         if (res.ok) {
@@ -72,85 +119,290 @@ const UserHistoryModal: React.FC<{
   }, [userId]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-card border border-border rounded-2xl shadow-2xl max-w-2xl w-full mx-4 p-6 max-h-[80vh] flex flex-col">
-        <button onClick={onClose} className="absolute top-4 right-4 p-1 rounded-full hover:bg-secondary transition-colors">
-          <X className="h-5 w-5 text-muted-foreground" />
-        </button>
-        <div className="flex items-center gap-2 mb-1">
-          <History className="h-5 w-5 text-primary" />
-          <h3 className="font-display text-lg text-foreground">Feedback history</h3>
-        </div>
-        <p className="text-muted-foreground text-sm mb-4">
-          {username || 'Anonymous'}{email ? ` · ${email}` : ''}
-        </p>
-        <div className="overflow-y-auto flex-1 space-y-3 pr-1">
-          {loading ? (
-            Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="h-16 bg-muted rounded-lg animate-pulse" />
-            ))
-          ) : history.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">No feedback history</p>
-          ) : (
-            history.map((fb) => (
-              <div key={fb.id} className="bg-muted/30 rounded-lg p-4 border border-border">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex gap-0.5">
-                    {[1, 2, 3, 4, 5].map((s) => (
-                      <Star key={s} className={`h-4 w-4 ${s <= fb.rating ? 'text-warning fill-warning' : 'text-muted-foreground/30'}`} />
-                    ))}
+    <>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={onClose} />
+        <div className="relative bg-card border border-border rounded-2xl shadow-2xl max-w-2xl w-full p-6 max-h-[80vh] flex flex-col">
+          <button onClick={onClose} className="absolute top-4 right-4 p-1 rounded-full hover:bg-secondary transition-colors">
+            <X className="h-5 w-5 text-muted-foreground" />
+          </button>
+          <div className="flex items-center gap-2 mb-1">
+            <History className="h-5 w-5 text-primary" />
+            <h3 className="font-display text-lg text-foreground">Feedback History</h3>
+          </div>
+          <p className="text-muted-foreground text-sm mb-4">
+            {username || 'Anonymous'}{email ? ` · ${email}` : ''}
+          </p>
+          <div className="overflow-y-auto flex-1 space-y-3 pr-1">
+            {loading ? (
+              Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="h-20 bg-muted rounded-lg animate-pulse" />
+              ))
+            ) : history.length === 0 ? (
+              <p className="text-muted-foreground text-center py-8">No feedback history</p>
+            ) : (
+              history.map((fb) => (
+                <div
+                  key={fb.id}
+                  className="bg-muted/30 rounded-lg p-4 border border-border cursor-pointer hover:border-primary/40 transition-colors"
+                  onClick={() => fb.comment && setOpenComment(fb.comment)}
+                  title={fb.comment ? 'Click to read full comment' : undefined}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <StarRow rating={fb.rating} />
+                    <span className="text-xs text-muted-foreground flex-shrink-0 ml-2">
+                      {new Date(fb.created_at).toLocaleDateString()} {new Date(fb.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
                   </div>
-                  <span className="text-xs text-muted-foreground">
-                    {new Date(fb.created_at).toLocaleDateString()} {new Date(fb.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </span>
+                  {fb.comment ? (
+                    <p className="text-sm text-foreground break-words whitespace-pre-wrap line-clamp-3">{fb.comment}</p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic">No comment</p>
+                  )}
+                  {fb.comment && fb.comment.length > 150 && (
+                    <p className="text-xs text-primary mt-1">Click to read full message</p>
+                  )}
                 </div>
-                {fb.comment ? (
-                  <p className="text-sm text-foreground">{fb.comment}</p>
-                ) : (
-                  <p className="text-sm text-muted-foreground italic">No comment</p>
-                )}
-              </div>
-            ))
-          )}
+              ))
+            )}
+          </div>
         </div>
+      </div>
+      {openComment && <CommentModal comment={openComment} onClose={() => setOpenComment(null)} />}
+    </>
+  );
+};
+
+// ─── Stats View ────────────────────────────────────────────────────────────────
+const StatsView: React.FC = () => {
+  const [stats, setStats] = useState<StatsData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [granularity, setGranularity] = useState<'day' | 'week'>('day');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+
+  const fetchStats = useCallback(async () => {
+    setLoading(true);
+    try {
+      const token = await getFirebaseIdToken();
+      if (!token) return;
+      const res = await fetch(`${SUPABASE_FN}?action=feedback-stats`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) setStats(await res.json());
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchStats(); }, [fetchStats]);
+
+  // Aggregate time series by granularity and date range
+  const chartData = useMemo(() => {
+    if (!stats) return [];
+    let series = [...stats.timeSeries];
+
+    // Date range filter
+    if (dateFrom) series = series.filter((d) => d.date >= dateFrom);
+    if (dateTo) series = series.filter((d) => d.date <= dateTo);
+
+    if (granularity === 'week') {
+      const weekMap: Record<string, { count: number; totalRating: number; entries: number }> = {};
+      for (const d of series) {
+        const dt = new Date(d.date);
+        const day = dt.getDay();
+        const monday = new Date(dt);
+        monday.setDate(dt.getDate() - ((day + 6) % 7));
+        const weekKey = monday.toISOString().substring(0, 10);
+        if (!weekMap[weekKey]) weekMap[weekKey] = { count: 0, totalRating: 0, entries: 0 };
+        weekMap[weekKey].count += d.count;
+        weekMap[weekKey].totalRating += d.avgRating * d.count;
+        weekMap[weekKey].entries += d.count;
+      }
+      return Object.entries(weekMap)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([date, { count, totalRating, entries }]) => ({
+          date: `W ${date}`,
+          count,
+          avgRating: entries > 0 ? Math.round((totalRating / entries) * 10) / 10 : 0,
+        }));
+    }
+
+    return series.map((d) => ({ ...d, date: d.date.substring(5) })); // MM-DD
+  }, [stats, granularity, dateFrom, dateTo]);
+
+  const filteredTotal = useMemo(() => chartData.reduce((s, d) => s + d.count, 0), [chartData]);
+  const filteredAvg = useMemo(() => {
+    if (!chartData.length) return 0;
+    const totalWeighted = chartData.reduce((s, d) => s + d.avgRating * d.count, 0);
+    const totalCount = chartData.reduce((s, d) => s + d.count, 0);
+    return totalCount > 0 ? Math.round((totalWeighted / totalCount) * 10) / 10 : 0;
+  }, [chartData]);
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="h-32 bg-muted rounded-xl animate-pulse" />
+        ))}
+      </div>
+    );
+  }
+
+  if (!stats) return <p className="text-muted-foreground">Failed to load stats.</p>;
+
+  const distData = [1, 2, 3, 4, 5].map((r) => ({
+    name: `${r}★`,
+    count: stats.distribution[r] || 0,
+  }));
+
+  return (
+    <div className="space-y-6">
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-card border border-border rounded-xl p-5">
+          <p className="text-xs text-muted-foreground mb-1">Total Reviews</p>
+          <p className="text-3xl font-display text-foreground">{stats.total}</p>
+          {dateFrom || dateTo ? (
+            <p className="text-xs text-primary mt-1">Filtered: {filteredTotal}</p>
+          ) : null}
+        </div>
+        <div className="bg-card border border-border rounded-xl p-5 flex flex-col gap-1">
+          <p className="text-xs text-muted-foreground">Avg Rating</p>
+          <p className="text-3xl font-display text-foreground">{stats.avgRating}</p>
+          <StarRow rating={Math.round(stats.avgRating)} size="h-3.5 w-3.5" />
+          {(dateFrom || dateTo) && filteredAvg !== stats.avgRating ? (
+            <p className="text-xs text-primary">Filtered: {filteredAvg}</p>
+          ) : null}
+        </div>
+        <div className="bg-card border border-border rounded-xl p-5">
+          <p className="text-xs text-muted-foreground mb-1">5★ Reviews</p>
+          <p className="text-3xl font-display text-foreground">{stats.distribution[5] || 0}</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            {stats.total > 0 ? Math.round(((stats.distribution[5] || 0) / stats.total) * 100) : 0}% of total
+          </p>
+        </div>
+        <div className="bg-card border border-border rounded-xl p-5">
+          <p className="text-xs text-muted-foreground mb-1">Poor Reviews (≤2★)</p>
+          <p className="text-3xl font-display text-foreground text-destructive">
+            {(stats.distribution[1] || 0) + (stats.distribution[2] || 0)}
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            {stats.total > 0 ? Math.round((((stats.distribution[1] || 0) + (stats.distribution[2] || 0)) / stats.total) * 100) : 0}% of total
+          </p>
+        </div>
+      </div>
+
+      {/* Rating Distribution */}
+      <div className="bg-card border border-border rounded-xl p-5">
+        <h3 className="font-display text-foreground mb-4 flex items-center gap-2">
+          <BarChart2 className="h-4 w-4 text-primary" />
+          Rating Distribution
+        </h3>
+        <ResponsiveContainer width="100%" height={160}>
+          <BarChart data={distData} barSize={36}>
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+            <XAxis dataKey="name" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} />
+            <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} allowDecimals={false} />
+            <Tooltip
+              contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8 }}
+              labelStyle={{ color: 'hsl(var(--foreground))' }}
+            />
+            <Bar dataKey="count" name="Reviews" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Time Series Chart */}
+      <div className="bg-card border border-border rounded-xl p-5">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+          <h3 className="font-display text-foreground flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-primary" />
+            Evolution Over Time
+          </h3>
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* Date Range */}
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="bg-secondary border border-border rounded-lg px-2 py-1 text-xs text-foreground focus:outline-none focus:border-primary"
+              />
+              <span className="text-xs text-muted-foreground">→</span>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="bg-secondary border border-border rounded-lg px-2 py-1 text-xs text-foreground focus:outline-none focus:border-primary"
+              />
+              {(dateFrom || dateTo) && (
+                <button onClick={() => { setDateFrom(''); setDateTo(''); }} className="text-muted-foreground hover:text-foreground">
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+            {/* Granularity */}
+            <div className="flex rounded-lg border border-border overflow-hidden">
+              {(['day', 'week'] as const).map((g) => (
+                <button
+                  key={g}
+                  onClick={() => setGranularity(g)}
+                  className={`px-3 py-1 text-xs transition-colors capitalize ${granularity === g ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'}`}
+                >
+                  {g}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {chartData.length === 0 ? (
+          <p className="text-muted-foreground text-center py-8 text-sm">No data for the selected period.</p>
+        ) : (
+          <ResponsiveContainer width="100%" height={240}>
+            <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <XAxis dataKey="date" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} interval="preserveStartEnd" />
+              <YAxis yAxisId="left" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} allowDecimals={false} />
+              <YAxis yAxisId="right" orientation="right" domain={[0, 5]} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} />
+              <Tooltip
+                contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8 }}
+                labelStyle={{ color: 'hsl(var(--foreground))' }}
+              />
+              <Legend wrapperStyle={{ color: 'hsl(var(--muted-foreground))', fontSize: 12 }} />
+              <Line yAxisId="left" type="monotone" dataKey="count" name="Reviews" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+              <Line yAxisId="right" type="monotone" dataKey="avgRating" name="Avg Rating" stroke="hsl(var(--warning))" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        )}
+      </div>
+
+      <div className="flex justify-end">
+        <Button variant="outline" size="sm" onClick={fetchStats} className="gap-2">
+          <RefreshCw className="h-4 w-4" />
+          Refresh Stats
+        </Button>
       </div>
     </div>
   );
 };
 
-// ─── Copy Button ─────────────────────────────────────────────────────────────
-const CopyButton: React.FC<{ text: string }> = ({ text }) => {
-  const [copied, setCopied] = useState(false);
-  const handleCopy = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    await navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
-  return (
-    <button
-      onClick={handleCopy}
-      className="ml-1 p-1 rounded hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"
-      title="Copy email"
-    >
-      {copied ? <Check className="h-3.5 w-3.5 text-primary" /> : <Copy className="h-3.5 w-3.5" />}
-    </button>
-  );
-};
-
-// ─── Main Page ───────────────────────────────────────────────────────────────
-export const AdminFeedback: React.FC = () => {
+// ─── Table View ───────────────────────────────────────────────────────────────
+const TableView: React.FC = () => {
   const [allFeedbacks, setAllFeedbacks] = useState<Feedback[]>([]);
   const [total, setTotal] = useState(0);
-  const [avgRating, setAvgRating] = useState(0);
   const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
   const [loading, setLoading] = useState(true);
 
-  // Filters
-  const [dateFilter, setDateFilter] = useState<DateFilter>('all');
+  // Filters (client-side on current page)
   const [ratingFilters, setRatingFilters] = useState<Set<RatingFilter>>(new Set());
   const [search, setSearch] = useState('');
+  const [dateFilter, setDateFilter] = useState<'all' | 'day' | '3days' | 'week'>('all');
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   // Selection
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -159,20 +411,19 @@ export const AdminFeedback: React.FC = () => {
   const [commentModal, setCommentModal] = useState<string | null>(null);
   const [historyModal, setHistoryModal] = useState<Feedback | null>(null);
 
-  const fetchFeedbacks = useCallback(async (p: number) => {
+  const fetchFeedbacks = useCallback(async (p: number, ps: number) => {
     setLoading(true);
     try {
       const token = await getFirebaseIdToken();
       if (!token) return;
       const res = await fetch(
-        `https://dzzeaesctendsggfdxra.supabase.co/functions/v1/admin-dashboard?action=feedbacks&page=${p}`,
+        `${SUPABASE_FN}?action=feedbacks&page=${p}&pageSize=${ps}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       if (res.ok) {
         const data: FeedbackResponse = await res.json();
         setAllFeedbacks(data.feedbacks);
         setTotal(data.total);
-        setAvgRating(data.avgRating);
       }
     } catch (err) {
       console.error('Failed to fetch feedbacks:', err);
@@ -181,20 +432,18 @@ export const AdminFeedback: React.FC = () => {
     }
   }, []);
 
-  useEffect(() => { fetchFeedbacks(page); }, [page, fetchFeedbacks]);
+  useEffect(() => { fetchFeedbacks(page, pageSize); }, [page, pageSize, fetchFeedbacks]);
 
-  // ── Client-side filtering ──────────────────────────────────────────────────
+  // Reset page when pageSize changes
+  const handlePageSizeChange = (ps: number) => { setPageSize(ps); setPage(0); };
+
+  // Client-side filtering
   const filtered = useMemo(() => {
     let list = [...allFeedbacks];
-
-    // Date filter
     if (dateFilter !== 'all') {
-      const now = Date.now();
       const ms = dateFilter === 'day' ? 86400000 : dateFilter === '3days' ? 259200000 : 604800000;
-      list = list.filter((fb) => now - new Date(fb.created_at).getTime() <= ms);
+      list = list.filter((fb) => Date.now() - new Date(fb.created_at).getTime() <= ms);
     }
-
-    // Rating filter
     if (ratingFilters.size > 0) {
       list = list.filter((fb) => {
         if (ratingFilters.has('good') && fb.rating >= 4) return true;
@@ -203,158 +452,152 @@ export const AdminFeedback: React.FC = () => {
         return false;
       });
     }
-
-    // Search
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       list = list.filter(
-        (fb) =>
-          (fb.username || '').toLowerCase().includes(q) ||
-          (fb.email || '').toLowerCase().includes(q)
+        (fb) => (fb.username || '').toLowerCase().includes(q) || (fb.email || '').toLowerCase().includes(q)
       );
     }
-
     return list;
   }, [allFeedbacks, dateFilter, ratingFilters, search]);
 
-  const totalPages = Math.ceil(total / 20);
-
-  // ── Selection helpers ──────────────────────────────────────────────────────
-  const allFilteredSelected = filtered.length > 0 && filtered.every((fb) => selected.has(fb.id));
-  const toggleAll = () => {
-    if (allFilteredSelected) {
-      setSelected((prev) => { const n = new Set(prev); filtered.forEach((fb) => n.delete(fb.id)); return n; });
-    } else {
-      setSelected((prev) => { const n = new Set(prev); filtered.forEach((fb) => n.add(fb.id)); return n; });
-    }
-  };
-  const toggleOne = (id: string) => {
-    setSelected((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
-  };
-
-  // ── Filter pills ───────────────────────────────────────────────────────────
-  const toggleRating = (r: RatingFilter) => {
-    setRatingFilters((prev) => { const n = new Set(prev); n.has(r) ? n.delete(r) : n.add(r); return n; });
-  };
-
+  const totalPages = Math.ceil(total / pageSize);
   const activeFilterCount = (dateFilter !== 'all' ? 1 : 0) + ratingFilters.size + (search ? 1 : 0);
 
-  const DATE_LABELS: { key: DateFilter; label: string }[] = [
-    { key: 'all', label: 'All time' },
-    { key: 'day', label: 'Last 24h' },
-    { key: '3days', label: 'Last 3 days' },
-    { key: 'week', label: 'Last week' },
+  // Selection
+  const allFilteredSelected = filtered.length > 0 && filtered.every((fb) => selected.has(fb.id));
+  const toggleAll = () => {
+    setSelected((prev) => {
+      const n = new Set(prev);
+      allFilteredSelected ? filtered.forEach((fb) => n.delete(fb.id)) : filtered.forEach((fb) => n.add(fb.id));
+      return n;
+    });
+  };
+  const toggleOne = (id: string) => setSelected((prev) => {
+    const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n;
+  });
+
+  const toggleRating = (r: RatingFilter) => setRatingFilters((prev) => {
+    const n = new Set(prev); n.has(r) ? n.delete(r) : n.add(r); return n;
+  });
+
+  const clearFilters = () => { setDateFilter('all'); setRatingFilters(new Set()); setSearch(''); };
+
+  const DATE_OPTIONS = [
+    { key: 'all' as const, label: 'All time' },
+    { key: 'day' as const, label: 'Last 24h' },
+    { key: '3days' as const, label: 'Last 3 days' },
+    { key: 'week' as const, label: 'Last week' },
   ];
-  const RATING_LABELS: { key: RatingFilter; label: string; color: string }[] = [
-    { key: 'good', label: '⭐ Good (4-5)', color: 'text-emerald-400 border-emerald-400/50 bg-emerald-400/10' },
-    { key: 'average', label: '⭐ Average (3)', color: 'text-yellow-400 border-yellow-400/50 bg-yellow-400/10' },
-    { key: 'bad', label: '⭐ Bad (1-2)', color: 'text-red-400 border-red-400/50 bg-red-400/10' },
+  const RATING_OPTIONS: { key: RatingFilter; label: string }[] = [
+    { key: 'good', label: '⭐ Good (4-5★)' },
+    { key: 'average', label: '⭐ Average (3★)' },
+    { key: 'bad', label: '⭐ Bad (1-2★)' },
   ];
 
   return (
-    <div>
-      {/* Header */}
-      <div className="flex items-start justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-display text-foreground">Feedback</h1>
-          <p className="text-muted-foreground mt-1">User reviews and ratings</p>
-        </div>
-        <Button variant="outline" size="sm" onClick={() => fetchFeedbacks(page)} disabled={loading} className="gap-2 mt-1">
-          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
-      </div>
-
-      {/* Stats */}
-      <div className="flex gap-4 mb-6">
-        <div className="bg-card rounded-xl border border-border px-5 py-4 flex items-center gap-3">
-          <Star className="h-5 w-5 text-warning fill-warning" />
-          <div>
-            <p className="text-2xl font-display text-foreground">{avgRating}</p>
-            <p className="text-xs text-muted-foreground">Avg Rating</p>
+    <div className="space-y-4">
+      {/* Filter Panel */}
+      <div className="bg-card border border-border rounded-xl overflow-hidden">
+        <button
+          onClick={() => setFiltersOpen((v) => !v)}
+          className="w-full flex items-center justify-between px-5 py-3 hover:bg-muted/20 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <Search className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium text-foreground">Filters & Search</span>
+            {activeFilterCount > 0 && (
+              <span className="bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full">
+                {activeFilterCount}
+              </span>
+            )}
           </div>
-        </div>
-        <div className="bg-card rounded-xl border border-border px-5 py-4">
-          <p className="text-2xl font-display text-foreground">{total}</p>
-          <p className="text-xs text-muted-foreground">Total Reviews</p>
-        </div>
-        {selected.size > 0 && (
-          <div className="bg-primary/10 border border-primary/30 rounded-xl px-5 py-4 flex items-center gap-2">
-            <p className="text-sm font-medium text-primary">{selected.size} selected</p>
-            <button onClick={() => setSelected(new Set())} className="text-muted-foreground hover:text-foreground ml-2">
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        )}
-      </div>
+          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${filtersOpen ? 'rotate-180' : ''}`} />
+        </button>
 
-      {/* Filter Section */}
-      <div className="bg-card rounded-xl border border-border p-4 mb-4 space-y-3">
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by username or email…"
-            className="w-full pl-9 pr-4 py-2 bg-secondary border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-          />
-          {search && (
-            <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-              <X className="h-4 w-4" />
-            </button>
-          )}
-        </div>
+        {filtersOpen && (
+          <div className="px-5 pb-5 pt-2 border-t border-border space-y-4">
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by username or email…"
+                className="w-full pl-9 pr-9 py-2 bg-secondary border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+              />
+              {search && (
+                <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
 
-        {/* Date pills */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs text-muted-foreground font-medium mr-1">Date:</span>
-          {DATE_LABELS.map(({ key, label }) => (
-            <button
-              key={key}
-              onClick={() => setDateFilter(key)}
-              className={`px-3 py-1 rounded-full text-xs border transition-all ${
-                dateFilter === key
-                  ? 'bg-primary text-primary-foreground border-primary'
-                  : 'border-border text-muted-foreground hover:border-primary/50 hover:text-foreground'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Date filter */}
+              <div>
+                <label className="text-xs text-muted-foreground font-medium block mb-1.5">Date range</label>
+                <div className="relative">
+                  <select
+                    value={dateFilter}
+                    onChange={(e) => setDateFilter(e.target.value as any)}
+                    className="w-full appearance-none bg-secondary border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary pr-8"
+                  >
+                    {DATE_OPTIONS.map((o) => (
+                      <option key={o.key} value={o.key}>{o.label}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                </div>
+              </div>
 
-        {/* Rating pills */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs text-muted-foreground font-medium mr-1">Rating:</span>
-          {RATING_LABELS.map(({ key, label, color }) => (
-            <button
-              key={key}
-              onClick={() => toggleRating(key)}
-              className={`px-3 py-1 rounded-full text-xs border transition-all ${
-                ratingFilters.has(key) ? color : 'border-border text-muted-foreground hover:border-primary/50 hover:text-foreground'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+              {/* Rating filter */}
+              <div>
+                <label className="text-xs text-muted-foreground font-medium block mb-1.5">Rating</label>
+                <div className="flex flex-wrap gap-2">
+                  {RATING_OPTIONS.map(({ key, label }) => (
+                    <button
+                      key={key}
+                      onClick={() => toggleRating(key)}
+                      className={`px-3 py-1.5 rounded-lg text-xs border transition-all ${
+                        ratingFilters.has(key)
+                          ? key === 'good'
+                            ? 'bg-emerald-400/10 text-emerald-400 border-emerald-400/50'
+                            : key === 'average'
+                            ? 'bg-yellow-400/10 text-yellow-400 border-yellow-400/50'
+                            : 'bg-destructive/10 text-destructive border-destructive/50'
+                          : 'border-border text-muted-foreground hover:border-primary/50 hover:text-foreground'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
 
-        {/* Active filter summary */}
-        {activeFilterCount > 0 && (
-          <div className="flex items-center gap-2 pt-1">
-            <span className="text-xs text-primary font-medium">{activeFilterCount} filter{activeFilterCount > 1 ? 's' : ''} active</span>
-            <button
-              onClick={() => { setDateFilter('all'); setRatingFilters(new Set()); setSearch(''); }}
-              className="text-xs text-muted-foreground hover:text-foreground underline"
-            >
-              Clear all
-            </button>
-            <span className="text-xs text-muted-foreground ml-auto">{filtered.length} result{filtered.length !== 1 ? 's' : ''}</span>
+            {activeFilterCount > 0 && (
+              <div className="flex items-center justify-between pt-1">
+                <span className="text-xs text-primary">{filtered.length} result{filtered.length !== 1 ? 's' : ''} on this page</span>
+                <button onClick={clearFilters} className="text-xs text-muted-foreground hover:text-foreground underline">
+                  Clear all filters
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
+
+      {/* Selection bar */}
+      {selected.size > 0 && (
+        <div className="bg-primary/10 border border-primary/30 rounded-xl px-5 py-3 flex items-center gap-3">
+          <p className="text-sm font-medium text-primary">{selected.size} selected</p>
+          <button onClick={() => setSelected(new Set())} className="text-muted-foreground hover:text-foreground ml-auto">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       {/* Table */}
       <div className="bg-card rounded-xl border border-border overflow-hidden">
@@ -379,7 +622,7 @@ export const AdminFeedback: React.FC = () => {
             </thead>
             <tbody>
               {loading ? (
-                Array.from({ length: 5 }).map((_, i) => (
+                Array.from({ length: pageSize }).map((_, i) => (
                   <tr key={i} className="border-b border-border">
                     {Array.from({ length: 6 }).map((__, j) => (
                       <td key={j} className="px-4 py-4"><div className="h-4 bg-muted rounded animate-pulse" /></td>
@@ -396,9 +639,10 @@ export const AdminFeedback: React.FC = () => {
                 filtered.map((fb) => (
                   <tr
                     key={fb.id}
-                    className={`border-b border-border transition-colors hover:bg-muted/10 ${selected.has(fb.id) ? 'bg-primary/5' : ''}`}
+                    onClick={() => setHistoryModal(fb)}
+                    className={`border-b border-border transition-colors hover:bg-muted/10 cursor-pointer ${selected.has(fb.id) ? 'bg-primary/5' : ''}`}
                   >
-                    <td className="px-4 py-4">
+                    <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
                       <input
                         type="checkbox"
                         checked={selected.has(fb.id)}
@@ -407,16 +651,12 @@ export const AdminFeedback: React.FC = () => {
                       />
                     </td>
                     <td className="px-4 py-4 text-sm text-foreground font-medium">
-                      <button
-                        onClick={() => setHistoryModal(fb)}
-                        className="hover:text-primary hover:underline flex items-center gap-1 transition-colors"
-                        title="View feedback history"
-                      >
+                      <div className="flex items-center gap-1 text-primary hover:underline">
                         {fb.username || 'Anonymous'}
                         <History className="h-3.5 w-3.5 opacity-50" />
-                      </button>
+                      </div>
                     </td>
-                    <td className="px-4 py-4 text-sm text-muted-foreground">
+                    <td className="px-4 py-4 text-sm text-muted-foreground" onClick={(e) => e.stopPropagation()}>
                       {fb.email ? (
                         <div className="flex items-center">
                           <span className="font-mono text-xs">{fb.email}</span>
@@ -427,23 +667,15 @@ export const AdminFeedback: React.FC = () => {
                       )}
                     </td>
                     <td className="px-4 py-4">
-                      <div className="flex gap-0.5">
-                        {[1, 2, 3, 4, 5].map((s) => (
-                          <Star key={s} className={`h-4 w-4 ${s <= fb.rating ? 'text-warning fill-warning' : 'text-muted-foreground/30'}`} />
-                        ))}
-                      </div>
+                      <StarRow rating={fb.rating} />
                     </td>
-                    <td className="px-4 py-4 text-sm text-foreground max-w-xs">
+                    <td className="px-4 py-4 text-sm text-foreground max-w-xs" onClick={(e) => { e.stopPropagation(); if (fb.comment) setCommentModal(fb.comment); }}>
                       {fb.comment ? (
-                        <button
-                          onClick={() => setCommentModal(fb.comment!)}
-                          className="truncate max-w-[240px] block text-left hover:text-primary transition-colors"
-                          title="Click to read full comment"
-                        >
+                        <span className="truncate max-w-[200px] block text-left hover:text-primary transition-colors cursor-pointer" title="Click to read full comment">
                           {fb.comment}
-                        </button>
+                        </span>
                       ) : (
-                        <span className="text-muted-foreground italic">No comment</span>
+                        <span className="text-muted-foreground italic text-xs">No comment</span>
                       )}
                     </td>
                     <td className="px-4 py-4 text-sm text-muted-foreground whitespace-nowrap">
@@ -460,25 +692,46 @@ export const AdminFeedback: React.FC = () => {
         </div>
 
         {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between px-6 py-4 border-t border-border">
-            <p className="text-sm text-muted-foreground">Page {page + 1} of {totalPages}</p>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}>
+        <div className="flex items-center justify-between px-5 py-4 border-t border-border flex-wrap gap-3">
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-muted-foreground">Rows per page:</span>
+            <div className="relative">
+              <select
+                value={pageSize}
+                onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                className="appearance-none bg-secondary border border-border rounded-lg px-3 py-1 text-sm text-foreground focus:outline-none focus:border-primary pr-7"
+              >
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+              </select>
+              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <p className="text-sm text-muted-foreground">
+              Page <span className="font-medium text-foreground">{page + 1}</span> of <span className="font-medium text-foreground">{Math.max(1, totalPages)}</span>
+              <span className="ml-2 opacity-60">({total} total)</span>
+            </p>
+            <div className="flex gap-1">
+              <Button variant="outline" size="sm" onClick={() => setPage(0)} disabled={page === 0} className="px-2">
+                <ChevronLeft className="h-3.5 w-3.5" /><ChevronLeft className="h-3.5 w-3.5 -ml-2" />
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1}>
+              <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1}>
                 <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setPage(totalPages - 1)} disabled={page >= totalPages - 1} className="px-2">
+                <ChevronRight className="h-3.5 w-3.5" /><ChevronRight className="h-3.5 w-3.5 -ml-2" />
               </Button>
             </div>
           </div>
-        )}
+        </div>
       </div>
 
-      {/* Comment Modal */}
+      {/* Modals */}
       {commentModal && <CommentModal comment={commentModal} onClose={() => setCommentModal(null)} />}
-
-      {/* User History Modal */}
       {historyModal && (
         <UserHistoryModal
           userId={historyModal.user_id}
@@ -487,6 +740,51 @@ export const AdminFeedback: React.FC = () => {
           onClose={() => setHistoryModal(null)}
         />
       )}
+    </div>
+  );
+};
+
+// ─── Main Page ─────────────────────────────────────────────────────────────────
+export const AdminFeedback: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<'table' | 'stats'>('table');
+
+  return (
+    <div>
+      {/* Header */}
+      <div className="flex items-start justify-between mb-6">
+        <div>
+          <h1 className="text-3xl font-display text-foreground">Feedback</h1>
+          <p className="text-muted-foreground mt-1">User reviews and ratings</p>
+        </div>
+      </div>
+
+      {/* Tab Navigation */}
+      <div className="flex gap-1 bg-muted/30 border border-border rounded-xl p-1 mb-6 w-fit">
+        <button
+          onClick={() => setActiveTab('table')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            activeTab === 'table'
+              ? 'bg-card shadow text-foreground border border-border'
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          <List className="h-4 w-4" />
+          Reviews Table
+        </button>
+        <button
+          onClick={() => setActiveTab('stats')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            activeTab === 'stats'
+              ? 'bg-card shadow text-foreground border border-border'
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          <BarChart2 className="h-4 w-4" />
+          Statistics
+        </button>
+      </div>
+
+      {activeTab === 'table' ? <TableView /> : <StatsView />}
     </div>
   );
 };
