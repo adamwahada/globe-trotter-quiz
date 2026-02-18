@@ -36,6 +36,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isSendingReset, setIsSendingReset] = useState(false);
+  // When email/password fails and the account might be Google-only, show inline prompt
+  const [showSetPasswordPrompt, setShowSetPasswordPrompt] = useState(false);
 
   // Stored Google credential pending account linking
   const pendingGoogleCredential = useRef<AuthCredential | null>(null);
@@ -49,6 +52,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
       setConfirmPassword('');
       setShowPassword(false);
       setShowConfirmPassword(false);
+      setShowSetPasswordPrompt(false);
       pendingGoogleCredential.current = null;
     }
   }, [isOpen, initialMode]);
@@ -151,7 +155,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
         code === 'auth/wrong-password' ||
         code === 'auth/user-not-found'
       ) {
-        addToast('error', 'Incorrect email or password. If you signed up with Google, use the button below.');
+        // Show an inline prompt — the account might be Google-only (no password set yet)
+        setShowSetPasswordPrompt(true);
       } else if (code === 'auth/invalid-email') {
         addToast('error', 'Invalid email address');
       } else if (code === 'auth/weak-password') {
@@ -386,6 +391,49 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
             <Button type="submit" variant="netflix" className="w-full py-6" disabled={isLoading}>
               {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : (mode === 'signin' ? t('signIn') : t('signUp'))}
             </Button>
+
+            {/* Inline prompt shown when email/password fails — may be a Google-only account */}
+            {showSetPasswordPrompt && mode === 'signin' && (
+              <div className="flex flex-col gap-3 p-4 rounded-lg bg-primary/10 border border-primary/20 text-sm">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                  <p className="text-foreground/80 leading-snug">
+                    <strong>Sign-in failed.</strong> If you registered with Google and haven't set a password yet, we can send you a link to set one — then you can use both methods.
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1 h-9 text-xs"
+                    onClick={() => setShowSetPasswordPrompt(false)}
+                  >
+                    Dismiss
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="netflix"
+                    className="flex-1 h-9 text-xs"
+                    disabled={isSendingReset || !email}
+                    onClick={async () => {
+                      if (!auth || !email) return;
+                      setIsSendingReset(true);
+                      try {
+                        await sendPasswordResetEmail(auth, email);
+                        addToast('success', 'Password setup email sent! Check your inbox, then come back to sign in with your email.');
+                        setShowSetPasswordPrompt(false);
+                      } catch (err: any) {
+                        addToast('error', err?.message || 'Failed to send email.');
+                      } finally {
+                        setIsSendingReset(false);
+                      }
+                    }}
+                  >
+                    {isSendingReset ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Send password setup email'}
+                  </Button>
+                </div>
+              </div>
+            )}
 
             {/* Divider */}
             <div className="flex items-center gap-4 my-4">
