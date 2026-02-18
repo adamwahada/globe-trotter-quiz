@@ -15,20 +15,21 @@ export const AdminProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    const checkAdmin = async () => {
+      try {
         const token = await getFirebaseIdToken();
-        if (!token) { 
-          setIsAdmin(false); 
-          setIsLoading(false); 
-          return; 
+        if (!token) {
+          setIsAdmin(false);
+          setIsLoading(false);
+          return;
         }
-        
+
         const res = await fetch(`/functions/v1/admin-check-role`, {
-          headers: { 
-            'Authorization': `Bearer ${token}`, 
-            'Content-Type': 'application/json' 
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
           },
         });
-
 
         if (res.ok) {
           const data = await res.json();
