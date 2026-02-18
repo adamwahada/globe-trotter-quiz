@@ -1,13 +1,12 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Star, ChevronLeft, ChevronRight, RefreshCw, Copy, Check, Search, X,
-  History, MessageSquare, BarChart2, List, ChevronDown, TrendingUp,
+  History, MessageSquare, BarChart2, List, ChevronDown, TrendingUp, Mail,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getFirebaseIdToken } from '@/utils/firebaseToken';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  BarChart, Bar, Legend,
 } from 'recharts';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -64,6 +63,68 @@ const CopyButton: React.FC<{ text: string }> = ({ text }) => {
     >
       {copied ? <Check className="h-3.5 w-3.5 text-primary" /> : <Copy className="h-3.5 w-3.5" />}
     </button>
+  );
+};
+
+// ─── Email Compose Modal ───────────────────────────────────────────────────────
+const EmailComposeModal: React.FC<{
+  emails: string[];
+  onClose: () => void;
+}> = ({ emails, onClose }) => {
+  const [copied, setCopied] = useState(false);
+  const emailList = emails.join(', ');
+  const mailtoLink = `mailto:${emails.join(',')}`;
+
+  const handleCopyAll = async () => {
+    await navigator.clipboard.writeText(emailList);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1800);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-card border border-border rounded-2xl shadow-2xl max-w-lg w-full p-6 flex flex-col gap-5">
+        <button onClick={onClose} className="absolute top-4 right-4 p-1 rounded-full hover:bg-secondary transition-colors">
+          <X className="h-5 w-5 text-muted-foreground" />
+        </button>
+        <div className="flex items-center gap-2">
+          <Mail className="h-5 w-5 text-primary" />
+          <h3 className="font-display text-lg text-foreground">Send Email</h3>
+          <span className="ml-auto text-xs text-muted-foreground">{emails.length} recipient{emails.length !== 1 ? 's' : ''}</span>
+        </div>
+
+        {/* Recipients list */}
+        <div className="bg-secondary/60 rounded-xl p-3 max-h-40 overflow-y-auto space-y-1.5">
+          {emails.map((email) => (
+            <div key={email} className="flex items-center justify-between gap-2">
+              <span className="text-sm font-mono text-foreground truncate">{email}</span>
+              <CopyButton text={email} />
+            </div>
+          ))}
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <a
+            href={mailtoLink}
+            className="flex items-center justify-center gap-2 bg-primary text-primary-foreground rounded-xl px-4 py-2.5 text-sm font-medium hover:opacity-90 transition-opacity"
+          >
+            <Mail className="h-4 w-4" />
+            Open in Mail App
+          </a>
+          <button
+            onClick={handleCopyAll}
+            className="flex items-center justify-center gap-2 bg-secondary text-foreground rounded-xl px-4 py-2.5 text-sm font-medium hover:bg-muted transition-colors border border-border"
+          >
+            {copied ? <Check className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}
+            {copied ? 'Copied!' : 'Copy all emails'}
+          </button>
+        </div>
+        <p className="text-xs text-muted-foreground text-center">
+          Note: Only users who provided an email are included.
+        </p>
+      </div>
+    </div>
   );
 };
 
@@ -177,7 +238,7 @@ const UserHistoryModal: React.FC<{
 const StatsView: React.FC = () => {
   const [stats, setStats] = useState<StatsData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [granularity, setGranularity] = useState<'day' | 'week'>('day');
+  const [granularity, setGranularity] = useState<'day' | 'week'>('week');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
 
@@ -199,56 +260,98 @@ const StatsView: React.FC = () => {
 
   useEffect(() => { fetchStats(); }, [fetchStats]);
 
-  // Aggregate time series by granularity and date range
+  const fmt = (iso: string) => {
+    const [y, m, d] = iso.split('-');
+    return `${d}/${m}/${y}`;
+  };
+
+  // Get Monday of the week containing a given date
+  const getMondayOf = (date: Date): Date => {
+    const d = new Date(date);
+    d.setUTCHours(0, 0, 0, 0);
+    const day = d.getUTCDay(); // 0=Sun,1=Mon,...
+    const diff = (day + 6) % 7;
+    d.setUTCDate(d.getUTCDate() - diff);
+    return d;
+  };
+
+  const toIso = (d: Date) => d.toISOString().substring(0, 10);
+
+  // Build continuous chart data with NO gaps
   const chartData = useMemo(() => {
-    if (!stats) return [];
-    let series = [...stats.timeSeries];
+    if (!stats || stats.timeSeries.length === 0) return [];
 
-    // Date range filter
-    if (dateFrom) series = series.filter((d) => d.date >= dateFrom);
-    if (dateTo) series = series.filter((d) => d.date <= dateTo);
-
-    const fmt = (iso: string) => {
-      const [y, m, d] = iso.split('-');
-      return `${d}/${m}/${y}`;
-    };
-
-    if (granularity === 'week') {
-      const weekMap: Record<string, { count: number; totalRating: number; entries: number; monday: string }> = {};
-      for (const d of series) {
-        const dt = new Date(d.date + 'T00:00:00');
-        const day = dt.getDay();
-        const monday = new Date(dt);
-        monday.setDate(dt.getDate() - ((day + 6) % 7));
-        const sunday = new Date(monday);
-        sunday.setDate(monday.getDate() + 6);
-        const weekKey = monday.toISOString().substring(0, 10);
-        if (!weekMap[weekKey]) weekMap[weekKey] = { count: 0, totalRating: 0, entries: 0, monday: weekKey };
-        weekMap[weekKey].count += d.count;
-        weekMap[weekKey].totalRating += d.avgRating * d.count;
-        weekMap[weekKey].entries += d.count;
-      }
-      return Object.entries(weekMap)
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([mondayIso, { count, totalRating, entries }]) => {
-          const mondayDate = new Date(mondayIso + 'T00:00:00');
-          const sundayDate = new Date(mondayDate);
-          sundayDate.setDate(mondayDate.getDate() + 6);
-          const sundayIso = sundayDate.toISOString().substring(0, 10);
-          return {
-            date: fmt(mondayIso),
-            dateLabel: `${fmt(mondayIso)} – ${fmt(sundayIso)}`,
-            count,
-            avgRating: entries > 0 ? Math.round((totalRating / entries) * 10) / 10 : 0,
-          };
-        });
+    // Build lookup: date -> { count, avgRating }
+    const lookup: Record<string, { count: number; avgRating: number }> = {};
+    for (const d of stats.timeSeries) {
+      lookup[d.date] = { count: d.count, avgRating: d.avgRating };
     }
 
-    return series.map((d) => ({
-      ...d,
-      date: fmt(d.date),
-      dateLabel: fmt(d.date),
-    }));
+    // Determine effective range
+    const allDates = stats.timeSeries.map((d) => d.date).sort();
+    const rawStart = dateFrom || allDates[0];
+    const rawEnd = dateTo || allDates[allDates.length - 1];
+
+    if (!rawStart || !rawEnd) return [];
+
+    if (granularity === 'day') {
+      // Fill every day from start to end
+      const result: { date: string; dateLabel: string; count: number; avgRating: number }[] = [];
+      const cur = new Date(rawStart + 'T00:00:00Z');
+      const end = new Date(rawEnd + 'T00:00:00Z');
+      while (cur <= end) {
+        const iso = toIso(cur);
+        const entry = lookup[iso];
+        result.push({
+          date: fmt(iso),
+          dateLabel: fmt(iso),
+          count: entry?.count ?? 0,
+          avgRating: entry?.avgRating ?? 0,
+        });
+        cur.setUTCDate(cur.getUTCDate() + 1);
+      }
+      return result;
+    }
+
+    // Weekly: Monday → Sunday, no gaps
+    const startMonday = getMondayOf(new Date(rawStart + 'T00:00:00Z'));
+    const endDate = new Date(rawEnd + 'T00:00:00Z');
+
+    const result: { date: string; dateLabel: string; count: number; avgRating: number }[] = [];
+    const cur = new Date(startMonday);
+
+    while (cur <= endDate) {
+      const mondayIso = toIso(cur);
+      const sundayDate = new Date(cur);
+      sundayDate.setUTCDate(cur.getUTCDate() + 6);
+      const sundayIso = toIso(sundayDate);
+
+      // Sum all days in this Mon-Sun window
+      let totalCount = 0;
+      let totalWeightedRating = 0;
+      const dayCursor = new Date(cur);
+      for (let i = 0; i < 7; i++) {
+        const dayIso = toIso(dayCursor);
+        const entry = lookup[dayIso];
+        if (entry) {
+          totalCount += entry.count;
+          totalWeightedRating += entry.avgRating * entry.count;
+        }
+        dayCursor.setUTCDate(dayCursor.getUTCDate() + 1);
+      }
+
+      result.push({
+        date: fmt(mondayIso),
+        dateLabel: `${fmt(mondayIso)} – ${fmt(sundayIso)}`,
+        count: totalCount,
+        avgRating: totalCount > 0 ? Math.round((totalWeightedRating / totalCount) * 10) / 10 : 0,
+      });
+
+      // Next Monday
+      cur.setUTCDate(cur.getUTCDate() + 7);
+    }
+
+    return result;
   }, [stats, granularity, dateFrom, dateTo]);
 
   const filteredTotal = useMemo(() => chartData.reduce((s, d) => s + d.count, 0), [chartData]);
@@ -271,20 +374,23 @@ const StatsView: React.FC = () => {
 
   if (!stats) return <p className="text-muted-foreground">Failed to load stats.</p>;
 
-  const distData = [1, 2, 3, 4, 5].map((r) => ({
-    name: `${r}★`,
-    count: stats.distribution[r] || 0,
-  }));
-
   return (
     <div className="space-y-6">
+      {/* Header row with Refresh */}
+      <div className="flex items-center justify-end">
+        <Button variant="outline" size="sm" onClick={fetchStats} className="gap-2">
+          <RefreshCw className="h-4 w-4" />
+          Refresh Stats
+        </Button>
+      </div>
+
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-card border border-border rounded-xl p-5">
           <p className="text-xs text-muted-foreground mb-1">Total Reviews</p>
           <p className="text-3xl font-display text-foreground">{stats.total}</p>
-          {dateFrom || dateTo ? (
-            <p className="text-xs text-primary mt-1">Filtered: {filteredTotal}</p>
+          {(dateFrom || dateTo) ? (
+            <p className="text-xs text-primary mt-1">Period: {filteredTotal}</p>
           ) : null}
         </div>
         <div className="bg-card border border-border rounded-xl p-5 flex flex-col gap-1">
@@ -292,7 +398,7 @@ const StatsView: React.FC = () => {
           <p className="text-3xl font-display text-foreground">{stats.avgRating}</p>
           <StarRow rating={Math.round(stats.avgRating)} size="h-3.5 w-3.5" />
           {(dateFrom || dateTo) && filteredAvg !== stats.avgRating ? (
-            <p className="text-xs text-primary">Filtered: {filteredAvg}</p>
+            <p className="text-xs text-primary">Period: {filteredAvg}</p>
           ) : null}
         </div>
         <div className="bg-card border border-border rounded-xl p-5">
@@ -311,26 +417,6 @@ const StatsView: React.FC = () => {
             {stats.total > 0 ? Math.round((((stats.distribution[1] || 0) + (stats.distribution[2] || 0)) / stats.total) * 100) : 0}% of total
           </p>
         </div>
-      </div>
-
-      {/* Rating Distribution */}
-      <div className="bg-card border border-border rounded-xl p-5">
-        <h3 className="font-display text-foreground mb-4 flex items-center gap-2">
-          <BarChart2 className="h-4 w-4 text-primary" />
-          Rating Distribution
-        </h3>
-        <ResponsiveContainer width="100%" height={160}>
-          <BarChart data={distData} barSize={36}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-            <XAxis dataKey="name" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} />
-            <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} allowDecimals={false} />
-            <Tooltip
-              contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8 }}
-              labelStyle={{ color: 'hsl(var(--foreground))' }}
-            />
-            <Bar dataKey="count" name="Reviews" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
       </div>
 
       {/* Time Series Controls */}
@@ -418,6 +504,7 @@ const StatsView: React.FC = () => {
                     strokeWidth={2.5}
                     dot={{ r: 5, fill: 'hsl(var(--primary))', strokeWidth: 0 }}
                     activeDot={{ r: 7, fill: 'hsl(var(--primary))', stroke: 'hsl(var(--background))', strokeWidth: 2 }}
+                    connectNulls={false}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -459,19 +546,13 @@ const StatsView: React.FC = () => {
                     strokeWidth={2.5}
                     dot={{ r: 5, fill: 'hsl(var(--warning))', strokeWidth: 0 }}
                     activeDot={{ r: 7, fill: 'hsl(var(--warning))', stroke: 'hsl(var(--background))', strokeWidth: 2 }}
+                    connectNulls={false}
                   />
                 </LineChart>
               </ResponsiveContainer>
             </div>
           </div>
         )}
-      </div>
-
-      <div className="flex justify-end">
-        <Button variant="outline" size="sm" onClick={fetchStats} className="gap-2">
-          <RefreshCw className="h-4 w-4" />
-          Refresh Stats
-        </Button>
       </div>
     </div>
   );
@@ -497,6 +578,7 @@ const TableView: React.FC = () => {
   // Modals
   const [commentModal, setCommentModal] = useState<string | null>(null);
   const [historyModal, setHistoryModal] = useState<Feedback | null>(null);
+  const [emailModal, setEmailModal] = useState(false);
 
   const fetchFeedbacks = useCallback(async (p: number, ps: number) => {
     setLoading(true);
@@ -570,6 +652,17 @@ const TableView: React.FC = () => {
 
   const clearFilters = () => { setDateFilter('all'); setRatingFilters(new Set()); setSearch(''); };
 
+  // Get emails from selected feedbacks
+  const selectedEmails = useMemo(() => {
+    const emails: string[] = [];
+    for (const fb of allFeedbacks) {
+      if (selected.has(fb.id) && fb.email) {
+        emails.push(fb.email);
+      }
+    }
+    return [...new Set(emails)]; // deduplicate
+  }, [selected, allFeedbacks]);
+
   const DATE_OPTIONS = [
     { key: 'all' as const, label: 'All time' },
     { key: 'day' as const, label: 'Last 24h' },
@@ -628,7 +721,7 @@ const TableView: React.FC = () => {
                 <div className="relative">
                   <select
                     value={dateFilter}
-                    onChange={(e) => setDateFilter(e.target.value as any)}
+                    onChange={(e) => setDateFilter(e.target.value as typeof dateFilter)}
                     className="w-full appearance-none bg-secondary border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary pr-8"
                   >
                     {DATE_OPTIONS.map((o) => (
@@ -678,8 +771,20 @@ const TableView: React.FC = () => {
 
       {/* Selection bar */}
       {selected.size > 0 && (
-        <div className="bg-primary/10 border border-primary/30 rounded-xl px-5 py-3 flex items-center gap-3">
+        <div className="bg-primary/10 border border-primary/30 rounded-xl px-5 py-3 flex items-center gap-3 flex-wrap">
           <p className="text-sm font-medium text-primary">{selected.size} selected</p>
+          {selectedEmails.length > 0 && (
+            <button
+              onClick={() => setEmailModal(true)}
+              className="flex items-center gap-1.5 text-xs bg-primary text-primary-foreground px-3 py-1.5 rounded-lg hover:opacity-90 transition-opacity"
+            >
+              <Mail className="h-3.5 w-3.5" />
+              Send email ({selectedEmails.length})
+            </button>
+          )}
+          {selectedEmails.length === 0 && selected.size > 0 && (
+            <span className="text-xs text-muted-foreground italic">No emails available for selected users</span>
+          )}
           <button onClick={() => setSelected(new Set())} className="text-muted-foreground hover:text-foreground ml-auto">
             <X className="h-4 w-4" />
           </button>
@@ -738,9 +843,9 @@ const TableView: React.FC = () => {
                       />
                     </td>
                     <td className="px-4 py-4 text-sm text-foreground font-medium">
-                      <div className="flex items-center gap-1 text-primary hover:underline">
-                        {fb.username || 'Anonymous'}
+                      <div className="flex items-center gap-1 text-primary">
                         <History className="h-3.5 w-3.5 opacity-50" />
+                        {fb.username || 'Anonymous'}
                       </div>
                     </td>
                     <td className="px-4 py-4 text-sm text-muted-foreground" onClick={(e) => e.stopPropagation()}>
@@ -825,6 +930,12 @@ const TableView: React.FC = () => {
           username={historyModal.username}
           email={historyModal.email}
           onClose={() => setHistoryModal(null)}
+        />
+      )}
+      {emailModal && (
+        <EmailComposeModal
+          emails={selectedEmails}
+          onClose={() => setEmailModal(false)}
         />
       )}
     </div>
