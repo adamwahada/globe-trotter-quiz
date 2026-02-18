@@ -19,8 +19,7 @@ export const AdminDashboard: React.FC = () => {
         const token = await getFirebaseIdToken();
         if (!token) return;
 
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-        const res = await fetch(`${supabaseUrl}/functions/v1/admin-dashboard?action=user-stats`, {
+        const res = await fetch(`https://dzzeaesctendsggfdxra.supabase.co/functions/v1/admin-dashboard?action=user-stats`, {
           headers: { 'Authorization': `Bearer ${token}` },
         });
 
