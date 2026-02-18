@@ -10,17 +10,27 @@ interface AdminContextType {
 const AdminContext = createContext<AdminContextType>({ isAdmin: false, isLoading: true });
 
 export const AdminProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, user } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // Wait for auth to finish before running the admin check
+    if (authLoading) return;
+
+    // If not authenticated, no need to check — not an admin
+    if (!isAuthenticated) {
+      setIsAdmin(false);
+      setIsLoading(false);
+      return;
+    }
+
     const checkAdmin = async () => {
+      setIsLoading(true);
       try {
         const token = await getFirebaseIdToken();
         if (!token) {
           setIsAdmin(false);
-          setIsLoading(false);
           return;
         }
 
@@ -46,7 +56,7 @@ export const AdminProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     };
 
     checkAdmin();
-  }, [isAuthenticated, user?.id]);
+  }, [isAuthenticated, authLoading, user?.id]);
 
   return (
     <AdminContext.Provider value={{ isAdmin, isLoading }}>
@@ -56,3 +66,4 @@ export const AdminProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 };
 
 export const useAdmin = () => useContext(AdminContext);
+
