@@ -339,6 +339,11 @@ const WaitingRoom = () => {
                           Host
                         </span>
                       )}
+                      {player.isGuest && (
+                        <span className="ml-2 text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded">
+                          Guest
+                        </span>
+                      )}
                     </p>
                     <p className="text-sm text-muted-foreground">
                       {player.isReady ? '✓ Ready' : 'Waiting...'}
