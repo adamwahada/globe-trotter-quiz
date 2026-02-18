@@ -10,6 +10,7 @@ import { FAQSection } from "@/components/LandingPage/FAQSection";
 import { AuthModal } from "@/components/Auth/AuthModal";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAdmin } from "@/contexts/AdminContext";
 import { useGame } from "@/contexts/GameContext";
 import { useToastContext } from "@/contexts/ToastContext";
 import { GameTooltip } from "@/components/Tooltip/GameTooltip";
@@ -39,6 +40,7 @@ import {
   UserCircle,
   Building,
   Music2,
+  Shield,
 } from "lucide-react";
 
 // Use public path for preloaded image - matches index.html preload
@@ -47,6 +49,7 @@ const worldMapBg = "/world-map-bg.webp";
 const Index = () => {
   const { t } = useLanguage();
   const { isAuthenticated } = useAuth();
+  const { isAdmin } = useAdmin();
   const { hasActiveSession, session, resumeSession, checkActiveSession } = useGame();
   const { addToast } = useToastContext();
   const navigate = useNavigate();
@@ -496,15 +499,28 @@ const Index = () => {
         <div className="max-w-2xl mx-auto">
           <h2 className="text-4xl md:text-5xl font-display text-foreground mb-6">{t("ctaTitle")}</h2>
           <p className="text-muted-foreground mb-8">{t("ctaSubtitle")}</p>
-          <Button
-            variant="hero"
-            size="xl"
-            onClick={hasActiveSession ? handleResumeGame : handleStartGame}
-            className="glow-red"
-          >
-            <Play className="h-6 w-6" />
-            {hasActiveSession ? "Resume Play" : t("startGame")}
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button
+              variant="hero"
+              size="xl"
+              onClick={hasActiveSession ? handleResumeGame : handleStartGame}
+              className="glow-red"
+            >
+              <Play className="h-6 w-6" />
+              {hasActiveSession ? "Resume Play" : t("startGame")}
+            </Button>
+            {isAdmin && (
+              <Button
+                variant="outline"
+                size="xl"
+                onClick={() => navigate("/admin")}
+                className="border-primary/50 text-primary hover:bg-primary/10"
+              >
+                <Shield className="h-5 w-5" />
+                Admin Dashboard
+              </Button>
+            )}
+          </div>
         </div>
       </section>
 
