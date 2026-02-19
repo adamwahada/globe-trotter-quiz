@@ -168,6 +168,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
     } catch (error: any) {
       console.error('Auth error:', error?.code, error?.message);
       const code = error?.code || '';
+      const msg = error?.message || '';
+
+      // Permanent ban check
+      if (msg === 'PERMANENTLY_BANNED') {
+        addToast('error', 'You have been permanently banned from this platform. You can no longer sign in.', 8000);
+        return;
+      }
 
       if (code === 'auth/email-already-in-use') {
         addToast('error', 'This email is already registered. Please sign in instead.');

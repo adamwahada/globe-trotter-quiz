@@ -15,6 +15,7 @@ import { useAdmin } from "@/contexts/AdminContext";
 import { useGame } from "@/contexts/GameContext";
 import { useToastContext } from "@/contexts/ToastContext";
 import { GameTooltip } from "@/components/Tooltip/GameTooltip";
+import { checkUserBan, formatBanMessage } from "@/utils/banUtils";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Play,
@@ -49,13 +50,14 @@ const worldMapBg = "/world-map-bg.webp";
 
 const Index = () => {
   const { t } = useLanguage();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { isAdmin } = useAdmin();
   const { hasActiveSession, session, resumeSession, checkActiveSession, error: gameError, joinSessionAsGuest } = useGame();
   const { addToast } = useToastContext();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const carouselRef = useRef<HTMLDivElement>(null);
+
 
   const [gameModalOpen, setGameModalOpen] = useState(false);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
@@ -113,15 +115,24 @@ const Index = () => {
 
 
 
-  const handleStartGame = () => {
+  const handleStartGame = async () => {
     if (!isAuthenticated) {
       addToast("info", t("authRequired"));
     } else if (hasActiveSession) {
       addToast("info", "You have an active session. Resume or leave it first.");
     } else {
+      // Check for active ban before opening modal
+      if (user?.id) {
+        const ban = await checkUserBan(user.id);
+        if (ban) {
+          addToast("error", formatBanMessage(ban), 6000);
+          return;
+        }
+      }
       setGameModalOpen(true);
     }
   };
+
 
   const handleResumeGame = async () => {
     if (!isAuthenticated) {

@@ -3,6 +3,7 @@ import { MessageSquare } from 'lucide-react';
 import { getFirebaseIdToken } from '@/utils/firebaseToken';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserMessagingModal } from '@/components/Messaging/UserMessagingModal';
+import { GameTooltip } from '@/components/Tooltip/GameTooltip';
 import { supabase } from '@/integrations/supabase/client';
 
 const MESSAGES_FN = `https://dzzeaesctendsggfdxra.supabase.co/functions/v1/user-messages`;
@@ -31,10 +32,8 @@ export const MessageIcon: React.FC = () => {
     if (!isAuthenticated || !user) return;
     fetchUnread();
 
-    // Poll every 30s when modal is closed
     const interval = setInterval(fetchUnread, 30000);
 
-    // Realtime for instant notification
     const channel = supabase
       .channel(`msg-badge-${user.id}`)
       .on('postgres_changes', {
@@ -59,18 +58,20 @@ export const MessageIcon: React.FC = () => {
 
   return (
     <>
-      <button
-        onClick={() => setIsOpen(true)}
-        className="relative p-2 rounded-full hover:bg-secondary/60 transition-colors text-muted-foreground hover:text-foreground"
-        title="Messages"
-      >
-        <MessageSquare className="h-5 w-5" />
-        {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center px-1 leading-none">
-            {unreadCount > 9 ? '9+' : unreadCount}
-          </span>
-        )}
-      </button>
+      <GameTooltip content={unreadCount > 0 ? `Messages (${unreadCount} unread)` : 'Messages'} position="bottom">
+        <button
+          onClick={() => setIsOpen(true)}
+          className="relative p-2 rounded-lg bg-secondary/50 border border-border hover:border-primary transition-all duration-200"
+          aria-label="Messages"
+        >
+          <MessageSquare className="h-5 w-5 text-primary" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 min-w-[16px] h-4 rounded-full bg-primary text-primary-foreground text-[9px] font-bold flex items-center justify-center px-1 leading-none">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          )}
+        </button>
+      </GameTooltip>
 
       <UserMessagingModal
         isOpen={isOpen}

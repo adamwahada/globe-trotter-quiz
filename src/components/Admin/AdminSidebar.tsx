@@ -1,14 +1,20 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, MessageSquare, ArrowLeft } from 'lucide-react';
+import { LayoutDashboard, MessageSquare, ArrowLeft, Shield } from 'lucide-react';
 
-const navItems = [
-  { path: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
-  { path: '/admin/feedback', icon: MessageSquare, label: 'Feedback' },
-];
+interface AdminSidebarProps {
+  messagesUnread?: number;
+}
 
-export const AdminSidebar: React.FC = () => {
+export const AdminSidebar: React.FC<AdminSidebarProps> = ({ messagesUnread = 0 }) => {
   const location = useLocation();
+
+  const navItems = [
+    { path: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
+    { path: '/admin/feedback', icon: MessageSquare, label: 'Feedback' },
+    { path: '/admin/messages', icon: MessageSquare, label: 'Messages', badge: messagesUnread },
+    { path: '/admin/bans', icon: Shield, label: 'Bans' },
+  ];
 
   return (
     <aside className="w-64 min-h-screen bg-card border-r border-border flex flex-col">
@@ -31,7 +37,12 @@ export const AdminSidebar: React.FC = () => {
               }`}
             >
               <item.icon className="h-5 w-5" />
-              {item.label}
+              <span className="flex-1">{item.label}</span>
+              {item.badge != null && item.badge > 0 && (
+                <span className="min-w-[20px] h-5 px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
+                  {item.badge > 99 ? '99+' : item.badge}
+                </span>
+              )}
             </NavLink>
           );
         })}

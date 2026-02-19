@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      bans: {
+        Row: {
+          ban_type: string
+          banned_at: string
+          banned_by: string
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          reason: string | null
+          user_email: string | null
+          user_id: string
+          user_name: string
+        }
+        Insert: {
+          ban_type: string
+          banned_at?: string
+          banned_by: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          reason?: string | null
+          user_email?: string | null
+          user_id: string
+          user_name: string
+        }
+        Update: {
+          ban_type?: string
+          banned_at?: string
+          banned_by?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          reason?: string | null
+          user_email?: string | null
+          user_id?: string
+          user_name?: string
+        }
+        Relationships: []
+      }
       feedback: {
         Row: {
           comment: string | null
