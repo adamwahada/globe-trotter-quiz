@@ -400,34 +400,37 @@ export const useFirebaseSession = () => {
     }
   }, [user, tabSessionId, addToast]);
 
-  // Guest join — no Firebase auth required
+  // Guest join — no Firebase auth required. Returns { success, error } for precise error reporting.
   const joinSessionAsGuest = useCallback(async (code: string, guestUsername: string): Promise<boolean> => {
-    // Generate a stable guest ID stored in sessionStorage so it survives page refreshes within the tab
-    let guestId = sessionStorage.getItem('guest_player_id');
-    if (!guestId) {
-      guestId = 'guest_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
-      sessionStorage.setItem('guest_player_id', guestId);
-    }
+    // Always generate a fresh guest ID for each join attempt to avoid "already joined" false positives
+    const guestId = 'guest_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+    sessionStorage.setItem('guest_player_id', guestId);
 
     setIsLoading(true);
     setError(null);
 
     try {
+      console.log('[Guest Join] Fetching session:', code);
       const existingSession = await getSessionByCode(code);
       console.log('[Guest Join] Session fetched:', existingSession?.code, 'status:', existingSession?.status, 'players:', Object.keys(existingSession?.players || {}).length);
 
       if (!existingSession) {
         console.warn('[Guest Join] Session not found:', code);
-        setError('Session not found');
+        setError('Session not found. The link may have expired.');
         return false;
       }
 
       const currentPlayers = playersMapToArray(existingSession.players);
       console.log('[Guest Join] Player count:', currentPlayers.length, '/', existingSession.maxPlayers);
 
-      if (currentPlayers.length >= existingSession.maxPlayers) { setError('Session is full'); return false; }
-      if (existingSession.status !== 'waiting') { setError('Session has already started'); return false; }
-      if (existingSession.players && existingSession.players[guestId]) { setError('Already in session'); return false; }
+      if (currentPlayers.length >= existingSession.maxPlayers) {
+        setError('Session is full');
+        return false;
+      }
+      if (existingSession.status !== 'waiting') {
+        setError('Session has already started');
+        return false;
+      }
 
       const avatars = ['🗺️', '🌍', '🌎', '🌏', '🧭', '🏔️', '🌊', '🏝️', '🌋', '🌵'];
       const colors = ['#6366f1', '#f59e0b', '#10b981', '#3b82f6', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6'];
@@ -467,10 +470,12 @@ export const useFirebaseSession = () => {
       }
 
       return success;
-    } catch (err) {
+    } catch (err: any) {
       console.error('[Guest Join] Error:', err);
-      setError('Failed to join session');
-      return false;
+      const msg = err?.message || 'Failed to join session';
+      setError(msg);
+      throw err; // Re-throw so handleGuestJoin can show the real message
+
     } finally {
       setIsLoading(false);
     }
