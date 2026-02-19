@@ -263,18 +263,35 @@ const WaitingRoom = () => {
             <Users className="h-5 w-5" />
             <span>{players.length}/{session.maxPlayers} {t('participants')}</span>
           </div>
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Clock className="h-5 w-5" />
-            <span>{session.duration} {t('minutes')}</span>
-          </div>
+
+          {/* Duration or Rounds depending on mode */}
+          {session.gameMode === 'speedRace' ? (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Zap className="h-5 w-5 text-success" />
+              <span className="text-success font-medium">{session.totalRounds} {t('speedRaceRounds' as any)}</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Clock className="h-5 w-5" />
+              <span>{session.duration} {t('minutes')}</span>
+            </div>
+          )}
+
           {/* Game Mode Badge */}
           {session.gameMode && (
             <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${
-              session.gameMode === 'againstTheClock' 
-                ? 'bg-warning/20 text-warning border border-warning/30' 
-                : 'bg-primary/20 text-primary border border-primary/30'
+              session.gameMode === 'speedRace'
+                ? 'bg-success/20 text-success border border-success/30'
+                : session.gameMode === 'againstTheClock'
+                  ? 'bg-warning/20 text-warning border border-warning/30'
+                  : 'bg-primary/20 text-primary border border-primary/30'
             }`}>
-              {session.gameMode === 'againstTheClock' ? (
+              {session.gameMode === 'speedRace' ? (
+                <>
+                  <Zap className="h-4 w-4" />
+                  {t('speedRaceMode' as any)}
+                </>
+              ) : session.gameMode === 'againstTheClock' ? (
                 <>
                   <Zap className="h-4 w-4" />
                   {t('againstTheClockMode')}
@@ -287,8 +304,9 @@ const WaitingRoom = () => {
               )}
             </div>
           )}
+
           {/* Card Mode Badge - Only for turn-based */}
-          {session.gameMode !== 'againstTheClock' && (
+          {session.gameMode !== 'againstTheClock' && session.gameMode !== 'speedRace' && (
             <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${
               session.cardModeEnabled 
                 ? 'bg-warning/20 text-warning border border-warning/30' 
