@@ -61,11 +61,16 @@ export const subscribeToSession = (
     return () => { };
   }
   const sessionRef = ref(database, `${SESSIONS_PATH}/${code}`);
+  const isGuest = !!sessionStorage.getItem('guest_player_id');
   const unsubscribe = onValue(sessionRef, (snapshot) => {
     callback(snapshot.exists() ? snapshot.val() as GameSession : null);
   }, (error) => {
     console.warn('[Firebase] subscribeToSession error:', (error as any)?.code, error?.message);
-    callback(null);
+    // For guests, a permission error on subscription does NOT mean the session ended.
+    // Do NOT call callback(null) — keep the last known state so the guest stays in-game.
+    if (!isGuest) {
+      callback(null);
+    }
   });
   return unsubscribe;
 };
@@ -370,10 +375,15 @@ export const updatePlayerConnection = async (
     return; // Can only update own connection status
   }
 
-  await updatePlayerData(code, playerId, {
-    isConnected,
-    lastSeen: Date.now(),
-  });
+  try {
+    await updatePlayerData(code, playerId, {
+      isConnected,
+      lastSeen: Date.now(),
+    });
+  } catch (err: any) {
+    // Silently ignore permission errors for guests — they cannot write after status changes
+    console.warn('[updatePlayerConnection] Write skipped:', err?.code);
+  }
 };
 
 // --- User Presence & Single Session Enforcement ---
