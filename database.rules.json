@@ -15,7 +15,7 @@
                 "players": {
                     "$playerId": {
                         ".read": true,
-                        ".write": "auth != null && ($playerId === auth.uid || (data.parent().parent().child('creatorId').val() === auth.uid && !newData.exists())) || (auth == null && $playerId.beginsWith('guest_') && ((!data.exists() && data.parent().parent().child('status').val() === 'waiting') || (data.exists() && data.child('isGuest').val() === true)))",
+                        ".write": "auth != null && ($playerId === auth.uid || (data.parent().parent().child('creatorId').val() === auth.uid && !newData.exists())) || (auth == null && $playerId.beginsWith('guest_') && ((!data.exists() && root.child('sessions').child($sessionCode).child('status').val() === 'waiting') || (data.exists() && data.child('isGuest').val() === true)))",
                         ".validate": "newData.hasChildren(['username', 'avatar', 'color', 'score', 'isReady', 'isConnected'])",
                         "username": {
                             ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 20"
