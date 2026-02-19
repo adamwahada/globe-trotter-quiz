@@ -92,18 +92,26 @@ export const updateSession = async (
   await update(sessionRef, updates);
 };
 
-// Add player to session using auth.uid
+// Add player to session using auth.uid or an explicit guest ID.
+// Pass `preValidatedSession` to skip the internal re-fetch (useful for guests who already verified the session)
 export const addPlayerToSession = async (
   code: string,
   playerData: PlayerData,
-  explicitPlayerId?: string // used for guest joins
+  explicitPlayerId?: string, // used for guest joins
+  preValidatedSession?: GameSession // skip internal re-fetch if already validated
 ): Promise<boolean> => {
   const uid = explicitPlayerId || getCurrentUid();
   if (!uid) {
     throw new Error('Must provide a player ID to join a session');
   }
 
-  const session = await getSessionByCode(code);
+  if (!isFirebaseReady() || !database) {
+    return false;
+  }
+
+  // If a pre-validated session was passed, trust it (avoids a potentially
+  // permission-denied re-fetch for unauthenticated guests).
+  const session = preValidatedSession ?? await getSessionByCode(code);
   if (!session) return false;
 
   const currentPlayers = playersMapToArray(session.players);
@@ -113,10 +121,6 @@ export const addPlayerToSession = async (
   // Check if player already in session
   if (session.players && session.players[uid]) {
     return false; // Already joined
-  }
-
-  if (!isFirebaseReady() || !database) {
-    return false;
   }
 
   // Write player entry using uid as the key
