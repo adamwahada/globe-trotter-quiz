@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import SpeedRaceGame from '@/components/Game/SpeedRaceGame';
 import { Logo } from '@/components/Logo/Logo';
 import { Button } from '@/components/ui/button';
 import { WorldMap } from '@/components/Map/WorldMap';
@@ -17,11 +18,11 @@ import { LonePlayerOverlay } from '@/components/Modal/LonePlayerOverlay';
 import { InactivityWarning } from '@/components/Modal/InactivityWarning';
 import { ReconnectionBanner } from '@/components/Banner/ReconnectionBanner';
 import { AgainstTheClockGame } from '@/components/Game/AgainstTheClockGame';
- import { CardButton } from '@/components/Cards/CardButton';
- import { CardModal } from '@/components/Cards/CardModal';
- import { CardEffectIndicator } from '@/components/Cards/CardEffectIndicator';
- import { CountrySelectionOverlay } from '@/components/Cards/CountrySelectionOverlay';
- import { useCardSystem } from '@/hooks/useCardSystem';
+import { CardButton } from '@/components/Cards/CardButton';
+import { CardModal } from '@/components/Cards/CardModal';
+import { CardEffectIndicator } from '@/components/Cards/CardEffectIndicator';
+import { CountrySelectionOverlay } from '@/components/Cards/CountrySelectionOverlay';
+import { useCardSystem } from '@/hooks/useCardSystem';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useGame, TurnState, Player } from '@/contexts/GameContext';
 import { useToastContext } from '@/contexts/ToastContext';
@@ -39,6 +40,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { validateGuess } from '@/utils/inputValidation';
 
 const GamePage = () => {
+  const { session } = useGame();
+
+  // Dispatch to Speed Race component when in that mode
+  if (session?.gameMode === 'speedRace') {
+    return <SpeedRaceGame />;
+  }
+
+  return <GamePageInner />;
+};
+
+const GamePageInner = () => {
   const { t, language } = useLanguage();
   const {
     session,

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
- import { X, Users, Clock, Hash, Copy, Check, User, Dice5, MousePointer, Sparkles } from 'lucide-react';
+import { X, Users, Clock, Hash, Copy, Check, User, Dice5, MousePointer, Sparkles, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
- import { Switch } from '@/components/ui/switch';
+import { Switch } from '@/components/ui/switch';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGame, GameMode } from '@/contexts/GameContext';
@@ -27,12 +27,18 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
   const [mode, setMode] = useState<'choose' | 'multiplayer' | 'solo' | 'selectGameMode' | 'create' | 'join'>('choose');
   const [players, setPlayers] = useState(2);
   const [duration, setDuration] = useState(30);
+  // Speed Race: rounds instead of duration
+  const [rounds, setRounds] = useState(20);
+  const [customRounds, setCustomRounds] = useState('');
+  const [useCustomRounds, setUseCustomRounds] = useState(false);
+  const [customPlayersInput, setCustomPlayersInput] = useState('');
+  const [useCustomPlayers, setUseCustomPlayers] = useState(false);
   const [sessionCode, setSessionCode] = useState('');
   const [generatedCode, setGeneratedCode] = useState('');
   const [guestName, setGuestName] = useState(localStorage.getItem('guest_username') || '');
   const [copied, setCopied] = useState(false);
   const [selectedGameMode, setSelectedGameMode] = useState<GameMode>('turnBased');
-   const [cardModeEnabled, setCardModeEnabled] = useState(false);
+  const [cardModeEnabled, setCardModeEnabled] = useState(false);
 
   // Auto-fill session code from invite link
   React.useEffect(() => {
@@ -47,15 +53,60 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
     setGeneratedCode('');
     setSessionCode('');
     setSelectedGameMode('turnBased');
-     setCardModeEnabled(false);
+    setCardModeEnabled(false);
+    setUseCustomRounds(false);
+    setCustomRounds('');
+    setUseCustomPlayers(false);
+    setCustomPlayersInput('');
     onClose();
   };
 
   if (!isOpen) return null;
 
+  // Compute effective rounds / players for Speed Race
+  const effectiveRounds = (() => {
+    if (selectedGameMode !== 'speedRace') return rounds;
+    if (useCustomRounds) {
+      const v = parseInt(customRounds, 10);
+      return isNaN(v) ? rounds : Math.min(100, Math.max(10, v));
+    }
+    return rounds;
+  })();
+
+  const effectivePlayers = (() => {
+    if (selectedGameMode !== 'speedRace') return players;
+    if (useCustomPlayers) {
+      const v = parseInt(customPlayersInput, 10);
+      return isNaN(v) ? players : Math.min(20, Math.max(2, v));
+    }
+    return players;
+  })();
+
   const handleCreate = async () => {
+    if (selectedGameMode === 'speedRace') {
+      // Validate rounds
+      const r = effectiveRounds;
+      if (r < 10 || r > 100) {
+        addToast('error', 'Rounds must be between 10 and 100');
+        return;
+      }
+      const p = effectivePlayers;
+      if (p < 2 || p > 20) {
+        addToast('error', 'Players must be between 2 and 20');
+        return;
+      }
+      try {
+        // For speed race, we pass rounds as duration (repurposed field) and totalRounds will be set inside
+        const code = await createSession(p, 30, false, selectedGameMode, false, r);
+        setGeneratedCode(code);
+        addToast('success', t('sessionCreated', { code }));
+      } catch (err) {
+        addToast('error', 'Failed to create session');
+      }
+      return;
+    }
     try {
-       const code = await createSession(players, duration, false, selectedGameMode, cardModeEnabled);
+      const code = await createSession(players, duration, false, selectedGameMode, cardModeEnabled);
       setGeneratedCode(code);
       addToast('success', t('sessionCreated', { code }));
     } catch (err) {
@@ -216,8 +267,13 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
             <GameModeSelector
               onSelect={(gameMode) => {
                 setSelectedGameMode(gameMode);
-                // Set appropriate default duration based on game mode
                 setDuration(gameMode === 'againstTheClock' ? 15 : 30);
+                setRounds(20);
+                setUseCustomRounds(false);
+                setCustomRounds('');
+                setPlayers(2);
+                setUseCustomPlayers(false);
+                setCustomPlayersInput('');
                 setMode('create');
               }}
               onBack={() => setMode('multiplayer')}
@@ -229,8 +285,6 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
               <h2 className="text-3xl font-display text-foreground text-center">
                 {t('soloMode')}
               </h2>
-
-              {/* Duration Selection */}
               <div className="space-y-3">
                 <label className="flex items-center justify-between text-sm font-medium text-foreground">
                   <span className="flex items-center gap-2">
@@ -244,20 +298,13 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
                     <button
                       key={mins}
                       onClick={() => setDuration(mins)}
-                      className={`
-                        flex-1 py-3 rounded-lg font-semibold transition-all
-                        ${duration === mins
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}
-                      `}
+                      className={`flex-1 py-3 rounded-lg font-semibold transition-all ${duration === mins ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}`}
                     >
                       {mins}m
                     </button>
                   ))}
                 </div>
               </div>
-
-              {/* Play mode info */}
               <div className="bg-secondary/50 rounded-xl p-4 space-y-3">
                 <p className="text-sm font-medium text-foreground">{t('soloPlayMode')}:</p>
                 <div className="flex items-start gap-3 text-sm text-muted-foreground">
@@ -269,17 +316,11 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
                   <span>{t('soloModeClick')}</span>
                 </div>
               </div>
-
               <div className="flex gap-3 pt-4">
                 <Button variant="outline" onClick={() => setMode('choose')} className="flex-1">
                   {t('cancel')}
                 </Button>
-                <Button
-                  variant="netflix"
-                  onClick={handleCreateSolo}
-                  className="flex-1"
-                  disabled={isLoading}
-                >
+                <Button variant="netflix" onClick={handleCreateSolo} className="flex-1" disabled={isLoading}>
                   {isLoading ? t('loading') : t('startPractice')}
                 </Button>
               </div>
@@ -287,107 +328,170 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
           )}
 
           {mode === 'create' && !generatedCode && (
-            <div className="space-y-6">
+            <div className="space-y-5">
               <h2 className="text-3xl font-display text-foreground text-center">
                 {t('createSession')}
               </h2>
 
               {/* Selected Game Mode Badge */}
               <div className="flex justify-center">
-                <span className={`
-                  px-4 py-2 rounded-full text-sm font-medium
-                  ${selectedGameMode === 'againstTheClock' 
-                    ? 'bg-warning/20 text-warning border border-warning/30' 
-                    : 'bg-primary/20 text-primary border border-primary/30'}
-                `}>
-                  {selectedGameMode === 'againstTheClock' ? t('againstTheClockMode') : t('turnBasedMode')}
+                <span className={`px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 ${
+                  selectedGameMode === 'speedRace'
+                    ? 'bg-[hsl(var(--success))]/20 text-[hsl(var(--success))] border border-[hsl(var(--success))]/30'
+                    : selectedGameMode === 'againstTheClock'
+                      ? 'bg-warning/20 text-warning border border-warning/30'
+                      : 'bg-primary/20 text-primary border border-primary/30'
+                }`}>
+                  {selectedGameMode === 'speedRace' && <Zap className="h-4 w-4" />}
+                  {selectedGameMode === 'speedRace'
+                    ? (t('speedRaceMode' as any))
+                    : selectedGameMode === 'againstTheClock'
+                      ? t('againstTheClockMode')
+                      : t('turnBasedMode')}
                 </span>
               </div>
 
               {/* Players Selection */}
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <label className="flex items-center gap-2 text-sm font-medium text-foreground">
                   <Users className="h-4 w-4 text-primary" />
                   {t('participants')}
                 </label>
-                <div className="flex gap-2">
-                  {[2, 3, 4].map((num) => (
-                    <button
-                      key={num}
-                      onClick={() => setPlayers(num)}
-                      className={`
-                        flex-1 py-3 rounded-lg font-semibold transition-all
-                        ${players === num
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}
-                      `}
-                    >
-                      {num}
-                    </button>
-                  ))}
-                </div>
+                {selectedGameMode === 'speedRace' ? (
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      {[2, 3, 4, 5].map((num) => (
+                        <button
+                          key={num}
+                          onClick={() => { setPlayers(num); setUseCustomPlayers(false); }}
+                          className={`flex-1 py-2.5 rounded-lg font-semibold transition-all text-sm ${!useCustomPlayers && effectivePlayers === num ? 'bg-[hsl(var(--success))] text-white' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}`}
+                        >
+                          {num}
+                        </button>
+                      ))}
+                      <button
+                        onClick={() => setUseCustomPlayers(true)}
+                        className={`flex-1 py-2.5 rounded-lg font-semibold transition-all text-xs ${useCustomPlayers ? 'bg-[hsl(var(--success))] text-white' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}`}
+                      >
+                        {t('customPlayers' as any)}
+                      </button>
+                    </div>
+                    {useCustomPlayers && (
+                      <input
+                        type="number"
+                        min={2}
+                        max={20}
+                        value={customPlayersInput}
+                        onChange={e => setCustomPlayersInput(e.target.value)}
+                        placeholder="2–20 players"
+                        className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm"
+                      />
+                    )}
+                    <p className="text-xs text-muted-foreground">Max 20 players in Speed Race</p>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    {[2, 3, 4].map((num) => (
+                      <button
+                        key={num}
+                        onClick={() => setPlayers(num)}
+                        className={`flex-1 py-3 rounded-lg font-semibold transition-all ${players === num ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}`}
+                      >
+                        {num}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
-              {/* Duration Selection - Different options based on game mode */}
-              <div className="space-y-3">
-                <label className="flex items-center justify-between text-sm font-medium text-foreground">
-                  <span className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-primary" />
-                    {t('gameDuration')}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {selectedGameMode === 'againstTheClock' ? t('maxDuration30') : t('maxDurationNote')}
-                  </span>
-                </label>
-                <div className="flex gap-2">
-                  {(selectedGameMode === 'againstTheClock' ? [10, 15, 20, 30] : [20, 30, 45, 60]).map((mins) => (
+              {/* Speed Race: Round Count */}
+              {selectedGameMode === 'speedRace' ? (
+                <div className="space-y-2">
+                  <label className="flex items-center justify-between text-sm font-medium text-foreground">
+                    <span className="flex items-center gap-2">
+                      <Zap className="h-4 w-4 text-[hsl(var(--success))]" />
+                      {t('roundCount' as any)}
+                    </span>
+                    <span className="text-xs text-muted-foreground">{t('roundCountNote' as any)}</span>
+                  </label>
+                  <div className="flex gap-2">
+                    {[10, 20, 30, 50].map((r) => (
+                      <button
+                        key={r}
+                        onClick={() => { setRounds(r); setUseCustomRounds(false); }}
+                        className={`flex-1 py-2.5 rounded-lg font-semibold transition-all text-sm ${!useCustomRounds && rounds === r ? 'bg-[hsl(var(--success))] text-white' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}`}
+                      >
+                        {r}
+                      </button>
+                    ))}
                     <button
-                      key={mins}
-                      onClick={() => setDuration(mins)}
-                      className={`
-                        flex-1 py-3 rounded-lg font-semibold transition-all
-                        ${duration === mins
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}
-                      `}
+                      onClick={() => setUseCustomRounds(true)}
+                      className={`flex-1 py-2.5 rounded-lg font-semibold transition-all text-xs ${useCustomRounds ? 'bg-[hsl(var(--success))] text-white' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}`}
                     >
-                      {mins}m
+                      {t('customRounds' as any)}
                     </button>
-                  ))}
+                  </div>
+                  {useCustomRounds && (
+                    <input
+                      type="number"
+                      min={10}
+                      max={100}
+                      value={customRounds}
+                      onChange={e => setCustomRounds(e.target.value)}
+                      placeholder="10–100 rounds"
+                      className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm"
+                    />
+                  )}
                 </div>
-              </div>
+              ) : (
+                /* Duration Selection - Different options based on game mode */
+                <div className="space-y-2">
+                  <label className="flex items-center justify-between text-sm font-medium text-foreground">
+                    <span className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-primary" />
+                      {t('gameDuration')}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {selectedGameMode === 'againstTheClock' ? t('maxDuration30') : t('maxDurationNote')}
+                    </span>
+                  </label>
+                  <div className="flex gap-2">
+                    {(selectedGameMode === 'againstTheClock' ? [10, 15, 20, 30] : [20, 30, 45, 60]).map((mins) => (
+                      <button
+                        key={mins}
+                        onClick={() => setDuration(mins)}
+                        className={`flex-1 py-3 rounded-lg font-semibold transition-all ${duration === mins ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}`}
+                      >
+                        {mins}m
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-               {/* Card Mode Toggle - Only for turn-based */}
-               {selectedGameMode === 'turnBased' && (
-                 <div className="space-y-3">
-                   <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg border border-border">
-                     <div className="flex items-center gap-3">
-                       <div className="p-2 bg-warning/20 rounded-lg">
-                         <Sparkles className="h-5 w-5 text-warning" />
-                       </div>
-                       <div>
-                         <p className="text-sm font-medium text-foreground">{t('cardMode')}</p>
-                         <p className="text-xs text-muted-foreground">{t('cardModeDesc')}</p>
-                       </div>
-                     </div>
-                     <Switch
-                       checked={cardModeEnabled}
-                       onCheckedChange={setCardModeEnabled}
-                     />
-                   </div>
-                 </div>
-               )}
+              {/* Card Mode Toggle - Only for turn-based */}
+              {selectedGameMode === 'turnBased' && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg border border-border">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-warning/20 rounded-lg">
+                        <Sparkles className="h-5 w-5 text-warning" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-foreground">{t('cardMode')}</p>
+                        <p className="text-xs text-muted-foreground">{t('cardModeDesc')}</p>
+                      </div>
+                    </div>
+                    <Switch checked={cardModeEnabled} onCheckedChange={setCardModeEnabled} />
+                  </div>
+                </div>
+              )}
 
-              <div className="flex gap-3 pt-4">
+              <div className="flex gap-3 pt-2">
                 <Button variant="outline" onClick={() => setMode('selectGameMode')} className="flex-1">
                   {t('cancel')}
                 </Button>
-                <Button
-                  variant="netflix"
-                  onClick={handleCreate}
-                  className="flex-1"
-                  disabled={isLoading}
-                >
+                <Button variant="netflix" onClick={handleCreate} className="flex-1" disabled={isLoading}>
                   {isLoading ? t('loading') : t('confirm')}
                 </Button>
               </div>

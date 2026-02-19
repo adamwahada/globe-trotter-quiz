@@ -187,7 +187,7 @@ export const useFirebaseSession = () => {
     }
   }, []);
 
-   const createSession = useCallback(async (maxPlayers: number, duration: number, isSoloMode?: boolean, gameMode?: GameMode, cardModeEnabled?: boolean): Promise<string> => {
+   const createSession = useCallback(async (maxPlayers: number, duration: number, isSoloMode?: boolean, gameMode?: GameMode, cardModeEnabled?: boolean, totalRounds?: number): Promise<string> => {
     // Get current user's auth.uid
     const uid = getCurrentUid();
     if (!uid || !user) {
@@ -259,8 +259,12 @@ export const useFirebaseSession = () => {
         turnStartTime: isSoloMode ? null : null, // Solo mode uses different timing (click-based)
         isSoloMode: isSoloMode || false,
         gameMode: effectiveGameMode,
-         cardModeEnabled: cardModeEnabled || false,
-         activeCardEffects: [],
+        cardModeEnabled: cardModeEnabled || false,
+        activeCardEffects: [],
+        // Speed Race specific
+        totalRounds: gameMode === 'speedRace' ? (totalRounds || 20) : undefined,
+        currentRound: gameMode === 'speedRace' ? 0 : undefined,
+        speedRaceRoundState: gameMode === 'speedRace' ? null : undefined,
       };
 
       await createSessionInFirebase(newSession);
