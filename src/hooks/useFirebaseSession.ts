@@ -198,15 +198,23 @@ export const useFirebaseSession = () => {
     // Check for existing active session
     const activeCheck = await checkHasActiveSession();
     if (activeCheck.hasSession) {
-      setError('You already have an active session. Resume or leave it first.');
-      throw new Error('Active session exists');
+      // For solo mode, stale recovery data could block creation — clear it and retry
+      if (isSoloMode) {
+        console.warn('[createSession] Stale active session found for solo, clearing...');
+        clearRecoveryData();
+      } else {
+        setError('You already have an active session. Resume or leave it first.');
+        throw new Error('Active session exists');
+      }
     }
 
-    // MANDATORY: Validate that this is the authorized session
-    const isValid = await validateUserPresence(uid, tabSessionId);
-    if (!isValid) {
-      addToast('error', translations[localStorage.getItem('worldquiz_language') as 'en' | 'fr' | 'ar' || 'en'].sessionConflictDesc, 8000);
-      throw new Error('Unauthorized session instance');
+    // MANDATORY: Validate that this is the authorized session (skip for solo to avoid race conditions)
+    if (!isSoloMode) {
+      const isValid = await validateUserPresence(uid, tabSessionId);
+      if (!isValid) {
+        addToast('error', translations[localStorage.getItem('worldquiz_language') as 'en' | 'fr' | 'ar' || 'en'].sessionConflictDesc, 8000);
+        throw new Error('Unauthorized session instance');
+      }
     }
 
     setIsLoading(true);
@@ -289,7 +297,8 @@ export const useFirebaseSession = () => {
       });
 
       return code;
-    } catch (err) {
+    } catch (err: any) {
+      console.error('[createSession] Failed:', err?.code, err?.message);
       setError('Failed to create session');
       throw err;
     } finally {
