@@ -51,7 +51,7 @@ const Index = () => {
   const { t } = useLanguage();
   const { isAuthenticated } = useAuth();
   const { isAdmin } = useAdmin();
-  const { hasActiveSession, session, resumeSession, checkActiveSession } = useGame();
+  const { hasActiveSession, session, resumeSession, checkActiveSession, error: gameError, joinSessionAsGuest } = useGame();
   const { addToast } = useToastContext();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -64,7 +64,6 @@ const Index = () => {
   const [guestJoinOpen, setGuestJoinOpen] = useState(false);
   const [pendingGuestCode, setPendingGuestCode] = useState<string | null>(null);
   const [authForInviteOpen, setAuthForInviteOpen] = useState(false);
-  const { joinSessionAsGuest } = useGame();
 
   // Check for active session on mount
   useEffect(() => {
@@ -99,12 +98,16 @@ const Index = () => {
 
   const handleGuestJoin = async (username: string) => {
     if (!pendingGuestCode) return;
-    const success = await joinSessionAsGuest(pendingGuestCode, username);
-    if (success) {
-      setGuestJoinOpen(false);
-      navigate('/waiting-room');
-    } else {
-      throw new Error('Could not join session. It may be full or already started.');
+    try {
+      const success = await joinSessionAsGuest(pendingGuestCode, username);
+      if (success) {
+        setGuestJoinOpen(false);
+        navigate('/waiting-room');
+      } else {
+        throw new Error(gameError || 'Session not found or no longer available.');
+      }
+    } catch (err: any) {
+      throw new Error(err?.message || 'Could not join session.');
     }
   };
 
