@@ -362,7 +362,7 @@ export const useFirebaseSession = () => {
         lastSeen: Date.now(),
       };
 
-      const success = await addPlayerToSession(code, playerData);
+      const success = await addPlayerToSession(code, playerData, undefined, existingSession);
 
       if (success) {
         // Set current player
@@ -414,9 +414,17 @@ export const useFirebaseSession = () => {
 
     try {
       const existingSession = await getSessionByCode(code);
-      if (!existingSession) { setError('Session not found'); return false; }
+      console.log('[Guest Join] Session fetched:', existingSession?.code, 'status:', existingSession?.status, 'players:', Object.keys(existingSession?.players || {}).length);
+
+      if (!existingSession) {
+        console.warn('[Guest Join] Session not found:', code);
+        setError('Session not found');
+        return false;
+      }
 
       const currentPlayers = playersMapToArray(existingSession.players);
+      console.log('[Guest Join] Player count:', currentPlayers.length, '/', existingSession.maxPlayers);
+
       if (currentPlayers.length >= existingSession.maxPlayers) { setError('Session is full'); return false; }
       if (existingSession.status !== 'waiting') { setError('Session has already started'); return false; }
       if (existingSession.players && existingSession.players[guestId]) { setError('Already in session'); return false; }
@@ -437,12 +445,19 @@ export const useFirebaseSession = () => {
         isGuest: true,
       };
 
-      const success = await addPlayerToSession(code, playerData, guestId);
+      // Pass the pre-validated session to skip a redundant re-fetch inside addPlayerToSession.
+      // This avoids any potential permission issues for unauthenticated guests.
+      const success = await addPlayerToSession(code, playerData, guestId, existingSession);
+      console.log('[Guest Join] addPlayerToSession result:', success, 'guestId:', guestId);
 
       if (success) {
         setCurrentPlayer({ id: guestId, ...playerData });
-        const refreshedSession = await getSessionByCode(code);
-        setSession(refreshedSession || existingSession);
+        // Build optimistic session immediately — avoids a second read that could fail for guests
+        const optimisticSession: GameSession = {
+          ...existingSession,
+          players: { ...existingSession.players, [guestId]: playerData },
+        };
+        setSession(optimisticSession);
         setHasActiveSession(true);
 
         sessionStorage.setItem('guest_session_code', code);
@@ -453,6 +468,7 @@ export const useFirebaseSession = () => {
 
       return success;
     } catch (err) {
+      console.error('[Guest Join] Error:', err);
       setError('Failed to join session');
       return false;
     } finally {
