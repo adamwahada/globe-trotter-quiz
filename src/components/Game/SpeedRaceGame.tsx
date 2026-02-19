@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGame } from '@/contexts/GameContext';
-import { useLanguage } from '@/contexts/LanguageContext';
 import { useToastContext } from '@/contexts/ToastContext';
 import { useSound } from '@/contexts/SoundContext';
 import { WorldMap } from '@/components/Map/WorldMap';
@@ -18,7 +17,7 @@ import {
   SpeedRaceRoundState,
 } from '@/types/game';
 import { getRandomUnplayedCountry, getCountryFlag } from '@/utils/countryData';
-import { LogOut, Trophy, MapPin, CheckCircle, XCircle, Zap, X } from 'lucide-react';
+import { LogOut, Trophy, MapPin, CheckCircle, XCircle, Zap, X, Clock, Users } from 'lucide-react';
 import { removePlayerFromSession, clearRecoveryData } from '@/services/gameSessionService';
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -58,8 +57,16 @@ const RoundCountdown: React.FC<{ startTime: number }> = ({ startTime }) => {
   );
 };
 
-/** Timer bar that depletes over SPEED_RACE_ANSWER_TIME seconds */
-const RoundTimer: React.FC<{ startTime: number; onExpire: () => void }> = ({ startTime, onExpire }) => {
+/**
+ * Timer bar that depletes over SPEED_RACE_ANSWER_TIME seconds.
+ * Always visible during guessing phase — even after the player has submitted.
+ * The timer calls onExpire exactly once when it hits 0 (host uses this to advance).
+ */
+const RoundTimer: React.FC<{
+  startTime: number;
+  onExpire: () => void;
+  submitted?: boolean;
+}> = ({ startTime, onExpire, submitted = false }) => {
   const [pct, setPct] = useState(100);
   const [remaining, setRemaining] = useState(SPEED_RACE_ANSWER_TIME);
   const firedRef = useRef(false);
@@ -87,14 +94,17 @@ const RoundTimer: React.FC<{ startTime: number; onExpire: () => void }> = ({ sta
         : 'hsl(var(--destructive))';
 
   return (
-    <div className="space-y-1">
-      <div className="flex justify-between text-xs text-muted-foreground px-1">
-        <span className="font-medium">Time left</span>
-        <span style={{ color }} className="font-bold tabular-nums">
+    <div className="space-y-1.5">
+      <div className="flex justify-between items-center text-xs px-0.5">
+        <span className="flex items-center gap-1 text-muted-foreground font-medium">
+          <Clock className="h-3 w-3" />
+          {submitted ? 'Round ends in' : 'Time to answer'}
+        </span>
+        <span style={{ color }} className="font-bold tabular-nums text-sm">
           {remaining.toFixed(1)}s
         </span>
       </div>
-      <div className="h-2.5 rounded-full bg-secondary overflow-hidden">
+      <div className="h-3 rounded-full bg-secondary overflow-hidden">
         <div
           className="h-full rounded-full transition-all duration-100"
           style={{ width: `${pct}%`, backgroundColor: color }}
@@ -110,32 +120,26 @@ const ConfirmModal: React.FC<{
   onConfirm: () => void;
   onCancel: () => void;
 }> = ({ country, onConfirm, onCancel }) => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm p-4">
+  <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-background/60 backdrop-blur-sm p-4">
     <div className="w-full max-w-sm bg-card border border-border rounded-2xl shadow-2xl animate-scale-in overflow-hidden">
       <div className="px-6 pt-6 pb-4 text-center">
         <div className="w-14 h-14 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center mx-auto mb-4">
           <MapPin className="h-6 w-6 text-primary" />
         </div>
         <h3 className="text-xl font-display text-foreground mb-1">Confirm Location?</h3>
-        <p className="text-sm text-muted-foreground mb-4">
+        <p className="text-sm text-muted-foreground mb-1">
           You selected <span className="font-bold text-foreground">{country}</span>.
-          Once confirmed you <span className="text-destructive font-medium">cannot change</span> your answer.
+        </p>
+        <p className="text-xs text-destructive font-medium">
+          ⚠️ Once confirmed, you cannot change your answer.
         </p>
       </div>
       <div className="flex gap-3 px-6 pb-6">
-        <Button
-          variant="outline"
-          className="flex-1 gap-2"
-          onClick={onCancel}
-        >
+        <Button variant="outline" className="flex-1 gap-2" onClick={onCancel}>
           <X className="h-4 w-4" />
           Cancel
         </Button>
-        <Button
-          variant="netflix"
-          className="flex-1 gap-2"
-          onClick={onConfirm}
-        >
+        <Button variant="default" className="flex-1 gap-2 bg-success hover:bg-success/90 text-success-foreground" onClick={onConfirm}>
           <CheckCircle className="h-4 w-4" />
           Confirm
         </Button>
@@ -144,13 +148,14 @@ const ConfirmModal: React.FC<{
   </div>
 );
 
-/** Post-round results modal: Top 10 ranking with rank movement & points earned */
+/** Post-round results: Top 10 ranking with rank movement & points earned */
 const RoundResultsModal: React.FC<{
   roundState: SpeedRaceRoundState;
   players: ReturnType<typeof playersMapToArray>;
   prevRanking: { id: string; score: number }[];
   nextRoundIn: number;
-}> = ({ roundState, players, prevRanking, nextRoundIn }) => {
+  totalRounds: number;
+}> = ({ roundState, players, prevRanking, nextRoundIn, totalRounds }) => {
   const [countdown, setCountdown] = useState(nextRoundIn);
 
   useEffect(() => {
@@ -170,11 +175,15 @@ const RoundResultsModal: React.FC<{
             <div>
               <h2 className="text-xl font-display text-foreground">Round {roundState.roundNumber} Results</h2>
               <p className="text-sm text-muted-foreground">
-                Answer was:{' '}
+                Correct:{' '}
                 <span className="font-bold text-foreground">
                   {getCountryFlag(roundState.country)} {roundState.country}
                 </span>
               </p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-muted-foreground">Round</p>
+              <p className="text-lg font-bold text-foreground">{roundState.roundNumber}/{totalRounds}</p>
             </div>
           </div>
         </div>
@@ -236,17 +245,17 @@ const RoundResultsModal: React.FC<{
                   ) : (
                     <span className="text-xs text-muted-foreground italic">no answer</span>
                   )}
-                  <p className="text-xs text-muted-foreground">{player.score.toFixed(2)} total</p>
+                  <p className="text-xs font-bold text-foreground">{player.score.toFixed(2)} pts</p>
                 </div>
               </div>
             );
           })}
         </div>
 
-        <div className="px-6 py-4 border-t border-border text-center">
+        <div className="px-6 py-4 border-t border-border text-center bg-secondary/20">
           <p className="text-sm text-muted-foreground">
             Next round in{' '}
-            <span className="font-bold text-foreground tabular-nums">{countdown}s</span>
+            <span className="font-bold text-foreground tabular-nums text-lg">{countdown}s</span>
           </p>
         </div>
       </div>
@@ -270,14 +279,12 @@ const SpeedRacePodium: React.FC<{
   const top3 = sorted.slice(0, 3);
   const rest = sorted.slice(3);
 
-  // Podium visual order: 2nd, 1st, 3rd
   const podiumOrder = [top3[1], top3[0], top3[2]].filter(Boolean);
   const heights = ['h-28', 'h-40', 'h-20'];
   const podiumIdx = [1, 0, 2];
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/98 backdrop-blur-xl p-4 overflow-y-auto">
-      {/* Stars */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         {[...Array(20)].map((_, i) => (
           <div
@@ -306,7 +313,6 @@ const SpeedRacePodium: React.FC<{
           <p className="text-muted-foreground">Speed Race Complete!</p>
         </div>
 
-        {/* Podium */}
         <div className="flex items-end justify-center gap-4 mb-8">
           {podiumOrder.map((player, pos) => {
             if (!player) return <div key={pos} className="w-28" />;
@@ -324,9 +330,7 @@ const SpeedRacePodium: React.FC<{
                 >
                   {player.avatar}
                 </div>
-                <p className="text-sm font-bold text-foreground mb-1 text-center max-w-[5rem] truncate">
-                  {player.username}
-                </p>
+                <p className="text-sm font-bold text-foreground mb-1 text-center max-w-[5rem] truncate">{player.username}</p>
                 <p className="text-xs text-muted-foreground mb-2">{player.score.toFixed(2)} pts</p>
                 <div className="text-2xl mb-1">{rankEmoji}</div>
                 <div
@@ -365,7 +369,7 @@ const SpeedRacePodium: React.FC<{
           </div>
         )}
 
-        <Button variant="netflix" className="w-full" onClick={onBack}>
+        <Button variant="default" className="w-full" onClick={onBack}>
           Back to Home
         </Button>
       </div>
@@ -390,7 +394,7 @@ const SpeedRaceGame: React.FC = () => {
   const guessedCountries = session?.guessedCountries || [];
 
   // Local UI state
-  const [pendingCountry, setPendingCountry] = useState<string | null>(null); // country clicked, confirm not yet shown
+  const [pendingCountry, setPendingCountry] = useState<string | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [showResults, setShowResults] = useState(false);
@@ -414,7 +418,7 @@ const SpeedRaceGame: React.FC = () => {
   useEffect(() => { totalRoundsRef.current = totalRounds; }, [totalRounds]);
 
   const submittedRoundRef = useRef<number>(-1);
-  const timeoutFiredRef = useRef<number>(-1);
+  const timerExpiredRoundRef = useRef<number>(-1);
 
   // Reset local state when new guessing phase starts
   useEffect(() => {
@@ -424,6 +428,7 @@ const SpeedRaceGame: React.FC = () => {
       setHasSubmitted(false);
     }
     if (roundState?.phase === 'results') {
+      setShowConfirmModal(false); // close any open confirm modal
       setShowResults(true);
     }
     if (roundState?.phase === 'reveal') {
@@ -511,6 +516,8 @@ const SpeedRaceGame: React.FC = () => {
   }, [updateGameState, endGame]);
 
   // ── HOST: Orchestrate round phases ────────────────────────────────────────
+  // THE TIMER IS THE SOLE AUTHORITY. After guessing phase timer expires, the
+  // host immediately moves to results — regardless of how many players submitted.
   useEffect(() => {
     if (!isHost || !roundState) return;
     const phase = roundState.phase;
@@ -538,18 +545,18 @@ const SpeedRaceGame: React.FC = () => {
     }
 
     if (phase === 'guessing') {
-      // Poll every 400ms: end early ONLY if every player has submitted
-      const iv = setInterval(async () => {
+      // Host timer: after SPEED_RACE_ANSWER_TIME, move to results unconditionally.
+      // Add small buffer (200ms) to ensure all client submissions propagate first.
+      const delay = Math.max(0, (SPEED_RACE_ANSWER_TIME * 1000 + 200) - (Date.now() - roundState.phaseStartTime));
+      const tid = setTimeout(async () => {
+        if (!isHostRef.current) return;
         const rs = roundStateRef.current;
-        if (!rs || rs.phase !== 'guessing') { clearInterval(iv); return; }
-        const subs = rs.submissions || {};
-        const allSubmitted = playersRef.current.every(p => subs[p.id] !== undefined);
-        if (allSubmitted) {
-          clearInterval(iv);
-          await moveToResults(rs);
-        }
-      }, 400);
-      return () => clearInterval(iv);
+        if (!rs || rs.phase !== 'guessing') return;
+        if (timerExpiredRoundRef.current === rs.roundNumber) return;
+        timerExpiredRoundRef.current = rs.roundNumber;
+        await moveToResults(rs);
+      }, delay);
+      return () => clearTimeout(tid);
     }
 
     if (phase === 'results') {
@@ -594,13 +601,12 @@ const SpeedRaceGame: React.FC = () => {
     setShowConfirmModal(true);
   }, [hasSubmitted, roundState, currentPlayer]);
 
-  // ── Confirm modal: cancel ─────────────────────────────────────────────────
   const handleCancelConfirm = useCallback(() => {
     setShowConfirmModal(false);
     setPendingCountry(null);
   }, []);
 
-  // ── Confirm modal: confirm → lock submission ───────────────────────────────
+  // ── Confirm → lock submission ───────────────────────────────────────────────
   const handleConfirm = useCallback(async () => {
     if (!currentPlayer || !roundState || hasSubmitted || !pendingCountry) return;
     if (roundState.phase !== 'guessing') return;
@@ -632,30 +638,18 @@ const SpeedRaceGame: React.FC = () => {
     }
   }, [currentPlayer, roundState, hasSubmitted, pendingCountry, updateGameState, addToast, playToastSound]);
 
-  // ── Timer expire: host moves to results immediately (non-submitters = 0) ──
-  const handleTimerExpire = useCallback(async () => {
-    if (!roundState) return;
-    if (roundState.phase !== 'guessing') return;
-    if (timeoutFiredRef.current === roundState.roundNumber) return;
-    timeoutFiredRef.current = roundState.roundNumber;
-
-    // Every player client closes the confirm modal if open
+  /**
+   * handleTimerExpire is called by the client-side RoundTimer component.
+   * It closes the confirm modal so the player can't submit after time.
+   * The HOST's own timeout handles the actual phase transition.
+   */
+  const handleTimerExpire = useCallback(() => {
     setShowConfirmModal(false);
-
-    // Non-submitted players register their own 0-score entry
-    if (!currentPlayer) return;
-    if (roundState.submissions?.[currentPlayer.id]) return;
-    if (submittedRoundRef.current === roundState.roundNumber) return;
-    submittedRoundRef.current = roundState.roundNumber;
-    setHasSubmitted(true);
-
-    const updatedSubs = {
-      ...(roundState.submissions || {}),
-      [currentPlayer.id]: { clickedCountry: null, confirmedAt: Date.now(), isCorrect: false, pointsEarned: 0 },
-    };
-
-    await updateGameState({ speedRaceRoundState: { ...roundState, submissions: updatedSubs } } as any);
-  }, [currentPlayer, roundState, updateGameState]);
+    // If player hasn't submitted, mark them as submitted with 0 (client-side only for UX)
+    if (!hasSubmitted) {
+      setHasSubmitted(true);
+    }
+  }, [hasSubmitted]);
 
   // ── Quit ──────────────────────────────────────────────────────────────────
   const handleQuit = async () => {
@@ -683,34 +677,40 @@ const SpeedRaceGame: React.FC = () => {
   const mySubmission = roundState.submissions?.[currentPlayer?.id || ''];
   const submittedCount = Object.keys(roundState.submissions || {}).length;
   const isGuessing = roundState.phase === 'guessing';
+  const totalScore = currentPlayer?.score || 0;
 
-  // Prev ranking for results modal
   const prevRanking = prevRankingRef.current.length > 0
     ? prevRankingRef.current
     : Object.entries(session?.players || {})
         .map(([id, p]) => ({ id, score: p.score || 0 }))
         .sort((a, b) => b.score - a.score);
 
+  // Live mini-leaderboard for sidebar
+  const rankedPlayers = [...players].sort((a, b) => b.score - a.score).slice(0, 5);
+
   return (
     <div className="fixed inset-0 flex flex-col bg-background overflow-hidden">
       <ReconnectionBanner />
 
       {/* ── Header ── */}
-      <header className="shrink-0 z-30 flex items-center justify-between px-4 py-2 bg-background/95 backdrop-blur border-b border-border">
-        <Logo />
-
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-success/10 border border-success/30">
-            <Zap className="h-3.5 w-3.5 text-success" />
+      <header className="shrink-0 z-30 flex items-center justify-between px-4 py-2.5 bg-background/95 backdrop-blur border-b border-border">
+        <div className="flex items-center gap-3">
+          <Logo />
+          {/* Round indicator */}
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/30">
+            <Zap className="h-3.5 w-3.5 text-primary" />
             <span className="text-xs font-bold text-foreground">
-              {roundState.roundNumber}/{totalRounds}
+              Round {roundState.roundNumber}/{totalRounds}
             </span>
           </div>
+        </div>
 
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/30">
-            <Trophy className="h-3.5 w-3.5 text-primary" />
-            <span className="text-xs font-bold text-primary">
-              {(currentPlayer?.score || 0).toFixed(2)}
+        <div className="flex items-center gap-2">
+          {/* MY TOTAL SESSION SCORE - prominent */}
+          <div className="flex flex-col items-center px-3 py-1 rounded-xl bg-success/15 border border-success/40">
+            <span className="text-[10px] text-success/70 font-medium uppercase tracking-wide leading-none">My Score</span>
+            <span className="text-xl font-display font-bold text-success tabular-nums leading-tight">
+              {totalScore.toFixed(2)}
             </span>
           </div>
 
@@ -721,82 +721,159 @@ const SpeedRaceGame: React.FC = () => {
         </div>
       </header>
 
-      {/* ── Country reveal bar ── */}
-      <div className={`shrink-0 text-center py-3 px-4 border-b border-border transition-colors ${
-        roundState.phase === 'reveal' || roundState.phase === 'countdown'
-          ? 'bg-success/10'
-          : isGuessing
-            ? 'bg-card'
-            : 'bg-secondary/30'
-      }`}>
-        <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-0.5">
-          {isGuessing ? 'Find this country on the map!' : 'Get ready...'}
-        </p>
-        <h2 className="text-2xl md:text-3xl font-display text-foreground leading-tight">
-          {roundState.country}
-        </h2>
-        {isGuessing && (
-          <p className="text-[11px] text-muted-foreground mt-0.5">
-            {hasSubmitted
-              ? `Waiting for others... (${submittedCount}/${players.length})`
-              : 'Click a country then confirm — one chance only!'}
-          </p>
-        )}
-      </div>
+      {/* ── Main content: country name + map + sidebar ── */}
+      <div className="flex-1 flex overflow-hidden">
 
-      {/* ── Timer bar (guessing phase only) ── */}
-      {isGuessing && !hasSubmitted && (
-        <div className="shrink-0 px-4 py-2 bg-background/80 border-b border-border">
-          <RoundTimer startTime={roundState.phaseStartTime} onExpire={handleTimerExpire} />
-        </div>
-      )}
+        {/* ── Left: map area ── */}
+        <div className="flex-1 flex flex-col overflow-hidden">
 
-      {/* Submitted status bar */}
-      {isGuessing && hasSubmitted && (
-        <div className="shrink-0 px-4 py-2 bg-background/80 border-b border-border flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {mySubmission?.isCorrect
-              ? <CheckCircle className="h-4 w-4 text-success" />
-              : <XCircle className="h-4 w-4 text-destructive" />
-            }
-            <span className="text-sm font-medium text-foreground">
-              {mySubmission?.isCorrect
-                ? `Correct! +${mySubmission.pointsEarned.toFixed(2)} pts`
-                : 'Wrong answer — waiting for results...'}
-            </span>
+          {/* Country name banner */}
+          <div className={`shrink-0 text-center py-2.5 px-4 border-b border-border transition-colors ${
+            roundState.phase === 'reveal' || roundState.phase === 'countdown'
+              ? 'bg-success/10'
+              : isGuessing
+                ? 'bg-card'
+                : 'bg-secondary/30'
+          }`}>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-0.5 font-medium">
+              {roundState.phase === 'reveal' ? 'Memorize this country...' :
+               roundState.phase === 'countdown' ? 'Get ready to locate it!' :
+               isGuessing ? '📍 Find this country on the map' :
+               `✅ Round ${roundState.roundNumber} complete`}
+            </p>
+            <h2 className="text-2xl md:text-3xl font-display text-foreground leading-tight">
+              {roundState.country}
+            </h2>
           </div>
-          <span className="text-xs text-muted-foreground">{submittedCount}/{players.length} answered</span>
-        </div>
-      )}
 
-      {/* ── Map area: fills remaining space ── */}
-      <div className="flex-1 relative overflow-hidden">
-        {/* Blur overlay during reveal */}
-        {roundState.phase === 'reveal' && (
-          <div className="absolute inset-0 z-10 backdrop-blur-md bg-background/70 flex items-center justify-center">
-            <div className="text-center animate-fade-in">
-              <p className="text-5xl mb-3 animate-pulse">🗺️</p>
-              <p className="text-lg font-display text-foreground">{roundState.country}</p>
-              <p className="text-sm text-muted-foreground mt-1">Map revealing soon...</p>
+          {/* Timer — always shown during guessing, even after submitting */}
+          {isGuessing && (
+            <div className={`shrink-0 px-4 py-2.5 border-b border-border ${
+              hasSubmitted ? 'bg-secondary/30' : 'bg-background'
+            }`}>
+              <RoundTimer
+                startTime={roundState.phaseStartTime}
+                onExpire={handleTimerExpire}
+                submitted={hasSubmitted}
+              />
+              {hasSubmitted && (
+                <div className="flex items-center justify-between mt-2">
+                  <div className="flex items-center gap-2">
+                    {mySubmission?.isCorrect
+                      ? <CheckCircle className="h-4 w-4 text-success" />
+                      : <XCircle className="h-4 w-4 text-destructive" />
+                    }
+                    <span className={`text-sm font-semibold ${mySubmission?.isCorrect ? 'text-success' : 'text-destructive'}`}>
+                      {mySubmission?.isCorrect
+                        ? `Correct! +${mySubmission.pointsEarned.toFixed(2)} pts`
+                        : mySubmission?.clickedCountry
+                          ? `Wrong — you picked ${mySubmission.clickedCountry}`
+                          : 'Time\'s up — 0 pts'
+                      }
+                    </span>
+                  </div>
+                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Users className="h-3 w-3" />
+                    {submittedCount}/{players.length}
+                  </span>
+                </div>
+              )}
+              {!hasSubmitted && (
+                <p className="text-[11px] text-muted-foreground mt-1.5">
+                  Double-click a country on the map to select it, then confirm your answer.
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Map — contained, not full-screen */}
+          <div className="flex-1 relative overflow-hidden p-2">
+            {/* Blur overlay during reveal */}
+            {roundState.phase === 'reveal' && (
+              <div className="absolute inset-2 z-10 rounded-xl backdrop-blur-md bg-background/70 flex items-center justify-center">
+                <div className="text-center animate-fade-in">
+                  <p className="text-5xl mb-3 animate-pulse">🗺️</p>
+                  <p className="text-lg font-display text-foreground">{roundState.country}</p>
+                  <p className="text-sm text-muted-foreground mt-1">Map revealing soon...</p>
+                </div>
+              </div>
+            )}
+
+            {/* 3-second countdown overlay */}
+            {roundState.phase === 'countdown' && (
+              <div className="absolute inset-2 z-10 rounded-xl overflow-hidden">
+                <RoundCountdown startTime={roundState.phaseStartTime} />
+              </div>
+            )}
+
+            <WorldMap
+              currentCountry={isGuessing && pendingCountry && !showConfirmModal ? pendingCountry : undefined}
+              guessedCountries={guessedCountries}
+              correctCountries={session?.correctCountries || []}
+              wrongCountries={session?.wrongCountries || []}
+              onCountryClick={isGuessing && !hasSubmitted ? handleCountryClick : () => {}}
+              disabled={!isGuessing || hasSubmitted}
+              speedRaceMode={true}
+            />
+          </div>
+        </div>
+
+        {/* ── Right sidebar: live mini-leaderboard ── */}
+        <div className="w-52 shrink-0 border-l border-border bg-card/50 flex flex-col overflow-hidden">
+          <div className="px-3 py-2.5 border-b border-border bg-card">
+            <div className="flex items-center gap-1.5">
+              <Trophy className="h-4 w-4 text-warning" />
+              <span className="text-xs font-bold text-foreground uppercase tracking-wide">Rankings</span>
             </div>
           </div>
-        )}
+          <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
+            {rankedPlayers.map((player, idx) => {
+              const isMe = player.id === currentPlayer?.id;
+              return (
+                <div
+                  key={player.id}
+                  className={`flex items-center gap-2 p-2 rounded-lg border transition-all ${
+                    isMe
+                      ? 'border-success/50 bg-success/10'
+                      : 'border-border/50 bg-secondary/20'
+                  }`}
+                >
+                  <span className="text-xs font-bold text-muted-foreground w-4 text-center shrink-0">
+                    {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `#${idx + 1}`}
+                  </span>
+                  <div
+                    className="w-6 h-6 rounded-full flex items-center justify-center text-xs shrink-0"
+                    style={{ backgroundColor: player.color }}
+                  >
+                    {player.avatar}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-xs truncate font-medium ${isMe ? 'text-success' : 'text-foreground'}`}>
+                      {isMe ? 'You' : player.username}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground tabular-nums font-bold">
+                      {player.score.toFixed(2)} pts
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+            {players.length > 5 && (
+              <p className="text-[10px] text-muted-foreground text-center pt-1">
+                +{players.length - 5} more players
+              </p>
+            )}
+          </div>
 
-        {/* 3-second countdown overlay */}
-        {roundState.phase === 'countdown' && (
-          <RoundCountdown startTime={roundState.phaseStartTime} />
-        )}
-
-        {/* Map: pass speedRace=true so WorldMap only shows zoom + recenter */}
-        <WorldMap
-          currentCountry={isGuessing && pendingCountry && !showConfirmModal ? pendingCountry : undefined}
-          guessedCountries={guessedCountries}
-          correctCountries={session?.correctCountries || []}
-          wrongCountries={session?.wrongCountries || []}
-          onCountryClick={isGuessing && !hasSubmitted ? handleCountryClick : () => {}}
-          disabled={!isGuessing || hasSubmitted}
-          speedRaceMode={true}
-        />
+          {/* My score prominent in sidebar too */}
+          <div className="p-3 border-t border-border bg-card">
+            <div className="text-center">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">My Total</p>
+              <p className="text-2xl font-display font-bold text-success tabular-nums">{totalScore.toFixed(2)}</p>
+              <p className="text-[10px] text-muted-foreground">points</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* ── Confirm modal ── */}
@@ -815,6 +892,7 @@ const SpeedRaceGame: React.FC = () => {
           players={players}
           prevRanking={prevRanking}
           nextRoundIn={Math.ceil(SPEED_RACE_RESULTS_TIME / 1000)}
+          totalRounds={totalRounds}
         />
       )}
     </div>
