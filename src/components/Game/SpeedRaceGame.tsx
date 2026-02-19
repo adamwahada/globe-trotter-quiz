@@ -17,8 +17,8 @@ import {
   calculateSpeedRacePoints,
   SpeedRaceRoundState,
 } from '@/types/game';
-import { getRandomUnplayedCountry, getMapCountryName, getCountryFlag } from '@/utils/countryData';
-import { LogOut, Trophy, MapPin, CheckCircle, XCircle, Zap, Crown } from 'lucide-react';
+import { getRandomUnplayedCountry, getCountryFlag } from '@/utils/countryData';
+import { LogOut, Trophy, MapPin, CheckCircle, XCircle, Zap } from 'lucide-react';
 import { removePlayerFromSession, clearRecoveryData } from '@/services/gameSessionService';
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -45,7 +45,7 @@ const RoundCountdown: React.FC<{ startTime: number }> = ({ startTime }) => {
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-background/90 backdrop-blur-xl">
       <div className="text-center animate-fade-in">
         <p className="text-xl text-muted-foreground mb-6 font-display">Map reveals in...</p>
-        <div className="text-[10rem] font-display text-[hsl(var(--success))] drop-shadow-[0_0_60px_hsl(var(--success))]">
+        <div className="text-[10rem] font-display text-success drop-shadow-[0_0_60px_hsl(var(--success))]">
           {count || '🗺️'}
         </div>
       </div>
@@ -75,13 +75,20 @@ const RoundTimer: React.FC<{ startTime: number; onExpire: () => void }> = ({ sta
   }, [startTime, onExpire]);
 
   const remaining = Math.max(0, SPEED_RACE_ANSWER_TIME - elapsed);
-  const color = pct > 60 ? 'hsl(var(--success))' : pct > 30 ? 'hsl(var(--warning))' : 'hsl(var(--destructive))';
+  const color =
+    pct > 60
+      ? 'hsl(var(--success))'
+      : pct > 30
+        ? 'hsl(var(--warning))'
+        : 'hsl(var(--destructive))';
 
   return (
     <div className="w-full space-y-1">
       <div className="flex justify-between text-xs text-muted-foreground">
         <span>Time left</span>
-        <span style={{ color }} className="font-bold tabular-nums">{remaining.toFixed(1)}s</span>
+        <span style={{ color }} className="font-bold tabular-nums">
+          {remaining.toFixed(1)}s
+        </span>
       </div>
       <div className="h-3 rounded-full bg-secondary overflow-hidden">
         <div
@@ -98,17 +105,16 @@ const RoundResultsModal: React.FC<{
   roundState: SpeedRaceRoundState;
   players: ReturnType<typeof playersMapToArray>;
   prevRanking: { id: string; score: number }[];
-  onNext: () => void;
-  isHost: boolean;
   nextRoundIn: number;
-}> = ({ roundState, players, prevRanking, onNext, isHost, nextRoundIn }) => {
+}> = ({ roundState, players, prevRanking, nextRoundIn }) => {
   const { t } = useLanguage();
   const [countdown, setCountdown] = useState(nextRoundIn);
 
   useEffect(() => {
+    setCountdown(nextRoundIn);
     const iv = setInterval(() => setCountdown(c => Math.max(0, c - 1)), 1000);
     return () => clearInterval(iv);
-  }, []);
+  }, [nextRoundIn, roundState.roundNumber]);
 
   // Build current ranking sorted by score
   const ranked = [...players].sort((a, b) => b.score - a.score).slice(0, 10);
@@ -117,12 +123,12 @@ const RoundResultsModal: React.FC<{
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 backdrop-blur-xl p-4">
       <div className="w-full max-w-lg bg-card border border-border rounded-2xl shadow-2xl overflow-hidden animate-scale-in">
         {/* Header */}
-        <div className="bg-gradient-to-r from-[hsl(var(--success))]/20 to-[hsl(var(--success))]/5 px-6 py-4 border-b border-border">
+        <div className="bg-gradient-to-r from-success/20 to-success/5 px-6 py-4 border-b border-border">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-display text-foreground">{t('roundResults' as any)}</h2>
               <p className="text-sm text-muted-foreground">
-                {t('round' as any)} {roundState.roundNumber} — {t('correct2' as any)}: {roundState.country}
+                {t('round' as any)} {roundState.roundNumber} — {t('correct2' as any)}: <span className="font-bold text-foreground">{roundState.country}</span>
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -144,10 +150,13 @@ const RoundResultsModal: React.FC<{
               <div
                 key={player.id}
                 className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${
-                  idx === 0 ? 'border-yellow-500/40 bg-yellow-500/10' :
-                  idx === 1 ? 'border-gray-400/40 bg-gray-400/10' :
-                  idx === 2 ? 'border-amber-600/40 bg-amber-600/10' :
-                  'border-border bg-secondary/30'
+                  idx === 0
+                    ? 'border-yellow-500/40 bg-yellow-500/10'
+                    : idx === 1
+                      ? 'border-gray-400/40 bg-gray-400/10'
+                      : idx === 2
+                        ? 'border-amber-600/40 bg-amber-600/10'
+                        : 'border-border bg-secondary/30'
                 }`}
               >
                 {/* Rank */}
@@ -167,7 +176,11 @@ const RoundResultsModal: React.FC<{
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-foreground text-sm truncate">{player.username}</p>
                   {rankChange !== 0 && (
-                    <p className={`text-xs font-bold ${rankChange > 0 ? 'text-[hsl(var(--success))]' : 'text-destructive'}`}>
+                    <p
+                      className={`text-xs font-bold ${
+                        rankChange > 0 ? 'text-success' : 'text-destructive'
+                      }`}
+                    >
                       {rankChange > 0 ? `↑ ${rankChange}` : `↓ ${Math.abs(rankChange)}`}
                     </p>
                   )}
@@ -177,11 +190,16 @@ const RoundResultsModal: React.FC<{
                 <div className="text-right shrink-0">
                   {submission ? (
                     <div className="flex items-center gap-1.5">
-                      {wasCorrect
-                        ? <CheckCircle className="h-4 w-4 text-[hsl(var(--success))]" />
-                        : <XCircle className="h-4 w-4 text-destructive" />
-                      }
-                      <span className={`text-sm font-bold ${wasCorrect ? 'text-[hsl(var(--success))]' : 'text-muted-foreground'}`}>
+                      {wasCorrect ? (
+                        <CheckCircle className="h-4 w-4 text-success" />
+                      ) : (
+                        <XCircle className="h-4 w-4 text-destructive" />
+                      )}
+                      <span
+                        className={`text-sm font-bold ${
+                          wasCorrect ? 'text-success' : 'text-muted-foreground'
+                        }`}
+                      >
                         {wasCorrect ? `+${pts.toFixed(2)}` : '0'}
                       </span>
                     </div>
@@ -198,7 +216,8 @@ const RoundResultsModal: React.FC<{
         {/* Footer */}
         <div className="px-6 py-4 border-t border-border text-center">
           <p className="text-sm text-muted-foreground">
-            {t('nextRoundIn' as any)} <span className="font-bold text-foreground">{countdown}s</span>
+            {t('nextRoundIn' as any)}{' '}
+            <span className="font-bold text-foreground">{countdown}s</span>
           </p>
         </div>
       </div>
@@ -215,15 +234,15 @@ const SpeedRacePodium: React.FC<{
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    const t = setTimeout(() => setVisible(true), 200);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setVisible(true), 200);
+    return () => clearTimeout(timer);
   }, []);
 
   const sorted = [...players].sort((a, b) => b.score - a.score);
   const top3 = sorted.slice(0, 3);
   const rest = sorted.slice(3);
 
-  // Podium order: 2nd, 1st, 3rd for visual height effect
+  // Podium visual order: 2nd, 1st, 3rd
   const podiumOrder = [top3[1], top3[0], top3[2]].filter(Boolean);
   const heights = ['h-28', 'h-40', 'h-20'];
   const podiumIdx = [1, 0, 2]; // which rank each position represents
@@ -237,11 +256,11 @@ const SpeedRacePodium: React.FC<{
             key={i}
             className="absolute animate-ping"
             style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 60}%`,
-              animationDelay: `${Math.random() * 3}s`,
-              animationDuration: `${2 + Math.random() * 2}s`,
-              fontSize: `${8 + Math.random() * 16}px`,
+              left: `${(i * 37 + 11) % 100}%`,
+              top: `${(i * 53 + 7) % 60}%`,
+              animationDelay: `${(i * 0.3) % 3}s`,
+              animationDuration: `${2 + (i % 3)}s`,
+              fontSize: `${8 + (i % 3) * 6}px`,
             }}
           >
             ⭐
@@ -249,13 +268,20 @@ const SpeedRacePodium: React.FC<{
         ))}
       </div>
 
-      <div className={`relative w-full max-w-lg transition-all duration-700 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+      <div
+        className={`relative w-full max-w-lg transition-all duration-700 ${
+          visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+        }`}
+      >
         {/* Title */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-3 mb-2">
             <Trophy className="h-8 w-8 text-warning animate-bounce" />
             <h1 className="text-4xl font-display text-foreground">{t('podiumTitle' as any)}</h1>
-            <Trophy className="h-8 w-8 text-warning animate-bounce" style={{ animationDelay: '0.2s' }} />
+            <Trophy
+              className="h-8 w-8 text-warning animate-bounce"
+              style={{ animationDelay: '0.2s' }}
+            />
           </div>
           <p className="text-muted-foreground">{t('podiumSubtitle' as any)}</p>
         </div>
@@ -271,17 +297,20 @@ const SpeedRacePodium: React.FC<{
             return (
               <div
                 key={player.id}
-                className={`flex flex-col items-center transition-all duration-700 ${visible ? 'opacity-100' : 'opacity-0'}`}
+                className={`flex flex-col items-center transition-all duration-700 ${
+                  visible ? 'opacity-100' : 'opacity-0'
+                }`}
                 style={{ transitionDelay: `${pos * 200}ms` }}
               >
-                {/* Avatar */}
                 <div
                   className="w-14 h-14 rounded-full flex items-center justify-center text-2xl mb-2 border-4 border-background shadow-lg"
                   style={{ backgroundColor: player.color }}
                 >
                   {player.avatar}
                 </div>
-                <p className="text-sm font-bold text-foreground mb-1 text-center max-w-[5rem] truncate">{player.username}</p>
+                <p className="text-sm font-bold text-foreground mb-1 text-center max-w-[5rem] truncate">
+                  {player.username}
+                </p>
                 <p className="text-xs text-muted-foreground mb-2">{player.score.toFixed(2)} pts</p>
                 <div className="text-2xl mb-1">{rankEmoji}</div>
 
@@ -289,11 +318,12 @@ const SpeedRacePodium: React.FC<{
                 <div
                   className={`${podiumH} w-24 rounded-t-lg flex items-start justify-center pt-2 font-display text-2xl`}
                   style={{
-                    background: rank === 0
-                      ? 'linear-gradient(135deg, #FFD700, #FFA500)'
-                      : rank === 1
-                        ? 'linear-gradient(135deg, #C0C0C0, #A0A0A0)'
-                        : 'linear-gradient(135deg, #CD7F32, #A0522D)',
+                    background:
+                      rank === 0
+                        ? 'linear-gradient(135deg, #FFD700, #FFA500)'
+                        : rank === 1
+                          ? 'linear-gradient(135deg, #C0C0C0, #A0A0A0)'
+                          : 'linear-gradient(135deg, #CD7F32, #A0522D)',
                   }}
                 >
                   {rank + 1}
@@ -352,12 +382,28 @@ const SpeedRaceGame: React.FC = () => {
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [showPodium, setShowPodium] = useState(false);
-  const [prevRanking, setPrevRanking] = useState<{ id: string; score: number }[]>([]);
-  const [roundTransitioning, setRoundTransitioning] = useState(false);
+  // prevRanking is computed from session data so all players share it
+  const prevRankingRef = useRef<{ id: string; score: number }[]>([]);
 
-  // Track submission per round to avoid double-submitting on re-render
+  // Refs to avoid stale closures in async host effects
+  const sessionRef = useRef(session);
+  const roundStateRef = useRef(roundState);
+  const playersRef = useRef(players);
+  const isHostRef = useRef(isHost);
+  const currentRoundRef = useRef(currentRound);
+  const totalRoundsRef = useRef(totalRounds);
+
+  useEffect(() => { sessionRef.current = session; }, [session]);
+  useEffect(() => { roundStateRef.current = roundState; }, [roundState]);
+  useEffect(() => { playersRef.current = players; }, [players]);
+  useEffect(() => { isHostRef.current = isHost; }, [isHost]);
+  useEffect(() => { currentRoundRef.current = currentRound; }, [currentRound]);
+  useEffect(() => { totalRoundsRef.current = totalRounds; }, [totalRounds]);
+
+  // Guard refs
   const submittedRoundRef = useRef<number>(-1);
   const timeoutFiredRef = useRef<number>(-1);
+  const orchestratorRoundRef = useRef<number>(-1); // prevent double-firing per round+phase
 
   // When round state changes phase, reset local selection
   useEffect(() => {
@@ -368,66 +414,25 @@ const SpeedRaceGame: React.FC = () => {
     if (roundState?.phase === 'results') {
       setShowResults(true);
     }
+    // Hide results modal when next round starts
+    if (roundState?.phase === 'reveal') {
+      setShowResults(false);
+    }
   }, [roundState?.phase, roundState?.roundNumber]);
 
-  // ── HOST: Orchestrate round flow ──────────────────────────────────────────
-  useEffect(() => {
-    if (!isHost || !session) return;
-
-    const phase = roundState?.phase;
-    const phaseStart = roundState?.phaseStartTime || 0;
-
-    if (phase === 'reveal') {
-      // After reveal time → countdown
-      const elapsed = Date.now() - phaseStart;
-      const delay = Math.max(0, SPEED_RACE_REVEAL_TIME - elapsed);
-      const tid = setTimeout(async () => {
-        await updateGameState({
-          speedRaceRoundState: { ...roundState!, phase: 'countdown', phaseStartTime: Date.now() },
-        } as any);
-      }, delay);
-      return () => clearTimeout(tid);
-    }
-
-    if (phase === 'countdown') {
-      const elapsed = Date.now() - phaseStart;
-      const delay = Math.max(0, SPEED_RACE_COUNTDOWN_TIME - elapsed);
-      const tid = setTimeout(async () => {
-        await updateGameState({
-          speedRaceRoundState: { ...roundState!, phase: 'guessing', phaseStartTime: Date.now() },
-        } as any);
-      }, delay);
-      return () => clearTimeout(tid);
-    }
-
-    if (phase === 'guessing') {
-      // Poll every 500ms to check if all players have submitted
-      const iv = setInterval(async () => {
-        if (!session?.speedRaceRoundState || session.speedRaceRoundState.phase !== 'guessing') return;
-        const subs = session.speedRaceRoundState.submissions || {};
-        const allSubmitted = players.every(p => subs[p.id] !== undefined);
-        if (allSubmitted) {
-          clearInterval(iv);
-          await moveToResults(session.speedRaceRoundState);
-        }
-      }, 500);
-      return () => clearInterval(iv);
-    }
-
-    if (phase === 'results') {
-      const elapsed = Date.now() - phaseStart;
-      const delay = Math.max(0, SPEED_RACE_RESULTS_TIME - elapsed);
-      const tid = setTimeout(async () => {
-        await advanceRound();
-      }, delay);
-      return () => clearTimeout(tid);
-    }
-  }, [roundState?.phase, roundState?.roundNumber, isHost]);
-
+  // ── HOST: moveToResults ───────────────────────────────────────────────────
   const moveToResults = useCallback(async (rs: SpeedRaceRoundState) => {
-    if (!isHost) return;
-    // Update scores for all players
-    const updatedPlayers = { ...(session?.players || {}) };
+    if (!isHostRef.current) return;
+    const sess = sessionRef.current;
+    if (!sess) return;
+
+    // Save prevRanking snapshot before updating scores
+    prevRankingRef.current = Object.entries(sess.players || {})
+      .map(([id, p]) => ({ id, score: p.score || 0 }))
+      .sort((a, b) => b.score - a.score);
+
+    // Update player scores
+    const updatedPlayers = { ...(sess.players || {}) };
     Object.entries(rs.submissions || {}).forEach(([pid, sub]) => {
       if (updatedPlayers[pid] && sub.isCorrect) {
         updatedPlayers[pid] = {
@@ -437,41 +442,44 @@ const SpeedRaceGame: React.FC = () => {
       }
     });
 
-    // Save prevRanking before update
-    setPrevRanking(
-      Object.entries(session?.players || {}).map(([id, p]) => ({ id, score: p.score || 0 }))
-        .sort((a, b) => b.score - a.score)
-    );
-
     await updateGameState({
       players: updatedPlayers,
       speedRaceRoundState: { ...rs, phase: 'results', phaseStartTime: Date.now() },
     } as any);
-  }, [isHost, session, updateGameState]);
+  }, [updateGameState]);
 
+  // ── HOST: advanceRound ────────────────────────────────────────────────────
   const advanceRound = useCallback(async () => {
-    if (!isHost || !session) return;
-    const nextRound = currentRound + 1;
+    if (!isHostRef.current) return;
+    const sess = sessionRef.current;
+    const rs = roundStateRef.current;
+    if (!sess) return;
 
-    if (nextRound > totalRounds) {
-      // Game over
+    const nextRound = currentRoundRef.current + 1;
+
+    if (nextRound > totalRoundsRef.current) {
+      // Game over — add the last country to guessed list then end
+      const allGuessed = [
+        ...(sess.guessedCountries || []),
+        ...(rs?.country ? [rs.country] : []),
+      ];
       await updateGameState({
-        guessedCountries: [...(session.guessedCountries || []), roundState?.country].filter(Boolean) as string[],
+        guessedCountries: allGuessed,
         speedRaceRoundState: null,
         currentRound: nextRound,
       } as any);
       await endGame();
-      setShowPodium(true);
       return;
     }
 
     // Pick next country
-    const allGuessed = [...(session.guessedCountries || []), roundState?.country].filter(Boolean) as string[];
+    const allGuessed = [
+      ...(sess.guessedCountries || []),
+      ...(rs?.country ? [rs.country] : []),
+    ];
     const nextCountry = getRandomUnplayedCountry(allGuessed);
     if (!nextCountry) {
-      // No more countries — end game
       await endGame();
-      setShowPodium(true);
       return;
     }
 
@@ -488,17 +496,82 @@ const SpeedRaceGame: React.FC = () => {
       guessedCountries: allGuessed,
       speedRaceRoundState: newRoundState,
     } as any);
+  }, [updateGameState, endGame]);
 
-    setShowResults(false);
-    setSelectedCountry(null);
-    setHasSubmitted(false);
-  }, [isHost, session, currentRound, totalRounds, roundState, updateGameState, endGame]);
+  // ── HOST: Orchestrate round phases ────────────────────────────────────────
+  useEffect(() => {
+    if (!isHost || !roundState) return;
+
+    const phase = roundState.phase;
+    const roundNum = roundState.roundNumber;
+    const phaseKey = `${roundNum}-${phase}`;
+
+    // Prevent re-firing the same phase transition
+    if (orchestratorRoundRef.current === phaseKey.length && phase !== 'guessing') return;
+
+    if (phase === 'reveal') {
+      const elapsed = Date.now() - roundState.phaseStartTime;
+      const delay = Math.max(0, SPEED_RACE_REVEAL_TIME - elapsed);
+      const tid = setTimeout(async () => {
+        if (!isHostRef.current) return;
+        await updateGameState({
+          speedRaceRoundState: {
+            ...roundStateRef.current!,
+            phase: 'countdown',
+            phaseStartTime: Date.now(),
+          },
+        } as any);
+      }, delay);
+      return () => clearTimeout(tid);
+    }
+
+    if (phase === 'countdown') {
+      const elapsed = Date.now() - roundState.phaseStartTime;
+      const delay = Math.max(0, SPEED_RACE_COUNTDOWN_TIME - elapsed);
+      const tid = setTimeout(async () => {
+        if (!isHostRef.current) return;
+        await updateGameState({
+          speedRaceRoundState: {
+            ...roundStateRef.current!,
+            phase: 'guessing',
+            phaseStartTime: Date.now(),
+          },
+        } as any);
+      }, delay);
+      return () => clearTimeout(tid);
+    }
+
+    if (phase === 'guessing') {
+      // Poll every 500ms to check if all players submitted or timer expired
+      const iv = setInterval(async () => {
+        const rs = roundStateRef.current;
+        if (!rs || rs.phase !== 'guessing') { clearInterval(iv); return; }
+        const subs = rs.submissions || {};
+        const allSubmitted = playersRef.current.every(p => subs[p.id] !== undefined);
+        if (allSubmitted) {
+          clearInterval(iv);
+          await moveToResults(rs);
+        }
+      }, 500);
+      return () => clearInterval(iv);
+    }
+
+    if (phase === 'results') {
+      const elapsed = Date.now() - roundState.phaseStartTime;
+      const delay = Math.max(0, SPEED_RACE_RESULTS_TIME - elapsed);
+      const tid = setTimeout(async () => {
+        if (!isHostRef.current) return;
+        await advanceRound();
+      }, delay);
+      return () => clearTimeout(tid);
+    }
+  }, [roundState?.phase, roundState?.roundNumber, isHost, updateGameState, moveToResults, advanceRound]);
 
   // ── HOST: Start first round ────────────────────────────────────────────────
   useEffect(() => {
     if (!isHost || !session) return;
     if (session.status !== 'playing') return;
-    if (roundState !== null && roundState !== undefined) return; // already started
+    if (roundState !== null && roundState !== undefined) return;
 
     const firstCountry = getRandomUnplayedCountry([]);
     if (!firstCountry) return;
@@ -517,7 +590,7 @@ const SpeedRaceGame: React.FC = () => {
     } as any);
   }, [session?.status, isHost]);
 
-  // ── Show podium when session finishes ─────────────────────────────────────
+  // ── Show podium when session finishes (all players) ───────────────────────
   useEffect(() => {
     if (session?.status === 'finished') {
       setShowPodium(true);
@@ -527,7 +600,7 @@ const SpeedRaceGame: React.FC = () => {
   // ── Handle map click (country selection) ──────────────────────────────────
   const handleCountryClick = useCallback((country: string) => {
     if (hasSubmitted || roundState?.phase !== 'guessing') return;
-    if (roundState?.submissions?.[currentPlayer?.id || '']) return; // already submitted
+    if (roundState?.submissions?.[currentPlayer?.id || '']) return;
     setSelectedCountry(country);
   }, [hasSubmitted, roundState, currentPlayer]);
 
@@ -536,10 +609,10 @@ const SpeedRaceGame: React.FC = () => {
     if (!currentPlayer || !roundState || hasSubmitted) return;
     if (roundState.phase !== 'guessing') return;
     if (roundState.submissions?.[currentPlayer.id]) return;
+    if (submittedRoundRef.current === roundState.roundNumber) return;
 
     const confirmedAt = Date.now();
-    const phaseStart = roundState.phaseStartTime;
-    const elapsedMs = confirmedAt - phaseStart;
+    const elapsedMs = confirmedAt - roundState.phaseStartTime;
     const isCorrect = selectedCountry === roundState.country;
     const pointsEarned = isCorrect ? calculateSpeedRacePoints(elapsedMs) : 0;
 
@@ -621,6 +694,14 @@ const SpeedRaceGame: React.FC = () => {
   const mySubmission = roundState.submissions?.[currentPlayer?.id || ''];
   const submittedCount = Object.keys(roundState.submissions || {}).length;
 
+  // Build prevRanking from current player scores BEFORE results phase updates them
+  // For non-host players we derive it from current session.players scores
+  const prevRanking = prevRankingRef.current.length > 0
+    ? prevRankingRef.current
+    : Object.entries(session?.players || {})
+        .map(([id, p]) => ({ id, score: p.score || 0 }))
+        .sort((a, b) => b.score - a.score);
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <ReconnectionBanner />
@@ -631,8 +712,8 @@ const SpeedRaceGame: React.FC = () => {
 
         <div className="flex items-center gap-3">
           {/* Round counter */}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[hsl(var(--success))]/10 border border-[hsl(var(--success))]/30">
-            <Zap className="h-4 w-4 text-[hsl(var(--success))]" />
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-success/10 border border-success/30">
+            <Zap className="h-4 w-4 text-success" />
             <span className="text-sm font-bold text-foreground">
               {t('round' as any)} {roundState.roundNumber}/{totalRounds}
             </span>
@@ -641,7 +722,9 @@ const SpeedRaceGame: React.FC = () => {
           {/* My score */}
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/30">
             <Trophy className="h-4 w-4 text-primary" />
-            <span className="text-sm font-bold text-primary">{(currentPlayer?.score || 0).toFixed(2)}</span>
+            <span className="text-sm font-bold text-primary">
+              {(currentPlayer?.score || 0).toFixed(2)}
+            </span>
           </div>
 
           <Button variant="outline" size="sm" onClick={handleQuit} className="gap-2">
@@ -652,19 +735,23 @@ const SpeedRaceGame: React.FC = () => {
       </header>
 
       {/* Country reveal bar */}
-      <div className={`text-center py-4 px-4 border-b border-border transition-all ${
-        roundState.phase === 'reveal'
-          ? 'bg-[hsl(var(--success))]/20'
-          : roundState.phase === 'guessing'
-            ? 'bg-card'
-            : 'bg-secondary/50'
-      }`}>
+      <div
+        className={`text-center py-4 px-4 border-b border-border transition-all ${
+          roundState.phase === 'reveal'
+            ? 'bg-success/20'
+            : roundState.phase === 'guessing'
+              ? 'bg-card'
+              : 'bg-secondary/50'
+        }`}
+      >
         {roundState.phase === 'reveal' || roundState.phase === 'countdown' ? (
           <>
             <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">
               {t('findCountry' as any)}
             </p>
-            <h2 className="text-3xl md:text-4xl font-display text-foreground">{roundState.country}</h2>
+            <h2 className="text-3xl md:text-4xl font-display text-foreground">
+              {roundState.country}
+            </h2>
             <p className="text-xs text-muted-foreground mt-1">{t('mapRevealIn' as any)}</p>
           </>
         ) : roundState.phase === 'guessing' ? (
@@ -672,9 +759,11 @@ const SpeedRaceGame: React.FC = () => {
             <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">
               {t('findCountry' as any)}
             </p>
-            <h2 className="text-3xl md:text-4xl font-display text-foreground">{roundState.country}</h2>
+            <h2 className="text-3xl md:text-4xl font-display text-foreground">
+              {roundState.country}
+            </h2>
             {hasSubmitted ? (
-              <p className="text-xs text-[hsl(var(--success))] mt-1">
+              <p className="text-xs text-success mt-1">
                 {t('waitingForPlayers2' as any)} ({submittedCount}/{players.length})
               </p>
             ) : (
@@ -703,11 +792,15 @@ const SpeedRaceGame: React.FC = () => {
         )}
 
         <WorldMap
-          currentCountry={roundState.phase === 'guessing' ? selectedCountry || undefined : undefined}
+          currentCountry={
+            roundState.phase === 'guessing' ? selectedCountry || undefined : undefined
+          }
           guessedCountries={guessedCountries}
           correctCountries={session?.correctCountries || []}
           wrongCountries={session?.wrongCountries || []}
-          onCountryClick={roundState.phase === 'guessing' && !hasSubmitted ? handleCountryClick : () => {}}
+          onCountryClick={
+            roundState.phase === 'guessing' && !hasSubmitted ? handleCountryClick : () => {}
+          }
           disabled={roundState.phase !== 'guessing' || hasSubmitted}
         />
 
@@ -720,15 +813,11 @@ const SpeedRaceGame: React.FC = () => {
               <div className="flex items-center gap-3">
                 {selectedCountry ? (
                   <>
-                    <div className="flex-1 flex items-center gap-2 px-3 py-2 rounded-lg bg-[hsl(var(--success))]/10 border border-[hsl(var(--success))]/30">
-                      <MapPin className="h-4 w-4 text-[hsl(var(--success))] shrink-0" />
+                    <div className="flex-1 flex items-center gap-2 px-3 py-2 rounded-lg bg-success/10 border border-success/30">
+                      <MapPin className="h-4 w-4 text-success shrink-0" />
                       <span className="text-sm font-medium text-foreground">{selectedCountry}</span>
                     </div>
-                    <Button
-                      variant="netflix"
-                      onClick={handleConfirm}
-                      className="gap-2 shrink-0"
-                    >
+                    <Button variant="netflix" onClick={handleConfirm} className="gap-2 shrink-0">
                       <CheckCircle className="h-4 w-4" />
                       {t('confirmLocation' as any)}
                     </Button>
@@ -748,15 +837,15 @@ const SpeedRaceGame: React.FC = () => {
           <div className="absolute bottom-0 left-0 right-0 z-20 p-4 bg-background/90 backdrop-blur border-t border-border">
             <div className="max-w-lg mx-auto flex items-center justify-between">
               <div className="flex items-center gap-2">
-                {mySubmission?.isCorrect
-                  ? <CheckCircle className="h-5 w-5 text-[hsl(var(--success))]" />
-                  : <XCircle className="h-5 w-5 text-destructive" />
-                }
+                {mySubmission?.isCorrect ? (
+                  <CheckCircle className="h-5 w-5 text-success" />
+                ) : (
+                  <XCircle className="h-5 w-5 text-destructive" />
+                )}
                 <span className="text-sm text-foreground">
                   {mySubmission?.isCorrect
                     ? `${t('correct2' as any)} +${mySubmission.pointsEarned.toFixed(2)} pts`
-                    : t('incorrect' as any)
-                  }
+                    : t('incorrect' as any)}
                 </span>
               </div>
               <span className="text-xs text-muted-foreground">
@@ -773,8 +862,6 @@ const SpeedRaceGame: React.FC = () => {
           roundState={roundState}
           players={players}
           prevRanking={prevRanking}
-          onNext={() => setShowResults(false)}
-          isHost={isHost}
           nextRoundIn={Math.ceil(SPEED_RACE_RESULTS_TIME / 1000)}
         />
       )}
