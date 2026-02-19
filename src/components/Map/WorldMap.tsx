@@ -254,12 +254,12 @@ export const WorldMap: React.FC<WorldMapProps> = ({
   };
 
   return (
-    <div className={`flex gap-2 h-full ${speedRaceMode ? 'flex-row' : 'gap-4'}`}>
+    <div className={`flex h-full ${speedRaceMode ? 'flex-row gap-2' : 'gap-4'}`}>
       {/* Map Container - Fixed box with scroll isolation */}
       <div
         ref={mapContainerRef}
         className={`relative flex-1 bg-card overflow-hidden border-2 border-border shadow-lg ${
-          speedRaceMode ? 'h-full rounded-none border-0' : 'h-[450px] md:h-[550px] lg:h-[600px] rounded-xl'
+          speedRaceMode ? 'h-full rounded-xl' : 'h-[450px] md:h-[550px] lg:h-[600px] rounded-xl'
         }`}
         style={{ touchAction: 'pan-x pan-y pinch-zoom' }}
         onMouseMove={handleMouseMove}
