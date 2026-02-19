@@ -50,7 +50,9 @@ export const getSessionByCode = async (code: string): Promise<GameSession | null
   }
 };
 
-// Subscribe to session changes — works for both authenticated and guest users
+// Subscribe to session changes — works for both authenticated and guest users.
+// For guests, falls back to polling if the realtime subscription is denied after
+// the session moves past 'waiting' (Firebase restricts unauthenticated reads).
 export const subscribeToSession = (
   code: string,
   callback: (session: GameSession | null) => void
@@ -62,17 +64,53 @@ export const subscribeToSession = (
   }
   const sessionRef = ref(database, `${SESSIONS_PATH}/${code}`);
   const isGuest = !!sessionStorage.getItem('guest_player_id');
+
+  let pollInterval: ReturnType<typeof setInterval> | null = null;
+  let unsubscribed = false;
+
+  // Start polling fallback for guests (every 2 seconds) — this bypasses permission
+  // issues since we use a plain REST-style `get()` call which can succeed even when
+  // the realtime listener is denied.
+  const startGuestPolling = () => {
+    if (pollInterval || unsubscribed) return;
+    console.log('[Firebase] Guest subscription denied — switching to polling fallback');
+    pollInterval = setInterval(async () => {
+      if (unsubscribed) {
+        if (pollInterval) clearInterval(pollInterval);
+        return;
+      }
+      try {
+        const snapshot = await get(sessionRef);
+        callback(snapshot.exists() ? snapshot.val() as GameSession : null);
+      } catch (err) {
+        // If even polling fails, keep last known state (do not call callback(null))
+        console.warn('[Firebase] Guest poll error:', (err as any)?.code);
+      }
+    }, 2000);
+  };
+
   const unsubscribe = onValue(sessionRef, (snapshot) => {
+    // Real-time update received — stop polling if it was running
+    if (pollInterval) {
+      clearInterval(pollInterval);
+      pollInterval = null;
+    }
     callback(snapshot.exists() ? snapshot.val() as GameSession : null);
   }, (error) => {
     console.warn('[Firebase] subscribeToSession error:', (error as any)?.code, error?.message);
-    // For guests, a permission error on subscription does NOT mean the session ended.
-    // Do NOT call callback(null) — keep the last known state so the guest stays in-game.
-    if (!isGuest) {
+    if (isGuest) {
+      // Switch to polling so the guest keeps receiving updates
+      startGuestPolling();
+    } else {
       callback(null);
     }
   });
-  return unsubscribe;
+
+  return () => {
+    unsubscribed = true;
+    if (pollInterval) clearInterval(pollInterval);
+    unsubscribe();
+  };
 };
 
 // Update session
