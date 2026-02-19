@@ -125,8 +125,14 @@ export const addPlayerToSession = async (
 
   // Write player entry using uid as the key
   const playerRef = ref(database, `${SESSIONS_PATH}/${code}/players/${uid}`);
-  await set(playerRef, playerData);
-  return true;
+  try {
+    await set(playerRef, playerData);
+    console.log('[addPlayerToSession] Write succeeded for:', uid);
+    return true;
+  } catch (err: any) {
+    console.error('[addPlayerToSession] Firebase write DENIED:', err?.code, err?.message, 'playerId:', uid, 'sessionCode:', code);
+    throw new Error(err?.message || 'Firebase permission denied — could not write player data');
+  }
 };
 
 // Remove player from session
