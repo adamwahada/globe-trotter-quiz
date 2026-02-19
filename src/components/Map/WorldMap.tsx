@@ -33,6 +33,8 @@ interface WorldMapProps {
   disabled?: boolean;
   isSoloMode?: boolean;
   countrySelectionMode?: boolean;
+  /** Speed Race mode: all countries clickable, minimal controls (zoom + recenter only), full-height */
+  speedRaceMode?: boolean;
 }
 
 export const WorldMap: React.FC<WorldMapProps> = ({
@@ -44,6 +46,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
   disabled = false,
   isSoloMode = false,
   countrySelectionMode = false,
+  speedRaceMode = false,
 }) => {
   const { t, language } = useLanguage();
   const [position, setPosition] = useState({ coordinates: [0, 20] as [number, number], zoom: 1 });
@@ -251,11 +254,13 @@ export const WorldMap: React.FC<WorldMapProps> = ({
   };
 
   return (
-    <div className="flex gap-4 h-full">
+    <div className={`flex gap-2 h-full ${speedRaceMode ? 'flex-row' : 'gap-4'}`}>
       {/* Map Container - Fixed box with scroll isolation */}
       <div
         ref={mapContainerRef}
-        className="relative flex-1 h-[450px] md:h-[550px] lg:h-[600px] bg-card rounded-xl overflow-hidden border-2 border-border shadow-lg"
+        className={`relative flex-1 bg-card overflow-hidden border-2 border-border shadow-lg ${
+          speedRaceMode ? 'h-full rounded-none border-0' : 'h-[450px] md:h-[550px] lg:h-[600px] rounded-xl'
+        }`}
         style={{ touchAction: 'pan-x pan-y pinch-zoom' }}
         onMouseMove={handleMouseMove}
         onWheelCapture={(e) => {
@@ -353,7 +358,9 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                   const isCountrySelectionClickable = countrySelectionMode && !isGuessed;
                   // In solo mode without dice roll, any unguessed country is clickable
                   const isSoloClickable = isSoloMode && !disabled && !isGuessed && !currentCountry;
-                  const isClickable = (!disabled && isCurrent && !isGuessed) || isSoloClickable || isCountrySelectionClickable;
+                  // In Speed Race, every country is clickable when not disabled
+                  const isSpeedRaceClickable = speedRaceMode && !disabled;
+                  const isClickable = isSpeedRaceClickable || (!disabled && isCurrent && !isGuessed) || isSoloClickable || isCountrySelectionClickable;
 
                   const getHoverFill = () => {
                     if (isCurrent) return 'hsl(60 100% 60%)';
@@ -367,7 +374,13 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                     <Geography
                       key={geo.rsmKey}
                       geography={geo}
-                      onClick={() => isClickable && onCountryClick(getGameCountryName(countryName))}
+                      onClick={() => {
+                        if (speedRaceMode && !disabled) {
+                          onCountryClick(getGameCountryName(countryName));
+                        } else if (isClickable) {
+                          onCountryClick(getGameCountryName(countryName));
+                        }
+                      }}
                       onMouseEnter={() => {
                         setHoveredCountry(countryName);
                       }}
@@ -408,15 +421,15 @@ export const WorldMap: React.FC<WorldMapProps> = ({
       </div>
 
       {/* Map Controls - Right side outside the map */}
-      <div className="flex flex-col gap-3 justify-center">
+      <div className="flex flex-col gap-2 justify-center pr-1">
         <GameTooltip content={t('zoomIn')} position="left">
           <Button
             variant="secondary"
             size="icon"
             onClick={handleZoomIn}
-            className="h-12 w-12 rounded-xl border-2 border-border hover:border-primary transition-all"
+            className="h-10 w-10 rounded-xl border-2 border-border hover:border-primary transition-all"
           >
-            <ZoomIn className="h-5 w-5" />
+            <ZoomIn className="h-4 w-4" />
           </Button>
         </GameTooltip>
 
@@ -425,47 +438,52 @@ export const WorldMap: React.FC<WorldMapProps> = ({
             variant="secondary"
             size="icon"
             onClick={handleZoomOut}
-            className="h-12 w-12 rounded-xl border-2 border-border hover:border-primary transition-all"
+            className="h-10 w-10 rounded-xl border-2 border-border hover:border-primary transition-all"
           >
-            <ZoomOut className="h-5 w-5" />
+            <ZoomOut className="h-4 w-4" />
           </Button>
         </GameTooltip>
 
-        <div className="h-px bg-border my-2" />
+        <div className="h-px bg-border my-1" />
 
         <GameTooltip content={t('tooltipRecenter')} position="left">
           <Button
             variant="secondary"
             size="icon"
             onClick={handleRecenter}
-            className="h-12 w-12 rounded-xl border-2 border-border hover:border-primary transition-all"
+            className="h-10 w-10 rounded-xl border-2 border-border hover:border-primary transition-all"
           >
-            <Maximize className="h-5 w-5" />
+            <Maximize className="h-4 w-4" />
           </Button>
         </GameTooltip>
 
-        <GameTooltip content={t('tooltipLocate')} position="left">
-          <Button
-            variant="secondary"
-            size="icon"
-            onClick={handleLocateCountry}
-            disabled={!currentCountry}
-            className="h-12 w-12 rounded-xl border-2 border-border hover:border-primary transition-all disabled:opacity-50"
-          >
-            <MapPin className="h-5 w-5" />
-          </Button>
-        </GameTooltip>
+        {/* Only show these extra controls when NOT in speed race mode */}
+        {!speedRaceMode && (
+          <>
+            <GameTooltip content={t('tooltipLocate')} position="left">
+              <Button
+                variant="secondary"
+                size="icon"
+                onClick={handleLocateCountry}
+                disabled={!currentCountry}
+                className="h-10 w-10 rounded-xl border-2 border-border hover:border-primary transition-all disabled:opacity-50"
+              >
+                <MapPin className="h-4 w-4" />
+              </Button>
+            </GameTooltip>
 
-        <GameTooltip content="Zoom to Continent" position="left">
-          <Button
-            variant="secondary"
-            size="icon"
-            onClick={handleZoomToContinent}
-            className="h-12 w-12 rounded-xl border-2 border-border hover:border-primary transition-all"
-          >
-            <Globe className="h-5 w-5" />
-          </Button>
-        </GameTooltip>
+            <GameTooltip content="Zoom to Continent" position="left">
+              <Button
+                variant="secondary"
+                size="icon"
+                onClick={handleZoomToContinent}
+                className="h-10 w-10 rounded-xl border-2 border-border hover:border-primary transition-all"
+              >
+                <Globe className="h-4 w-4" />
+              </Button>
+            </GameTooltip>
+          </>
+        )}
       </div>
     </div>
   );
