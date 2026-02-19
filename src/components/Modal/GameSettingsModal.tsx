@@ -20,7 +20,7 @@ interface GameSettingsModalProps {
 export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, onClose, initialJoinCode }) => {
   const { t } = useLanguage();
   const { user, isAuthenticated } = useAuth();
-  const { createSession, joinSession, isLoading, error } = useGame();
+  const { createSession, joinSession, joinSessionAsGuest, isLoading, error } = useGame();
   const { addToast } = useToastContext();
   const navigate = useNavigate();
 
@@ -83,17 +83,31 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
       return;
     }
 
-    // Validate guest name if not authenticated
+    const code = sessionCode.trim().toUpperCase();
+
+    // Unauthenticated users join as guests
     if (!isAuthenticated) {
       const nameValidation = validateUsername(guestName);
       if (!nameValidation.valid) {
         addToast('error', nameValidation.error || 'Invalid name');
         return;
       }
+      try {
+        const success = await joinSessionAsGuest(code, guestName.trim());
+        if (success) {
+          navigate('/waiting-room');
+          onClose();
+        } else {
+          addToast('error', 'Could not join session. It may be full or already started.');
+        }
+      } catch (err) {
+        addToast('error', 'Failed to join session');
+      }
+      return;
     }
 
     try {
-      const success = await joinSession(sessionCode.trim().toUpperCase(), isAuthenticated ? undefined : guestName.trim());
+      const success = await joinSession(code);
       if (success) {
         navigate('/waiting-room');
         onClose();
