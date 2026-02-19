@@ -19,6 +19,8 @@ import GamePage from "./pages/GamePage";
 import NotFound from "./pages/NotFound";
 import { AdminDashboard } from "./pages/AdminDashboard";
 import { AdminFeedback } from "./pages/AdminFeedback";
+import { AdminMessagesPage } from "./pages/AdminMessagesPage";
+import { AdminBans } from "./pages/AdminBans";
 
 const queryClient = new QueryClient();
 
@@ -43,6 +45,8 @@ const App = () => (
                       <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
                         <Route index element={<AdminDashboard />} />
                         <Route path="feedback" element={<AdminFeedback />} />
+                        <Route path="messages" element={<AdminMessagesPage />} />
+                        <Route path="bans" element={<AdminBans />} />
                       </Route>
                       <Route path="*" element={<NotFound />} />
                     </Routes>

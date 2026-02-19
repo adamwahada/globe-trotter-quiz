@@ -8,7 +8,7 @@ import { getFirebaseIdToken } from '@/utils/firebaseToken';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
-import { AdminMessages } from '@/components/Messaging/AdminMessages';
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Feedback {
@@ -945,8 +945,7 @@ const TableView: React.FC = () => {
 
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 export const AdminFeedback: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'table' | 'stats' | 'messages'>('table');
-  const [adminMsgUnread, setAdminMsgUnread] = useState(0);
+  const [activeTab, setActiveTab] = useState<'table' | 'stats'>('table');
 
   return (
     <div className="h-full flex flex-col">
@@ -954,7 +953,7 @@ export const AdminFeedback: React.FC = () => {
       <div className="flex items-start justify-between mb-6">
         <div>
           <h1 className="text-3xl font-display text-foreground">Feedback</h1>
-          <p className="text-muted-foreground mt-1">User reviews, ratings and messages</p>
+          <p className="text-muted-foreground mt-1">User reviews and ratings</p>
         </div>
       </div>
 
@@ -982,28 +981,11 @@ export const AdminFeedback: React.FC = () => {
           <BarChart2 className="h-4 w-4" />
           Statistics
         </button>
-        <button
-          onClick={() => setActiveTab('messages')}
-          className={`relative flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-            activeTab === 'messages'
-              ? 'bg-card shadow text-foreground border border-border'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          <MessageSquare className="h-4 w-4" />
-          Messages
-          {adminMsgUnread > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center px-1 leading-none">
-              {adminMsgUnread > 9 ? '9+' : adminMsgUnread}
-            </span>
-          )}
-        </button>
       </div>
 
       <div className="flex-1 min-h-0">
         {activeTab === 'table' && <TableView />}
         {activeTab === 'stats' && <StatsView />}
-        {activeTab === 'messages' && <AdminMessages onUnreadChange={setAdminMsgUnread} />}
       </div>
     </div>
   );

@@ -11,6 +11,8 @@ import {
 import { trackUserPresence, subscribeToUserPresence, clearUserPresence } from '@/services/gameSessionService';
 import { translations } from '@/i18n/translations';
 import { useToastContext } from './ToastContext';
+import { checkUserBan } from '@/utils/banUtils';
+
 
 export interface User {
   id: string;
@@ -168,11 +170,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (!auth) throw new Error('Firebase not initialized');
     setIsLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const credential = await signInWithEmailAndPassword(auth, email, password);
+      // Check for permanent ban after login
+      const ban = await checkUserBan(credential.user.uid);
+      if (ban && ban.ban_type === 'permanent') {
+        await firebaseSignOut(auth);
+        throw new Error('PERMANENTLY_BANNED');
+      }
     } finally {
       setIsLoading(false);
     }
   };
+
 
   const signUp = async (email: string, password: string, username: string) => {
     if (!auth) throw new Error('Firebase not initialized');
