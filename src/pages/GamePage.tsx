@@ -159,7 +159,12 @@ const GamePage = () => {
       if (session?.status === 'finished') {
         setShowResults(true);
       } else {
-        navigate('/');
+        // Don't redirect guests who lost their session subscription mid-game.
+        // Guests store their ID in sessionStorage — if it's present, keep them in-game.
+        const guestId = sessionStorage.getItem('guest_player_id');
+        if (!guestId) {
+          navigate('/');
+        }
       }
     }
   }, [session, navigate]);

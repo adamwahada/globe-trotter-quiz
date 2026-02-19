@@ -44,7 +44,11 @@ const WaitingRoom = () => {
 
   useEffect(() => {
     if (!session) {
-      navigate('/');
+      // Don't redirect guests if their session subscription temporarily drops
+      const guestId = sessionStorage.getItem('guest_player_id');
+      if (!guestId) {
+        navigate('/');
+      }
     }
   }, [session, navigate]);
 
