@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { GameTooltip } from '@/components/Tooltip/GameTooltip';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { MessageIcon } from '@/components/Messaging/MessageIcon';
 
 interface NavbarProps {
   variant?: 'default' | 'game';
@@ -42,8 +43,9 @@ export const Navbar: React.FC<NavbarProps> = ({ variant = 'default', rightConten
         <div className="flex items-center justify-between px-4 md:px-6 max-w-7xl mx-auto">
           <Logo size={scrolled ? 'sm' : 'md'} />
           
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             <SoundToggle />
+            <MessageIcon />
             <LanguageSwitcher />
             
             {rightContent ? (

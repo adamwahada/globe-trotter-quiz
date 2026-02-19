@@ -1,5 +1,11 @@
 project_id = "dzzeaesctendsggfdxra"
 
+[functions.user-messages]
+verify_jwt = false
+
+[functions.admin-messages]
+verify_jwt = false
+
 [functions.validate-guess]
 verify_jwt = false
 
