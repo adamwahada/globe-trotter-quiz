@@ -92,6 +92,39 @@ export type Database = {
         }
         Relationships: []
       }
+      messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_admin_reply: boolean
+          is_read: boolean
+          sender_email: string | null
+          sender_id: string
+          sender_name: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_admin_reply?: boolean
+          is_read?: boolean
+          sender_email?: string | null
+          sender_id: string
+          sender_name: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_admin_reply?: boolean
+          is_read?: boolean
+          sender_email?: string | null
+          sender_id?: string
+          sender_name?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
