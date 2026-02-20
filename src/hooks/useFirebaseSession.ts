@@ -263,16 +263,17 @@ export const useFirebaseSession = () => {
         startTime: isSoloMode ? Date.now() : null, // Start immediately for solo
         waitingRoomStartTime: Date.now(),
         countdownStartTime: null,
-        // For solo mode, start turn timer immediately so player has limited time per country
-        turnStartTime: isSoloMode ? null : null, // Solo mode uses different timing (click-based)
+        turnStartTime: null,
         isSoloMode: isSoloMode || false,
         gameMode: effectiveGameMode,
         cardModeEnabled: cardModeEnabled || false,
         activeCardEffects: [],
-        // Speed Race specific
-        totalRounds: gameMode === 'speedRace' ? (totalRounds || 20) : undefined,
-        currentRound: gameMode === 'speedRace' ? 0 : undefined,
-        speedRaceRoundState: gameMode === 'speedRace' ? null : undefined,
+        // Speed Race specific — only include when applicable (Firebase rejects undefined)
+        ...(gameMode === 'speedRace' ? {
+          totalRounds: totalRounds || 20,
+          currentRound: 0,
+          speedRaceRoundState: null,
+        } : {}),
       };
 
       await createSessionInFirebase(newSession);

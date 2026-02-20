@@ -121,8 +121,9 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
       // Solo mode goes directly to game, no waiting room
       navigate('/game');
       onClose();
-    } catch (err) {
-      addToast('error', 'Failed to create solo session');
+    } catch (err: any) {
+      console.error('[Solo] Failed to create:', err?.message, err);
+      addToast('error', `Failed to create solo session: ${err?.message || 'Unknown error'}`);
     }
   };
 

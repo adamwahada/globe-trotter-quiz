@@ -121,12 +121,17 @@ const Index = () => {
     } else if (hasActiveSession) {
       addToast("info", "You have an active session. Resume or leave it first.");
     } else {
-      // Check for active ban before opening modal
+      // Check for active ban before opening modal (non-blocking on failure)
       if (user?.id) {
-        const ban = await checkUserBan(user.id);
-        if (ban) {
-          addToast("error", formatBanMessage(ban), 6000);
-          return;
+        try {
+          const ban = await checkUserBan(user.id);
+          if (ban) {
+            addToast("error", formatBanMessage(ban), 6000);
+            return;
+          }
+        } catch {
+          // Ban check failed — allow play to continue
+          console.warn('[handleStartGame] Ban check failed, allowing play');
         }
       }
       setGameModalOpen(true);
