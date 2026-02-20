@@ -1,7 +1,8 @@
 import { useCallback } from 'react';
 import { getFirebaseIdToken } from '@/utils/firebaseToken';
 
-const BANS_FN = `https://dzzeaesctendsggfdxra.supabase.co/functions/v1/admin-bans`;
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://dzzeaesctendsggfdxra.supabase.co';
+const BANS_FN = `${SUPABASE_URL}/functions/v1/admin-bans`;
 
 export interface BanInfo {
   id: string;
