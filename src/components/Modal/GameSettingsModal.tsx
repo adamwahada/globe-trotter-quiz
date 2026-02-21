@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { X, Users, Clock, Hash, Copy, Check, User, Dice5, MousePointer, Sparkles, Zap } from 'lucide-react';
+import { X, Users, Clock, Hash, Copy, Check, User, Dice5, MousePointer, Sparkles, Zap, Minus, Plus } from 'lucide-react';
+import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -31,8 +32,9 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
   const [rounds, setRounds] = useState(20);
   const [customRounds, setCustomRounds] = useState('');
   const [useCustomRounds, setUseCustomRounds] = useState(false);
-  const [customPlayersInput, setCustomPlayersInput] = useState('');
+  const [customPlayersInput, setCustomPlayersInput] = useState(5);
   const [useCustomPlayers, setUseCustomPlayers] = useState(false);
+  const [showCustomPlayersModal, setShowCustomPlayersModal] = useState(false);
   const [sessionCode, setSessionCode] = useState('');
   const [generatedCode, setGeneratedCode] = useState('');
   const [guestName, setGuestName] = useState(localStorage.getItem('guest_username') || '');
@@ -57,8 +59,8 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
     setUseCustomRounds(false);
     setCustomRounds('');
     setUseCustomPlayers(false);
-    setCustomPlayersInput('');
-    onClose();
+    setCustomPlayersInput(5);
+    setShowCustomPlayersModal(false);
   };
 
   if (!isOpen) return null;
@@ -74,10 +76,8 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
   })();
 
   const effectivePlayers = (() => {
-    if (selectedGameMode !== 'speedRace') return players;
     if (useCustomPlayers) {
-      const v = parseInt(customPlayersInput, 10);
-      return isNaN(v) ? players : Math.min(20, Math.max(2, v));
+      return Math.min(20, Math.max(2, customPlayersInput));
     }
     return players;
   })();
@@ -106,7 +106,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
       return;
     }
     try {
-      const code = await createSession(players, duration, false, selectedGameMode, cardModeEnabled);
+      const code = await createSession(effectivePlayers, duration, false, selectedGameMode, cardModeEnabled);
       setGeneratedCode(code);
       addToast('success', t('sessionCreated', { code }));
     } catch (err) {
@@ -274,7 +274,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
                 setCustomRounds('');
                 setPlayers(2);
                 setUseCustomPlayers(false);
-                setCustomPlayersInput('');
+                setCustomPlayersInput(5);
                 setMode('create');
               }}
               onBack={() => setMode('multiplayer')}
@@ -358,52 +358,81 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
                   <Users className="h-4 w-4 text-primary" />
                   {t('participants')}
                 </label>
-                {selectedGameMode === 'speedRace' ? (
-                  <div className="space-y-2">
-                    <div className="flex gap-2">
-                      {[2, 3, 4, 5].map((num) => (
-                        <button
-                          key={num}
-                          onClick={() => { setPlayers(num); setUseCustomPlayers(false); }}
-                          className={`flex-1 py-2.5 rounded-lg font-semibold transition-all text-sm ${!useCustomPlayers && effectivePlayers === num ? 'bg-[hsl(var(--success))] text-white' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}`}
-                        >
-                          {num}
-                        </button>
-                      ))}
-                      <button
-                        onClick={() => setUseCustomPlayers(true)}
-                        className={`flex-1 py-2.5 rounded-lg font-semibold transition-all text-xs ${useCustomPlayers ? 'bg-[hsl(var(--success))] text-white' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}`}
-                      >
-                        {t('customPlayers' as any)}
-                      </button>
-                    </div>
-                    {useCustomPlayers && (
-                      <input
-                        type="number"
-                        min={2}
-                        max={20}
-                        value={customPlayersInput}
-                        onChange={e => setCustomPlayersInput(e.target.value)}
-                        placeholder="2–20 players"
-                        className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm"
-                      />
-                    )}
-                    <p className="text-xs text-muted-foreground">Max 20 players in Speed Race</p>
-                  </div>
-                ) : (
-                  <div className="flex gap-2">
-                    {[2, 3, 4].map((num) => (
-                      <button
-                        key={num}
-                        onClick={() => setPlayers(num)}
-                        className={`flex-1 py-3 rounded-lg font-semibold transition-all ${players === num ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}`}
-                      >
-                        {num}
-                      </button>
-                    ))}
-                  </div>
+                <div className="flex gap-2">
+                  {[2, 3, 4].map((num) => (
+                    <button
+                      key={num}
+                      onClick={() => { setPlayers(num); setUseCustomPlayers(false); }}
+                      className={`flex-1 py-2.5 rounded-lg font-semibold transition-all text-sm ${!useCustomPlayers && players === num ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}`}
+                    >
+                      {num}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => {
+                      setCustomPlayersInput(useCustomPlayers ? customPlayersInput : 5);
+                      setShowCustomPlayersModal(true);
+                    }}
+                    className={`flex-1 py-2.5 rounded-lg font-semibold transition-all text-xs ${useCustomPlayers ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}`}
+                  >
+                    {useCustomPlayers ? `${effectivePlayers}` : t('customPlayers' as any) || 'Custom'}
+                  </button>
+                </div>
+                {useCustomPlayers && (
+                  <p className="text-xs text-muted-foreground">{effectivePlayers} {t('participants').toLowerCase()}</p>
                 )}
               </div>
+
+              {/* Custom Players Modal */}
+              {showCustomPlayersModal && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center">
+                  <div className="absolute inset-0 bg-background/60 backdrop-blur-sm" onClick={() => setShowCustomPlayersModal(false)} />
+                  <div className="relative bg-card border border-border rounded-2xl shadow-2xl p-6 w-72 animate-scale-in space-y-5">
+                    <h3 className="text-lg font-semibold text-foreground text-center">{t('participants')}</h3>
+                    <div className="text-center text-4xl font-bold text-foreground">{customPlayersInput}</div>
+                    <div className="flex items-center gap-4">
+                      <button
+                        onClick={() => setCustomPlayersInput(Math.max(2, customPlayersInput - 1))}
+                        className="p-2.5 rounded-full bg-secondary hover:bg-secondary/80 transition-colors"
+                      >
+                        <Minus className="h-5 w-5 text-foreground" />
+                      </button>
+                      <Slider
+                        min={2}
+                        max={20}
+                        step={1}
+                        value={[customPlayersInput]}
+                        onValueChange={([v]) => setCustomPlayersInput(v)}
+                        className="flex-1"
+                      />
+                      <button
+                        onClick={() => setCustomPlayersInput(Math.min(20, customPlayersInput + 1))}
+                        className="p-2.5 rounded-full bg-secondary hover:bg-secondary/80 transition-colors"
+                      >
+                        <Plus className="h-5 w-5 text-foreground" />
+                      </button>
+                    </div>
+                    <p className="text-xs text-muted-foreground text-center">2 – 20 players</p>
+                    <div className="flex gap-2">
+                      <Button variant="outline" onClick={() => setShowCustomPlayersModal(false)} className="flex-1" size="sm">
+                        {t('cancel')}
+                      </Button>
+                      <Button
+                        variant="netflix"
+                        className="flex-1"
+                        size="sm"
+                        onClick={() => {
+                          setUseCustomPlayers(true);
+                          setPlayers(customPlayersInput);
+                          setShowCustomPlayersModal(false);
+                        }}
+                      >
+                        {t('confirm')}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Speed Race: Round Count */}
               {selectedGameMode === 'speedRace' ? (
