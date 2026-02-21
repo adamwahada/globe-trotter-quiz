@@ -53,7 +53,7 @@
                     ".validate": "newData.isString() && (newData.val() === 'waiting' || newData.val() === 'countdown' || newData.val() === 'playing' || newData.val() === 'finished')"
                 },
                 "maxPlayers": {
-                    ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 8"
+                    ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 20"
                 },
                 "duration": {
                     ".validate": "newData.isNumber() && newData.val() > 0"

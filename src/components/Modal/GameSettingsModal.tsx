@@ -61,6 +61,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
     setUseCustomPlayers(false);
     setCustomPlayersInput(5);
     setShowCustomPlayersModal(false);
+    onClose();
   };
 
   if (!isOpen) return null;
@@ -358,27 +359,43 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
                   <Users className="h-4 w-4 text-primary" />
                   {t('participants')}
                 </label>
-                <div className="flex gap-2">
-                  {[2, 3, 4].map((num) => (
+                {selectedGameMode === 'turnBased' ? (
+                  /* Turn-based: only 2, 3, 4 */
+                  <div className="flex gap-2">
+                    {[2, 3, 4].map((num) => (
+                      <button
+                        key={num}
+                        onClick={() => { setPlayers(num); setUseCustomPlayers(false); }}
+                        className={`flex-1 py-2.5 rounded-lg font-semibold transition-all text-sm ${players === num ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}`}
+                      >
+                        {num}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  /* Against the Clock & Speed Race: 2, 3, 4 + Custom */
+                  <div className="flex gap-2">
+                    {[2, 3, 4].map((num) => (
+                      <button
+                        key={num}
+                        onClick={() => { setPlayers(num); setUseCustomPlayers(false); }}
+                        className={`flex-1 py-2.5 rounded-lg font-semibold transition-all text-sm ${!useCustomPlayers && players === num ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}`}
+                      >
+                        {num}
+                      </button>
+                    ))}
                     <button
-                      key={num}
-                      onClick={() => { setPlayers(num); setUseCustomPlayers(false); }}
-                      className={`flex-1 py-2.5 rounded-lg font-semibold transition-all text-sm ${!useCustomPlayers && players === num ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}`}
+                      onClick={() => {
+                        setCustomPlayersInput(useCustomPlayers ? customPlayersInput : 5);
+                        setShowCustomPlayersModal(true);
+                      }}
+                      className={`flex-1 py-2.5 rounded-lg font-semibold transition-all text-xs ${useCustomPlayers ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}`}
                     >
-                      {num}
+                      {useCustomPlayers ? `${effectivePlayers}` : t('customPlayers' as any) || 'Custom'}
                     </button>
-                  ))}
-                  <button
-                    onClick={() => {
-                      setCustomPlayersInput(useCustomPlayers ? customPlayersInput : 5);
-                      setShowCustomPlayersModal(true);
-                    }}
-                    className={`flex-1 py-2.5 rounded-lg font-semibold transition-all text-xs ${useCustomPlayers ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}`}
-                  >
-                    {useCustomPlayers ? `${effectivePlayers}` : t('customPlayers' as any) || 'Custom'}
-                  </button>
-                </div>
-                {useCustomPlayers && (
+                  </div>
+                )}
+                {useCustomPlayers && selectedGameMode !== 'turnBased' && (
                   <p className="text-xs text-muted-foreground">{effectivePlayers} {t('participants').toLowerCase()}</p>
                 )}
               </div>

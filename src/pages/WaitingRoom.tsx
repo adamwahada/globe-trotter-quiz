@@ -180,6 +180,7 @@ const WaitingRoom = () => {
     navigate('/');
   };
 
+  const readyPlayers = players.filter(p => p.isReady);
   const allReady = players.every(p => p.isReady);
   const isHost = session?.host === currentPlayer?.id;
   const isFull = players.length === session?.maxPlayers;
@@ -409,7 +410,7 @@ const WaitingRoom = () => {
               variant="hero"
               size="lg"
               onClick={handleStartGame}
-              disabled={!allReady || players.length < 2}
+              disabled={readyPlayers.length < 2}
               className="gap-2"
             >
               <Play className="h-5 w-5" />
@@ -418,9 +419,9 @@ const WaitingRoom = () => {
           )}
         </div>
 
-        {!allReady && (
+        {readyPlayers.length < 2 && (
           <p className="text-center text-muted-foreground mt-4">
-            Waiting for all players to be ready...
+            {t('waitingForPlayers')}... ({readyPlayers.length}/2 {t('participants').toLowerCase()} ready)
           </p>
         )}
       </div>
