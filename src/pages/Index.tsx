@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Navbar } from "@/components/Navbar/Navbar";
 import { GameSettingsModal } from "@/components/Modal/GameSettingsModal";
+import { GameStartSignInModal } from "@/components/Modal/GameStartSignInModal";
 import { Button } from "@/components/ui/button";
 import { GameRuleCard } from "@/components/RuleCards/GameRuleCard";
 import { GameModesSection } from "@/components/LandingPage/GameModesSection";
@@ -66,6 +67,9 @@ const Index = () => {
   const [guestJoinOpen, setGuestJoinOpen] = useState(false);
   const [pendingGuestCode, setPendingGuestCode] = useState<string | null>(null);
   const [authForInviteOpen, setAuthForInviteOpen] = useState(false);
+  const [gameAuthOpen, setGameAuthOpen] = useState(false);
+  const [gameAuthMode, setGameAuthMode] = useState<'signin' | 'signup'>('signin');
+  const [gameStartSignInOpen, setGameStartSignInOpen] = useState(false);
 
   // Check for active session on mount
   useEffect(() => {
@@ -84,32 +88,35 @@ const Index = () => {
       setInviteCode(code);
       setSearchParams({});
 
-      if (!hasActiveSession) {
-        if (isAuthenticated) {
-          // Authenticated users get the normal join modal
-          setGameModalOpen(true);
-          addToast("info", `Joining session: ${code}`);
-        } else {
-          // Non-authenticated users get the guest join modal
-          setPendingGuestCode(code);
-          setGuestJoinOpen(true);
-        }
+      // Always allow invite links to proceed — the join functions
+      // already check capacity internally. If there's stale recovery
+      // data from a previous session, don't let it silently block
+      // the invite flow.
+      if (isAuthenticated) {
+        // Authenticated users get the normal join modal
+        setGameModalOpen(true);
+        addToast("info", `Joining session: ${code}`);
+      } else {
+        // Non-authenticated users get the guest join modal
+        setPendingGuestCode(code);
+        setGuestJoinOpen(true);
       }
     }
-  }, [searchParams, setSearchParams, isCheckingSession, hasActiveSession, isAuthenticated, addToast]);
+  }, [searchParams, setSearchParams, isCheckingSession, isAuthenticated, addToast]);
 
   const handleGuestJoin = async (username: string) => {
     if (!pendingGuestCode) return;
-    try {
-      const success = await joinSessionAsGuest(pendingGuestCode, username);
-      if (success) {
-        setGuestJoinOpen(false);
-        navigate('/waiting-room');
-      } else {
-        throw new Error(gameError || 'Session not found or no longer available.');
-      }
-    } catch (err: any) {
-      throw new Error(err?.message || 'Could not join session.');
+    // joinSessionAsGuest now throws on failure with a descriptive message,
+    // so simply await it — errors propagate to GuestJoinModal's catch block.
+    const success = await joinSessionAsGuest(pendingGuestCode, username);
+    if (success) {
+      setGuestJoinOpen(false);
+      navigate('/waiting-room');
+    }
+    // If joinSessionAsGuest returned false without throwing, surface a message
+    // (shouldn't normally happen — the function throws on every failure path).
+    if (!success) {
+      throw new Error('Could not join session. Please try again.');
     }
   };
 
@@ -117,7 +124,8 @@ const Index = () => {
 
   const handleStartGame = async () => {
     if (!isAuthenticated) {
-      addToast("info", t("authRequired"));
+      setGameStartSignInOpen(true);
+      return;
     } else if (hasActiveSession) {
       addToast("info", "You have an active session. Resume or leave it first.");
     } else {
@@ -141,7 +149,7 @@ const Index = () => {
 
   const handleResumeGame = async () => {
     if (!isAuthenticated) {
-      addToast("info", t("authRequired"));
+      setGameStartSignInOpen(true);
       return;
     }
 
@@ -587,6 +595,29 @@ const Index = () => {
         isOpen={feedbackAuthOpen}
         onClose={() => setFeedbackAuthOpen(false)}
         initialMode="signin"
+      />
+
+      {/* Welcome modal for unauthenticated users - Game Start */}
+      <GameStartSignInModal
+        isOpen={gameStartSignInOpen}
+        onClose={() => setGameStartSignInOpen(false)}
+        onSignIn={() => {
+          setGameStartSignInOpen(false);
+          setGameAuthMode('signin');
+          setGameAuthOpen(true);
+        }}
+        onJoin={() => {
+          setGameStartSignInOpen(false);
+          setGameAuthMode('signup');
+          setGameAuthOpen(true);
+        }}
+      />
+
+      {/* Auth modal triggered from Game Start modal */}
+      <AuthModal
+        isOpen={gameAuthOpen}
+        onClose={() => setGameAuthOpen(false)}
+        initialMode={gameAuthMode}
       />
 
       {/* Auth modal triggered from guest modal "sign in" button */}

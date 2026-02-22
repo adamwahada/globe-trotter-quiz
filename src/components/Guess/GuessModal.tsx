@@ -586,12 +586,12 @@ export const GuessModal: React.FC<GuessModalProps> = ({
             </div>
 
             {/* Action buttons */}
-            <div className="flex gap-3 pt-2">
+            <div className="flex gap-3 pt-2 justify-between">
               <GameTooltip content={t('tooltipSkip')} position="top">
                 <Button
                   variant="outline"
                   onClick={handleSkip}
-                  className="flex-1 gap-2"
+                  className="gap-2"
                 >
                   <SkipForward className="h-4 w-4" />
                   {t('skip')}
@@ -603,7 +603,7 @@ export const GuessModal: React.FC<GuessModalProps> = ({
                   variant="netflix"
                   onClick={handleSubmit}
                   disabled={!guess.trim()}
-                  className="flex-1 gap-2"
+                  className="gap-2"
                 >
                   <Send className="h-4 w-4" />
                   {t('submit')}

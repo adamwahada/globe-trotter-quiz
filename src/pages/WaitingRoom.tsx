@@ -4,9 +4,12 @@ import { Navbar } from '@/components/Navbar/Navbar';
 import { Button } from '@/components/ui/button';
 import { TimerProgress } from '@/components/Timer/TimerProgress';
 import { AvatarSelector } from '@/components/Avatar/AvatarSelector';
+import { AvatarDisplay } from '@/components/Avatar/AvatarDisplay';
 import { CountdownOverlay } from '@/components/Countdown/CountdownOverlay';
+import { GameStartSignInModal } from '@/components/Modal/GameStartSignInModal';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useGame } from '@/contexts/GameContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useToastContext } from '@/contexts/ToastContext';
 import { GameTooltip } from '@/components/Tooltip/GameTooltip';
 import { LonePlayerOverlay } from '@/components/Modal/LonePlayerOverlay';
@@ -20,6 +23,7 @@ import { kickUnreadyPlayers, clearRecoveryData } from '@/services/gameSessionSer
 const WaitingRoom = () => {
   const { t } = useLanguage();
   const { session, currentPlayer, setReady, updatePlayerMetadata, startCountdown, startGame, leaveSession, getPlayersArray } = useGame();
+  const { isAuthenticated } = useAuth();
   const { addToast } = useToastContext();
   const { playToastSound } = useSound();
   const navigate = useNavigate();
@@ -28,8 +32,10 @@ const WaitingRoom = () => {
 
   const [copied, setCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
-  const [avatar, setAvatar] = useState(currentPlayer?.avatar || '🦁');
-  const [color, setColor] = useState(currentPlayer?.color || '#E50914');
+  const [avatar, setAvatar] = useState(currentPlayer?.avatar || 'lion');
+  const [color, setColor] = useState(currentPlayer?.color || '#E85D04');
+  const [isAvatarSelectorOpen, setIsAvatarSelectorOpen] = useState(!currentPlayer?.isReady);
+  const [isSignInModalOpen, setIsSignInModalOpen] = useState(false);
 
   // Get players as array for rendering
   const players = getPlayersArray ? getPlayersArray() : playersMapToArray(session?.players);
@@ -37,8 +43,8 @@ const WaitingRoom = () => {
   // Sync state with currentPlayer when it loads
   useEffect(() => {
     if (currentPlayer) {
-      setAvatar(currentPlayer.avatar || '🦁');
-      setColor(currentPlayer.color || '#E50914');
+      setAvatar(currentPlayer.avatar || 'lion');
+      setColor(currentPlayer.color || '#E85D04');
     }
   }, [currentPlayer?.id, currentPlayer?.avatar, currentPlayer?.color]);
 
@@ -161,6 +167,10 @@ const WaitingRoom = () => {
   };
 
   const handleStartGame = async () => {
+    if (!isAuthenticated) {
+      setIsSignInModalOpen(true);
+      return;
+    }
     await startCountdown();
     addToast('game', t('gameStarting'));
   };
@@ -173,6 +183,34 @@ const WaitingRoom = () => {
   const handleColorChange = async (newColor: string) => {
     setColor(newColor);
     await updatePlayerMetadata({ color: newColor });
+  };
+
+  const handleAvatarConfirm = async (confirmedAvatar: string, confirmedColor: string) => {
+    // Update metadata with final avatar and color
+    await updatePlayerMetadata({ avatar: confirmedAvatar, color: confirmedColor });
+    // Set player as ready
+    await setReady(true);
+    // Close the modal
+    setIsAvatarSelectorOpen(false);
+    addToast('success', 'Avatar confirmed! You\'re ready to play.');
+  };
+
+  const handleToggleReady = async () => {
+    if (currentPlayer?.isReady) {
+      // If ready, allow clicking "Not Ready" to edit avatar
+      await setReady(false);
+      setIsAvatarSelectorOpen(true);
+    }
+  };
+
+  const handleSignInClick = () => {
+    setIsSignInModalOpen(false);
+    navigate('/');
+  };
+
+  const handleJoinClick = () => {
+    setIsSignInModalOpen(false);
+    navigate('/');
   };
 
   const handleLeave = async () => {
@@ -319,17 +357,42 @@ const WaitingRoom = () => {
           )}
         </div>
 
+        {/* Avatar Modal */}
+        <AvatarSelector
+          isOpen={isAvatarSelectorOpen}
+          selectedAvatar={avatar}
+          selectedColor={color}
+          onAvatarChange={handleAvatarChange}
+          onColorChange={handleColorChange}
+          onConfirm={handleAvatarConfirm}
+          onOpenChange={setIsAvatarSelectorOpen}
+        />
+
+        {/* Sign In Modal for Game Start */}
+        <GameStartSignInModal
+          isOpen={isSignInModalOpen}
+          onClose={() => setIsSignInModalOpen(false)}
+          onSignIn={handleSignInClick}
+          onJoin={handleJoinClick}
+        />
+
         {/* Players Grid */}
         <div className="grid md:grid-cols-2 gap-6 mb-8">
           {/* Current Player */}
           <div className="card-netflix p-6">
             <h3 className="text-xl font-display text-foreground mb-4">Your Avatar</h3>
-            <AvatarSelector
-              selectedAvatar={avatar}
-              selectedColor={color}
-              onAvatarChange={handleAvatarChange}
-              onColorChange={handleColorChange}
-            />
+            <div className="flex flex-col items-center gap-4">
+              <AvatarDisplay
+                avatarId={avatar}
+                color={color}
+                size={64}
+              />
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground mb-2">
+                  {currentPlayer?.isReady ? 'Avatar Confirmed' : 'Select your avatar'}
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Other Players */}
@@ -348,12 +411,12 @@ const WaitingRoom = () => {
                       : 'bg-secondary border-border'}
                   `}
                 >
-                  <div
-                    className="w-12 h-12 rounded-full flex items-center justify-center text-xl"
-                    style={{ backgroundColor: player.color }}
-                  >
-                    {player.avatar}
-                  </div>
+                  <AvatarDisplay
+                    avatarId={player.avatar}
+                    color={player.color}
+                    size={48}
+                    className="flex-shrink-0"
+                  />
                   <div className="flex-1">
                     <p className="font-medium text-foreground">
                       {player.username}
@@ -398,11 +461,17 @@ const WaitingRoom = () => {
           <Button
             variant={currentPlayer?.isReady ? 'outline' : 'netflix'}
             size="lg"
-            onClick={handleVoteReady}
+            onClick={() => {
+              if (currentPlayer?.isReady) {
+                handleToggleReady();
+              } else {
+                setIsAvatarSelectorOpen(true);
+              }
+            }}
             className="gap-2"
           >
             <Check className="h-5 w-5" />
-            {currentPlayer?.isReady ? 'Not Ready' : t('voteYes')}
+            {currentPlayer?.isReady ? 'Change Avatar' : t('voteYes')}
           </Button>
 
           {isHost && (

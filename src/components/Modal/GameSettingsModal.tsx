@@ -9,6 +9,7 @@ import { useGame, GameMode } from '@/contexts/GameContext';
 import { useToastContext } from '@/contexts/ToastContext';
 import { useNavigate } from 'react-router-dom';
 import { GameTooltip } from '@/components/Tooltip/GameTooltip';
+import { GameStartSignInModal } from './GameStartSignInModal';
 import { GameModeSelector } from './GameModeSelector';
 import { validateSessionCode, validateUsername, MAX_USERNAME_LENGTH } from '@/utils/inputValidation';
 
@@ -41,6 +42,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
   const [copied, setCopied] = useState(false);
   const [selectedGameMode, setSelectedGameMode] = useState<GameMode>('turnBased');
   const [cardModeEnabled, setCardModeEnabled] = useState(false);
+  const [isSignInModalOpen, setIsSignInModalOpen] = useState(false);
 
   // Auto-fill session code from invite link
   React.useEffect(() => {
@@ -84,6 +86,12 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
   })();
 
   const handleCreate = async () => {
+    // Check if user is authenticated
+    if (!isAuthenticated) {
+      setIsSignInModalOpen(true);
+      return;
+    }
+
     if (selectedGameMode === 'speedRace') {
       // Validate rounds
       const r = effectiveRounds;
@@ -116,6 +124,12 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
   };
 
   const handleCreateSolo = async () => {
+    // Check if user is authenticated
+    if (!isAuthenticated) {
+      setIsSignInModalOpen(true);
+      return;
+    }
+
     try {
       // Create solo session with 1 player and specified duration (max 60 min)
       const code = await createSession(1, Math.min(duration, 60), true);
@@ -151,10 +165,10 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
           navigate('/waiting-room');
           onClose();
         } else {
-          addToast('error', 'Could not join session. It may be full or already started.');
+          addToast('error', 'Could not join session. Please try again.');
         }
-      } catch (err) {
-        addToast('error', 'Failed to join session');
+      } catch (err: any) {
+        addToast('error', err?.message || 'Failed to join session');
       }
       return;
     }
@@ -165,10 +179,10 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
         navigate('/waiting-room');
         onClose();
       } else {
-        addToast('error', error || t('invalidCode'));
+        addToast('error', error || 'Could not join session. Please try again.');
       }
-    } catch (err) {
-      addToast('error', t('invalidCode'));
+    } catch (err: any) {
+      addToast('error', err?.message || 'Failed to join session');
     }
   };
 
@@ -184,7 +198,9 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <>
+      {/* Game Settings Modal */}
+      <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div
         className="absolute inset-0 bg-background/80 backdrop-blur-sm"
         onClick={handleClose}
@@ -635,5 +651,20 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
         </div>
       </div>
     </div>
+
+    {/* Sign In Modal - Outside z-50 container so it appears on top */}
+    <GameStartSignInModal
+      isOpen={isSignInModalOpen}
+      onClose={() => setIsSignInModalOpen(false)}
+      onSignIn={() => {
+        setIsSignInModalOpen(false);
+        navigate('/');
+      }}
+      onJoin={() => {
+        setIsSignInModalOpen(false);
+        navigate('/');
+      }}
+    />
+    </>
   );
 };

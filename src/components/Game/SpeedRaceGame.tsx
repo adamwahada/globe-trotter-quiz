@@ -6,6 +6,7 @@ import { useSound } from '@/contexts/SoundContext';
 import { WorldMap } from '@/components/Map/WorldMap';
 import { Logo } from '@/components/Logo/Logo';
 import { Button } from '@/components/ui/button';
+import { AvatarDisplay } from '@/components/Avatar/AvatarDisplay';
 import { ReconnectionBanner } from '@/components/Banner/ReconnectionBanner';
 import { playersMapToArray } from '@/types/game';
 import {
@@ -215,12 +216,12 @@ const RoundResultsModal: React.FC<{
                   {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `#${idx + 1}`}
                 </div>
 
-                <div
-                  className="w-9 h-9 rounded-full flex items-center justify-center text-base shrink-0 border-2 border-background"
-                  style={{ backgroundColor: player.color }}
-                >
-                  {player.avatar}
-                </div>
+                <AvatarDisplay
+                  avatarId={player.avatar}
+                  color={player.color}
+                  size={36}
+                  className="flex-shrink-0 border-2 border-background"
+                />
 
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-foreground text-sm truncate">{player.username}</p>
@@ -324,12 +325,12 @@ const SpeedRacePodium: React.FC<{
                 className={`flex flex-col items-center transition-all duration-700 ${visible ? 'opacity-100' : 'opacity-0'}`}
                 style={{ transitionDelay: `${pos * 200}ms` }}
               >
-                <div
-                  className="w-14 h-14 rounded-full flex items-center justify-center text-2xl mb-2 border-4 border-background shadow-lg"
-                  style={{ backgroundColor: player.color }}
-                >
-                  {player.avatar}
-                </div>
+                <AvatarDisplay
+                  avatarId={player.avatar}
+                  color={player.color}
+                  size={56}
+                  className="flex-shrink-0 mb-2 border-4 border-background shadow-lg"
+                />
                 <p className="text-sm font-bold text-foreground mb-1 text-center max-w-[5rem] truncate">{player.username}</p>
                 <p className="text-xs text-muted-foreground mb-2">{player.score.toFixed(2)} pts</p>
                 <div className="text-2xl mb-1">{rankEmoji}</div>
@@ -356,12 +357,12 @@ const SpeedRacePodium: React.FC<{
             {rest.map((player, i) => (
               <div key={player.id} className="flex items-center gap-3">
                 <span className="w-8 text-center text-muted-foreground font-bold">#{i + 4}</span>
-                <div
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-sm"
-                  style={{ backgroundColor: player.color }}
-                >
-                  {player.avatar}
-                </div>
+                <AvatarDisplay
+                  avatarId={player.avatar}
+                  color={player.color}
+                  size={32}
+                  className="flex-shrink-0"
+                />
                 <span className="flex-1 text-sm text-foreground">{player.username}</span>
                 <span className="text-sm font-bold text-foreground">{player.score.toFixed(2)}</span>
               </div>
@@ -841,12 +842,12 @@ const SpeedRaceGame: React.FC = () => {
                   <span className="text-xs font-bold text-muted-foreground w-4 text-center shrink-0">
                     {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `#${idx + 1}`}
                   </span>
-                  <div
-                    className="w-6 h-6 rounded-full flex items-center justify-center text-xs shrink-0"
-                    style={{ backgroundColor: player.color }}
-                  >
-                    {player.avatar}
-                  </div>
+                  <AvatarDisplay
+                    avatarId={player.avatar}
+                    color={player.color}
+                    size={24}
+                    className="flex-shrink-0"
+                  />
                   <div className="flex-1 min-w-0">
                     <p className={`text-xs truncate font-medium ${isMe ? 'text-success' : 'text-foreground'}`}>
                       {isMe ? 'You' : player.username}

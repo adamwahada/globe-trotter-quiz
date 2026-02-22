@@ -325,13 +325,8 @@ export const useFirebaseSession = () => {
     setIsLoading(true);
     setError(null);
 
-    // MANDATORY: Validate that this is the authorized session
-    const isValid = await validateUserPresence(uid, tabSessionId);
-    if (!isValid) {
-      addToast('error', translations[localStorage.getItem('worldquiz_language') as 'en' | 'fr' | 'ar' || 'en'].sessionConflictDesc, 8000);
-      setIsLoading(false);
-      return false;
-    }
+    // Skip presence validation for joining — only enforce on creation.
+    // Joining via invite link must not be blocked by stale presence records.
 
     try {
       const existingSession = await getSessionByCode(code);
@@ -378,36 +373,35 @@ export const useFirebaseSession = () => {
 
       const success = await addPlayerToSession(code, playerData, undefined, existingSession);
 
-      if (success) {
-        // Set current player
-        setCurrentPlayer({
-          id: playerId,
-          ...playerData
-        });
+      // Set current player
+      setCurrentPlayer({
+        id: playerId,
+        ...playerData
+      });
 
-        // Get the refreshed session
-        const refreshedSession = await getSessionByCode(code);
-        setSession(refreshedSession || existingSession);
+      // Get the refreshed session
+      const refreshedSession = await getSessionByCode(code);
+      setSession(refreshedSession || existingSession);
 
-        setHasActiveSession(true);
+      setHasActiveSession(true);
 
-        if (username) localStorage.setItem('guest_username', username);
-        localStorage.setItem('gameSessionCode', code);
-        localStorage.setItem('currentPlayerId', playerId);
+      if (username) localStorage.setItem('guest_username', username);
+      localStorage.setItem('gameSessionCode', code);
+      localStorage.setItem('currentPlayerId', playerId);
 
-        // Track user session for single-session enforcement
-        await trackUserPresence(uid, tabSessionId, code);
+      // Track user session for single-session enforcement
+      await trackUserPresence(uid, tabSessionId, code);
 
-        saveRecoveryData({
-          sessionCode: code,
-          playerId,
-          timestamp: Date.now(),
-        });
-      }
+      saveRecoveryData({
+        sessionCode: code,
+        playerId,
+        timestamp: Date.now(),
+      });
 
-      return success;
-    } catch (err) {
-      setError('Failed to join session');
+      return true;
+    } catch (err: any) {
+      const msg = err?.message || 'Failed to join session';
+      setError(msg);
       return false;
     } finally {
       setIsLoading(false);
@@ -430,20 +424,17 @@ export const useFirebaseSession = () => {
 
       if (!existingSession) {
         console.warn('[Guest Join] Session not found:', code);
-        setError('Session not found. The link may have expired.');
-        return false;
+        throw new Error('Session not found. The link may have expired.');
       }
 
       const currentPlayers = playersMapToArray(existingSession.players);
       console.log('[Guest Join] Player count:', currentPlayers.length, '/', existingSession.maxPlayers);
 
       if (currentPlayers.length >= existingSession.maxPlayers) {
-        setError('Session is full');
-        return false;
+        throw new Error(`Session is full (${currentPlayers.length}/${existingSession.maxPlayers})`);
       }
       if (existingSession.status !== 'waiting') {
-        setError('Session has already started');
-        return false;
+        throw new Error('Session has already started');
       }
 
       const avatars = ['🗺️', '🌍', '🌎', '🌏', '🧭', '🏔️', '🌊', '🏝️', '🌋', '🌵'];
@@ -467,23 +458,21 @@ export const useFirebaseSession = () => {
       const success = await addPlayerToSession(code, playerData, guestId, existingSession);
       console.log('[Guest Join] addPlayerToSession result:', success, 'guestId:', guestId);
 
-      if (success) {
-        setCurrentPlayer({ id: guestId, ...playerData });
-        // Build optimistic session immediately — avoids a second read that could fail for guests
-        const optimisticSession: GameSession = {
-          ...existingSession,
-          players: { ...existingSession.players, [guestId]: playerData },
-        };
-        setSession(optimisticSession);
-        setHasActiveSession(true);
+      setCurrentPlayer({ id: guestId, ...playerData });
+      // Build optimistic session immediately — avoids a second read that could fail for guests
+      const optimisticSession: GameSession = {
+        ...existingSession,
+        players: { ...existingSession.players, [guestId]: playerData },
+      };
+      setSession(optimisticSession);
+      setHasActiveSession(true);
 
-        sessionStorage.setItem('guest_session_code', code);
-        sessionStorage.setItem('guest_username', guestUsername);
-        localStorage.setItem('gameSessionCode', code);
-        localStorage.setItem('currentPlayerId', guestId);
-      }
+      sessionStorage.setItem('guest_session_code', code);
+      sessionStorage.setItem('guest_username', guestUsername);
+      localStorage.setItem('gameSessionCode', code);
+      localStorage.setItem('currentPlayerId', guestId);
 
-      return success;
+      return true;
     } catch (err: any) {
       console.error('[Guest Join] Error:', err);
       const msg = err?.message || 'Failed to join session';

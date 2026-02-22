@@ -1,5 +1,6 @@
 import React from 'react';
 import { Trophy, Medal, Award } from 'lucide-react';
+import { AvatarDisplay } from '@/components/Avatar/AvatarDisplay';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Player } from '@/contexts/GameContext';
 
@@ -62,12 +63,12 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ players, currentPlayer
             </div>
             
             {/* Avatar */}
-            <div 
-              className="w-10 h-10 rounded-full flex items-center justify-center text-lg"
-              style={{ backgroundColor: player.color }}
-            >
-              {player.avatar}
-            </div>
+            <AvatarDisplay
+              avatarId={player.avatar}
+              color={player.color}
+              size={40}
+              className="flex-shrink-0"
+            />
             
             {/* Info */}
             <div className="flex-1 min-w-0">

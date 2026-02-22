@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Trophy, Medal, Award, TrendingUp, TrendingDown } from 'lucide-react';
+import { AvatarDisplay } from '@/components/Avatar/AvatarDisplay';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Player } from '@/contexts/GameContext';
 import { cn } from '@/lib/utils';
@@ -139,12 +140,12 @@ export const LiveLeaderboard: React.FC<LiveLeaderboardProps> = ({ players, curre
               </div>
               
               {/* Avatar */}
-              <div 
-                className="w-8 h-8 rounded-full flex items-center justify-center text-base shrink-0 transition-transform hover:scale-110"
-                style={{ backgroundColor: player.color }}
-              >
-                {player.avatar}
-              </div>
+              <AvatarDisplay
+                avatarId={player.avatar}
+                color={player.color}
+                size={32}
+                className="flex-shrink-0 hover:scale-110 transition-transform"
+              />
               
               {/* Info */}
               <div className="flex-1 min-w-0">

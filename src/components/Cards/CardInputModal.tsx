@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { AvatarDisplay } from '@/components/Avatar/AvatarDisplay';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useGame } from '@/contexts/GameContext';
 import { CardType, CARD_DEFINITIONS, PlayerCard } from '@/types/cards';
@@ -81,12 +82,12 @@ export const CardInputModal: React.FC<CardInputModalProps> = ({
               : 'border-border bg-secondary/50 hover:border-primary/50'}
           `}
         >
-          <div
-            className="w-12 h-12 rounded-full flex items-center justify-center text-xl"
-            style={{ backgroundColor: player.color }}
-          >
-            {player.avatar}
-          </div>
+          <AvatarDisplay
+            avatarId={player.avatar}
+            color={player.color}
+            size={48}
+            className="flex-shrink-0"
+          />
           <div className="flex-1 text-left">
             <p className="font-medium text-foreground">{player.username}</p>
             <p className="text-sm text-muted-foreground">Score: {player.score}</p>
@@ -125,12 +126,12 @@ export const CardInputModal: React.FC<CardInputModalProps> = ({
         return (
           <div key={player.id} className="space-y-2">
             <div className="flex items-center gap-2">
-              <div
-                className="w-8 h-8 rounded-full flex items-center justify-center text-sm"
-                style={{ backgroundColor: player.color }}
-              >
-                {player.avatar}
-              </div>
+              <AvatarDisplay
+                avatarId={player.avatar}
+                color={player.color}
+                size={32}
+                className="flex-shrink-0"
+              />
               <p className="font-medium text-foreground">{player.username}</p>
             </div>
             <div className="grid grid-cols-3 gap-2 pl-10">

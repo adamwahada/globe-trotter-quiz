@@ -155,15 +155,21 @@ export const addPlayerToSession = async (
   // If a pre-validated session was passed, trust it (avoids a potentially
   // permission-denied re-fetch for unauthenticated guests).
   const session = preValidatedSession ?? await getSessionByCode(code);
-  if (!session) return false;
+  if (!session) {
+    throw new Error('Session not found');
+  }
 
   const currentPlayers = playersMapToArray(session.players);
-  if (currentPlayers.length >= session.maxPlayers) return false;
-  if (session.status !== 'waiting') return false;
+  if (currentPlayers.length >= session.maxPlayers) {
+    throw new Error(`Session is full (${currentPlayers.length}/${session.maxPlayers})`);
+  }
+  if (session.status !== 'waiting') {
+    throw new Error('Session has already started');
+  }
 
   // Check if player already in session
   if (session.players && session.players[uid]) {
-    return false; // Already joined
+    throw new Error('You have already joined this session');
   }
 
   // Write player entry using uid as the key

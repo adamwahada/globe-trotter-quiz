@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, CheckCircle, XCircle, TrendingUp, Target, Percent } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { AvatarDisplay } from '@/components/Avatar/AvatarDisplay';
 import { Player } from '@/types/game';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -48,12 +49,12 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
       
       <div className="relative w-full max-w-md mx-4 bg-card border border-border rounded-2xl shadow-2xl animate-scale-in overflow-hidden max-h-[85vh] flex flex-col">
         <div className="p-4 border-b border-border flex items-center gap-3">
-          <div 
-            className="w-12 h-12 rounded-full flex items-center justify-center text-xl"
-            style={{ backgroundColor: player.color }}
-          >
-            {player.avatar}
-          </div>
+          <AvatarDisplay
+            avatarId={player.avatar}
+            color={player.color}
+            size={48}
+            className="flex-shrink-0"
+          />
           <div className="flex-1">
             <h2 className="text-xl font-display text-foreground">{player.username}</h2>
             <p className="text-sm text-muted-foreground">{t('score')}: {player.score}</p>

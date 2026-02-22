@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Trophy, Medal, Award, X, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { AvatarDisplay } from '@/components/Avatar/AvatarDisplay';
 import { Player } from '@/types/game';
 import { PlayerStatsModal } from './PlayerStatsModal';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -74,12 +75,12 @@ export const RankingModal: React.FC<RankingModalProps> = ({
                   <div className="w-8 flex justify-center">
                     {getRankIcon(index)}
                   </div>
-                  <div 
-                    className="w-10 h-10 rounded-full flex items-center justify-center text-lg"
-                    style={{ backgroundColor: player.color }}
-                  >
-                    {player.avatar}
-                  </div>
+                  <AvatarDisplay
+                    avatarId={player.avatar}
+                    color={player.color}
+                    size={40}
+                    className="flex-shrink-0"
+                  />
                   <div className="flex-1 text-left">
                     <p className="font-medium text-foreground">{player.username}</p>
                     <p className="text-xs text-muted-foreground">

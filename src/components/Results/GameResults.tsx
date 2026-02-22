@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Trophy, Medal, Award, Home, RotateCcw, Target, Globe, TrendingUp, Timer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { AvatarDisplay } from '@/components/Avatar/AvatarDisplay';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Player } from '@/contexts/GameContext';
 import { useNavigate } from 'react-router-dom';
@@ -128,12 +129,12 @@ export const GameResults: React.FC<GameResultsProps> = ({ isOpen, players, onPla
                   <div className="w-5 flex justify-center">
                     {rankIcon || <span className="text-xs text-muted-foreground">{index + 1}</span>}
                   </div>
-                  <div 
-                    className="w-6 h-6 rounded-full flex items-center justify-center text-xs shrink-0"
-                    style={{ backgroundColor: player.color }}
-                  >
-                    {player.avatar}
-                  </div>
+                  <AvatarDisplay
+                    avatarId={player.avatar}
+                    color={player.color}
+                    size={24}
+                    className="flex-shrink-0"
+                  />
                   <span className="text-sm text-foreground truncate flex-1">{player.username}</span>
                   <span className="text-xs text-muted-foreground">{countriesCount} 🌍</span>
                   <span className="text-xs text-muted-foreground w-10">{accuracy}%</span>

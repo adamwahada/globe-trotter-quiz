@@ -44,7 +44,6 @@ export const Logo: React.FC<LogoProps> = ({ size = "md" }) => {
         sizes={`(max-width: 640px) ${dimensions.sm.width}px, ${dimensions[size].width}px`}
         loading="eager"
         decoding="async"
-        fetchPriority="high"
         className={`${sizeClasses[size]} w-auto object-contain animate-logo-glow hover:drop-shadow-[0_0_30px_rgba(220,38,38,0.8)] transition-all duration-300`}
       />
     </Link>
