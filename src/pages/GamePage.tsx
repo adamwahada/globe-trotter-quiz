@@ -92,6 +92,7 @@ const GamePageInner = () => {
   // Without this, the 1s interval can fire multiple times after time hits 0,
   // quickly incrementing inactiveTurns multiple times and kicking too early.
   const handledTimeoutKeyRef = useRef<string | null>(null);
+  const historySavedRef = useRef(false);
 
   // Card effects state for current turn
   const [currentCardEffects, setCurrentCardEffects] = useState<{
@@ -1077,8 +1078,9 @@ const GamePageInner = () => {
 
   const handleLeave = useCallback(async () => {
     // Save partial game history on mid-game leave
-    if (session && currentPlayer && session.status === 'playing') {
+    if (session && currentPlayer && session.status === 'playing' && !historySavedRef.current) {
       try {
+        historySavedRef.current = true;
         const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
         const playerCorrect = currentPlayer.countriesGuessed.filter(c => correctCountries.includes(c)).length;
         const playerWrong = currentPlayer.countriesGuessed.filter(c => wrongCountries.includes(c)).length;
@@ -1124,13 +1126,12 @@ const GamePageInner = () => {
 
     await endGame();
 
-    // Save current user's game results to server
+    // Save current user's game results to server (only if not already saved)
     try {
-      const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
-      const winnerScore = sortedPlayers[0]?.score || 0;
-      
-      // Only save the current user's entry
-      if (currentPlayer) {
+      if (currentPlayer && !historySavedRef.current) {
+        historySavedRef.current = true;
+        const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
+        const winnerScore = sortedPlayers[0]?.score || 0;
         const playerCorrect = currentPlayer.countriesGuessed.filter(c => correctCountries.includes(c)).length;
         const playerWrong = currentPlayer.countriesGuessed.filter(c => wrongCountries.includes(c)).length;
         const totalTurns = playerCorrect + playerWrong;

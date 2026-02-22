@@ -56,6 +56,7 @@ export const AgainstTheClockGame: React.FC<AgainstTheClockGameProps> = ({ onShow
   const [showLastMinuteWarning, setShowLastMinuteWarning] = useState(false);
   const [remainingGameSeconds, setRemainingGameSeconds] = useState(0);
   const lastMinuteTriggeredRef = useRef(false);
+  const historySavedRef = useRef(false);
 
   // Per-player tracking: each player sees only their own correct/wrong on the map
   const [myCorrectCountries, setMyCorrectCountries] = useState<string[]>([]);
@@ -351,8 +352,9 @@ export const AgainstTheClockGame: React.FC<AgainstTheClockGameProps> = ({ onShow
 
   const handleLeave = useCallback(async () => {
     // Save partial game history on mid-game leave
-    if (session && currentPlayer && session.status === 'playing') {
+    if (session && currentPlayer && session.status === 'playing' && !historySavedRef.current) {
       try {
+        historySavedRef.current = true;
         const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
         const totalTurns = currentPlayer.countriesGuessed.length;
         const estimatedCorrect = Math.floor(currentPlayer.score / 2.5);
@@ -391,7 +393,8 @@ export const AgainstTheClockGame: React.FC<AgainstTheClockGameProps> = ({ onShow
       const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
       const winnerScore = sortedPlayers[0]?.score || 0;
       
-      if (currentPlayer) {
+      if (currentPlayer && !historySavedRef.current) {
+        historySavedRef.current = true;
         const totalTurns = currentPlayer.countriesGuessed.length;
         const estimatedCorrect = Math.floor(currentPlayer.score / 2.5);
         const estimatedWrong = Math.max(0, totalTurns - estimatedCorrect);
