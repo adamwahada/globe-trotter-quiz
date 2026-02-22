@@ -113,14 +113,19 @@ export const subscribeToSession = (
   };
 };
 
-// Update session
+// Update session — allows both authenticated users and guest players.
+// Firebase rules enforce security: guests can only write during active gameplay.
 export const updateSession = async (
   code: string,
   updates: Partial<GameSession>
 ): Promise<void> => {
   const uid = getCurrentUid();
-  if (!uid) {
-    throw new Error('User must be authenticated to update a session');
+  const guestId = typeof sessionStorage !== 'undefined'
+    ? sessionStorage.getItem('guest_player_id')
+    : null;
+
+  if (!uid && !guestId) {
+    throw new Error('No player identity found to update session');
   }
 
   if (!isFirebaseReady() || !database) {

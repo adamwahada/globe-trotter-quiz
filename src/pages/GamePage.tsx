@@ -191,7 +191,9 @@ const GamePageInner = () => {
       if (remaining <= 0) {
         // Countdown finished - start game (only host should do this)
         if (session.host === currentPlayer?.id) {
-          startGame();
+          startGame().catch(err =>
+            console.error('[GamePage] startGame error:', err)
+          );
         }
       }
     }
@@ -329,7 +331,9 @@ const GamePageInner = () => {
       );
     }
     if (Object.keys(gameStateUpdate).length > 0) {
-      updateGameState(gameStateUpdate as any);
+      updateGameState(gameStateUpdate as any).catch(err =>
+        console.error('[GamePage] card effects update error:', err)
+      );
     }
   }, [currentTurnIndex, isCardModeEnabled, isMyTurn, currentPlayer, session]);
 
@@ -369,24 +373,30 @@ const GamePageInner = () => {
   const handleSoloClickTimeout = useCallback(async () => {
     if (!soloClickedCountry || !currentPlayer || !session) return;
 
-    // Mark country as wrong
-    const nextGuessedCountries = guessedCountries.includes(soloClickedCountry)
-      ? guessedCountries
-      : [...guessedCountries, soloClickedCountry];
-    const nextWrongCountries = wrongCountries.includes(soloClickedCountry)
-      ? wrongCountries
-      : [...wrongCountries, soloClickedCountry];
+    try {
+      // Mark country as wrong
+      const nextGuessedCountries = guessedCountries.includes(soloClickedCountry)
+        ? guessedCountries
+        : [...guessedCountries, soloClickedCountry];
+      const nextWrongCountries = wrongCountries.includes(soloClickedCountry)
+        ? wrongCountries
+        : [...wrongCountries, soloClickedCountry];
 
-    await updateGameState({
-      guessedCountries: nextGuessedCountries,
-      wrongCountries: nextWrongCountries,
-    });
+      await updateGameState({
+        guessedCountries: nextGuessedCountries,
+        wrongCountries: nextWrongCountries,
+      });
 
-    addToast('error', t('timeUp'));
-    playToastSound('error');
-    setGuessModalOpen(false);
-    setSoloClickedCountry(null);
-    setSoloClickStartTime(null);
+      addToast('error', t('timeUp'));
+      playToastSound('error');
+    } catch (error) {
+      console.error('[GamePage] handleSoloClickTimeout error:', error);
+      addToast('error', t('timeUp'));
+    } finally {
+      setGuessModalOpen(false);
+      setSoloClickedCountry(null);
+      setSoloClickStartTime(null);
+    }
   }, [soloClickedCountry, currentPlayer, session, guessedCountries, wrongCountries, updateGameState, addToast, t, playToastSound]);
 
   // NOTE: Turn timer useEffect is placed after handleTurnTimeout definition
@@ -401,55 +411,58 @@ const GamePageInner = () => {
     playDiceSound();
 
     setTimeout(async () => {
-      // Check for forced country from card effects
-      let country: string | null = null;
+      try {
+        // Check for forced country from card effects
+        let country: string | null = null;
 
-      if (forcedCountryRef.current) {
-        // Pick Your Country card - use the selected country
-        country = forcedCountryRef.current;
-        forcedCountryRef.current = null; // Clear after use
-        addToast('info', '🎯 Using selected country from card!');
-      } else if (forcedContinentRef.current) {
-        // Pick Your Continent or Forced Continent card - get random country from that continent
-        const continent = forcedContinentRef.current;
-        forcedContinentRef.current = null; // Clear after use
-        country = getRandomUnplayedCountryFromContinent(continent, guessedCountries);
-        if (country) {
-          addToast('info', `🌍 Country from ${continent}!`);
+        if (forcedCountryRef.current) {
+          // Pick Your Country card - use the selected country
+          country = forcedCountryRef.current;
+          forcedCountryRef.current = null; // Clear after use
+          addToast('info', '🎯 Using selected country from card!');
+        } else if (forcedContinentRef.current) {
+          // Pick Your Continent or Forced Continent card - get random country from that continent
+          const continent = forcedContinentRef.current;
+          forcedContinentRef.current = null; // Clear after use
+          country = getRandomUnplayedCountryFromContinent(continent, guessedCountries);
+          if (country) {
+            addToast('info', `🌍 Country from ${continent}!`);
+          }
+        } else {
+          // Normal random country
+          country = getRandomUnplayedCountry(guessedCountries);
         }
-      } else {
-        // Normal random country
-        country = getRandomUnplayedCountry(guessedCountries);
-      }
 
-      if (!country) {
-        addToast('info', 'All countries have been guessed!');
+        if (!country) {
+          addToast('info', 'All countries have been guessed!');
+          await endGame().catch(err => console.error('[GamePage] endGame error:', err));
+          return;
+        }
+
+        // Preload flag so hint appears instantly
+        preloadCountryFlag(country);
+
+        const turnState: TurnState = {
+          playerId: currentPlayer!.id,
+          startTime: Date.now(),
+          country,
+          diceRolled: true,
+          modalOpen: false,
+          submittedAnswer: null,
+          pointsEarned: null,
+          isCorrect: null,
+        };
+
+        await updateTurnState(turnState);
+        // NOTE: Do NOT reset turnStartTime here - the timer already started when turn began
+        // The player has a single 35s window for their entire turn (roll + guess)
+      } catch (error) {
+        console.error('[GamePage] handleRollDice error:', error);
+        addToast('error', 'Failed to roll dice. Turn will advance automatically.');
+      } finally {
         rollingLockRef.current = false;
         setIsRolling(false);
-        await endGame();
-        return;
       }
-
-      // Preload flag so hint appears instantly
-      preloadCountryFlag(country);
-
-      const turnState: TurnState = {
-        playerId: currentPlayer!.id,
-        startTime: Date.now(),
-        country,
-        diceRolled: true,
-        modalOpen: false,
-        submittedAnswer: null,
-        pointsEarned: null,
-        isCorrect: null,
-      };
-
-      await updateTurnState(turnState);
-      // NOTE: Do NOT reset turnStartTime here - the timer already started when turn began
-      // The player has a single 35s window for their entire turn (roll + guess)
-
-      rollingLockRef.current = false;
-      setIsRolling(false);
     }, 800);
   }, [isMyTurn, isRolling, currentCountry, guessedCountries, currentPlayer, updateTurnState, addToast, endGame, playDiceSound]);
 
@@ -565,58 +578,68 @@ const GamePageInner = () => {
     setGuessModalOpen(true);
 
     if (currentTurnState) {
-      await updateTurnState({
-        ...currentTurnState,
-        modalOpen: true,
-      });
+      try {
+        await updateTurnState({
+          ...currentTurnState,
+          modalOpen: true,
+        });
+      } catch (error) {
+        console.error('[GamePage] handleCountryClick updateTurnState error:', error);
+        // Modal is already open locally — continue despite sync failure
+      }
     }
   }, [isMyTurn, activeCountry, currentTurnState, updateTurnState, isSoloMode, guessedCountries, addToast]);
 
   const moveToNextTurn = useCallback(async () => {
-    const nextTurn = (currentTurnIndex + 1) % players.length;
-    const nextPlayerId = players[nextTurn]?.id;
+    try {
+      const nextTurn = (currentTurnIndex + 1) % players.length;
+      const nextPlayerId = players[nextTurn]?.id;
 
-    if (!nextPlayerId) return;
+      if (!nextPlayerId) return;
 
-    // Check for skip effect targeting the next player
-    if (isCardModeEnabled && session?.activeCardEffects?.length) {
-      const currentTurn = session.currentTurn || 0;
-      const nextPlayerEffects = session.activeCardEffects.filter(
-        e => e.targetPlayerId === nextPlayerId && e.expiresAfterTurn >= currentTurn
-      );
-
-      const hasSkip = nextPlayerEffects.some(e => e.cardType === 'skipNextPlayer');
-
-      if (hasSkip) {
-        // Remove ALL effects targeting the skipped player (they won't get a turn)
-        const remainingEffects = session.activeCardEffects.filter(
-          e => !(e.targetPlayerId === nextPlayerId &&
-            e.expiresAfterTurn >= currentTurn &&
-            nextPlayerEffects.some(ne =>
-              ne.sourcePlayerId === e.sourcePlayerId &&
-              ne.cardType === e.cardType &&
-              ne.appliedAt === e.appliedAt
-            ))
+      // Check for skip effect targeting the next player
+      if (isCardModeEnabled && session?.activeCardEffects?.length) {
+        const currentTurn = session.currentTurn || 0;
+        const nextPlayerEffects = session.activeCardEffects.filter(
+          e => e.targetPlayerId === nextPlayerId && e.expiresAfterTurn >= currentTurn
         );
 
-        const followingTurn = (nextTurn + 1) % players.length;
-        await updateGameState({
-          currentTurn: followingTurn,
-          currentTurnState: null,
-          turnStartTime: Date.now(),
-          activeCardEffects: remainingEffects,
-        });
-        return;
-      }
-    }
+        const hasSkip = nextPlayerEffects.some(e => e.cardType === 'skipNextPlayer');
 
-    // Normal turn advancement — card effects (time, hints, etc.) are processed
-    // by the next player's client via the card effects useEffect
-    await updateGameState({
-      currentTurn: nextTurn,
-      currentTurnState: null,
-      turnStartTime: Date.now(),
-    });
+        if (hasSkip) {
+          // Remove ALL effects targeting the skipped player (they won't get a turn)
+          const remainingEffects = session.activeCardEffects.filter(
+            e => !(e.targetPlayerId === nextPlayerId &&
+              e.expiresAfterTurn >= currentTurn &&
+              nextPlayerEffects.some(ne =>
+                ne.sourcePlayerId === e.sourcePlayerId &&
+                ne.cardType === e.cardType &&
+                ne.appliedAt === e.appliedAt
+              ))
+          );
+
+          const followingTurn = (nextTurn + 1) % players.length;
+          await updateGameState({
+            currentTurn: followingTurn,
+            currentTurnState: null,
+            turnStartTime: Date.now(),
+            activeCardEffects: remainingEffects,
+          });
+          return;
+        }
+      }
+
+      // Normal turn advancement — card effects (time, hints, etc.) are processed
+      // by the next player's client via the card effects useEffect
+      await updateGameState({
+        currentTurn: nextTurn,
+        currentTurnState: null,
+        turnStartTime: Date.now(),
+      });
+    } catch (error) {
+      console.error('[GamePage] moveToNextTurn error:', error);
+      // The host stale-player failsafe will handle stuck turns
+    }
   }, [players.length, currentTurnIndex, updateGameState, isCardModeEnabled, session]);
 
   const handleTurnTimeout = useCallback(async () => {
@@ -630,55 +653,62 @@ const GamePageInner = () => {
     if (handledTimeoutKeyRef.current === timeoutKey) return;
     handledTimeoutKeyRef.current = timeoutKey;
 
-    if (currentCountry && !guessedCountries.includes(currentCountry)) {
-      await updateGameState({
-        guessedCountries: [...guessedCountries, currentCountry],
-        wrongCountries: [...wrongCountries, currentCountry],
-      });
-    }
-
-    if (currentTurnState && currentCountry) {
-      await updateTurnState({
-        ...currentTurnState,
-        submittedAnswer: '[TIME UP]',
-        pointsEarned: 0,
-        isCorrect: false,
-        modalOpen: false,
-      });
-    }
-
-    // Track inactivity (timeout counts as inactive)
-    const currentPlayerData = session.players?.[currentPlayer.id];
-    if (!currentPlayerData) return; // Guard against missing player data
-    
-    const newInactiveTurns = (currentPlayerData.inactiveTurns || 0) + 1;
-
-    if (newInactiveTurns >= 3) {
-      // Kick player after 3 inactive turns
-      addToast('error', 'You have been kicked for inactivity (3 missed turns)');
-      playToastSound('error');
-      await removePlayerFromSession(session.code, currentPlayer.id);
-      clearRecoveryData();
-      navigate('/');
-      return;
-    }
-
-    // Update inactivity count and turnsPlayed (timeout counts as a turn)
-    const updatedPlayers: PlayersMap = {
-      ...session.players,
-      [currentPlayer.id]: {
-        ...currentPlayerData,
-        turnsPlayed: (currentPlayerData.turnsPlayed || 0) + 1,
-        inactiveTurns: newInactiveTurns,
+    try {
+      if (currentCountry && !guessedCountries.includes(currentCountry)) {
+        await updateGameState({
+          guessedCountries: [...guessedCountries, currentCountry],
+          wrongCountries: [...wrongCountries, currentCountry],
+        });
       }
-    };
-    await updateGameState({ players: updatedPlayers });
 
-    addToast('error', t('timeUp'));
-    playToastSound('error');
-    setGuessModalOpen(false);
+      if (currentTurnState && currentCountry) {
+        await updateTurnState({
+          ...currentTurnState,
+          submittedAnswer: '[TIME UP]',
+          pointsEarned: 0,
+          isCorrect: false,
+          modalOpen: false,
+        });
+      }
 
-    setTimeout(() => moveToNextTurn(), 2000);
+      // Track inactivity (timeout counts as inactive)
+      const currentPlayerData = session.players?.[currentPlayer.id];
+      if (!currentPlayerData) return; // Guard against missing player data
+      
+      const newInactiveTurns = (currentPlayerData.inactiveTurns || 0) + 1;
+
+      if (newInactiveTurns >= 3) {
+        // Kick player after 3 inactive turns
+        addToast('error', 'You have been kicked for inactivity (3 missed turns)');
+        playToastSound('error');
+        await removePlayerFromSession(session.code, currentPlayer.id);
+        clearRecoveryData();
+        navigate('/');
+        return;
+      }
+
+      // Update inactivity count and turnsPlayed (timeout counts as a turn)
+      const updatedPlayers: PlayersMap = {
+        ...session.players,
+        [currentPlayer.id]: {
+          ...currentPlayerData,
+          turnsPlayed: (currentPlayerData.turnsPlayed || 0) + 1,
+          inactiveTurns: newInactiveTurns,
+        }
+      };
+      await updateGameState({ players: updatedPlayers });
+
+      addToast('error', t('timeUp'));
+      playToastSound('error');
+      setGuessModalOpen(false);
+
+      setTimeout(() => moveToNextTurn(), 2000);
+    } catch (error) {
+      console.error('[GamePage] handleTurnTimeout error:', error);
+      // The stale-player failsafe will advance the turn if this player can't
+      addToast('error', t('timeUp'));
+      setGuessModalOpen(false);
+    }
   }, [isMyTurn, currentTurnState, currentCountry, guessedCountries, wrongCountries, updateGameState, addToast, t, moveToNextTurn, playToastSound, updateTurnState, session, currentPlayer, navigate, currentTurnIndex]);
 
   // Turn timer timeout - handles both dice mode and solo click mode
@@ -724,36 +754,49 @@ const GamePageInner = () => {
 
   // CRITICAL: Watch for inactive current player from other players' perspective
   // If current player hasn't responded and their time is way over, force advance
-  // This handles cases where the current player's client crashed or disconnected
+  // This handles cases where the current player's client crashed, disconnected,
+  // or encountered an error that prevents them from completing their turn.
+  // Any player can trigger the advance to prevent games from getting stuck.
+  const handledStaleKeyRef = useRef<string | null>(null);
+
   useEffect(() => {
     // Only run this check for non-current players in multiplayer
     if (isAgainstTheClock || isSoloMode || isMyTurn || !session?.turnStartTime) return;
     
-    const GRACE_PERIOD = 5000; // 5 seconds grace period after timeout
+    // Host gets priority at 5s, other players kick in at 8s as a fallback
+    const isHost = session.host === currentPlayer?.id;
+    const GRACE_PERIOD = isHost ? 5000 : 8000;
     
     const checkForStalePlayer = () => {
+      // If the turn already had an outcome, no need to intervene
+      if (session.currentTurnState?.submittedAnswer) return;
+
       const elapsed = Date.now() - session.turnStartTime!;
       const expectedTimeout = (TURN_TIME_SECONDS * 1000) + GRACE_PERIOD;
       
       if (elapsed > expectedTimeout) {
-        // Current player is likely disconnected or crashed
-        // The host should force-advance the turn
-        if (session.host === currentPlayer?.id) {
-          console.log('Host forcing turn advance due to stale player');
-          
-          // Force advance the turn WITHOUT incrementing inactivity
-          // The stale player's own client should have already incremented it
-          // We only advance the turn to prevent the game from being stuck
-          const stalePlayerId = players[currentTurnIndex]?.id;
-          if (stalePlayerId) {
-            // Advance to next turn
-            const nextTurn = (currentTurnIndex + 1) % players.length;
-            updateGameState({
-              currentTurn: nextTurn,
-              currentTurnState: null,
-              turnStartTime: Date.now(),
-            });
-          }
+        // Dedup: only attempt once per stale turn per client
+        const staleKey = `${session.code}:${currentTurnIndex}:${session.turnStartTime}`;
+        if (handledStaleKeyRef.current === staleKey) return;
+        handledStaleKeyRef.current = staleKey;
+
+        console.log(`[GamePage] ${isHost ? 'Host' : 'Player'} forcing turn advance due to stale player`);
+        
+        // Force advance the turn WITHOUT incrementing inactivity
+        // The stale player's own client should have already incremented it
+        // We only advance the turn to prevent the game from being stuck
+        const stalePlayerId = players[currentTurnIndex]?.id;
+        if (stalePlayerId) {
+          const nextTurn = (currentTurnIndex + 1) % players.length;
+          updateGameState({
+            currentTurn: nextTurn,
+            currentTurnState: null,
+            turnStartTime: Date.now(),
+          }).catch(err => {
+            console.warn('[GamePage] Force-advance failed:', err);
+            // Allow retry on failure
+            handledStaleKeyRef.current = null;
+          });
         }
       }
     };
@@ -771,110 +814,120 @@ const GamePageInner = () => {
     const validation = validateGuess(guess);
     if (!validation.valid) return;
 
-    // Server-side scoring validation (prevents client-side score manipulation)
-    const result = await validateGuessServer(guess, countryToGuess, language);
-
-    const nextGuessedCountries = guessedCountries.includes(countryToGuess)
-      ? guessedCountries
-      : [...guessedCountries, countryToGuess];
-
-    // Track correct vs wrong countries
-    const nextCorrectCountries = result.correct && !correctCountries.includes(countryToGuess)
-      ? [...correctCountries, countryToGuess]
-      : correctCountries;
-    const nextWrongCountries = !result.correct && !wrongCountries.includes(countryToGuess)
-      ? [...wrongCountries, countryToGuess]
-      : wrongCountries;
-
-    // Apply card effects to points
-    let finalPoints = result.points;
-    if (result.correct && currentCardEffects.doublePoints) {
-      finalPoints *= 2;
-      addToast('info', '✖️ Double Points applied!');
-    }
-
-    // Handle point strike on wrong answer
-    let pointStrikePenalty = 0;
-    if (!result.correct && currentCardEffects.pointStrike) {
-      pointStrikePenalty = currentCardEffects.pointStrike.penalty;
-      addToast('error', `💣 Point Strike: -${pointStrikePenalty} points!`);
-    }
-
-    // Close modal immediately
+    // Close modal immediately (do this BEFORE async work to keep UI responsive)
     setGuessModalOpen(false);
 
-    // Update turn state if it exists (dice mode)
-    if (currentTurnState) {
-      await updateTurnState({
-        ...currentTurnState,
-        submittedAnswer: guess,
-        pointsEarned: finalPoints,
-        isCorrect: result.correct,
-        modalOpen: false,
-      });
-    }
+    try {
+      // Server-side scoring validation (prevents client-side score manipulation)
+      const result = await validateGuessServer(guess, countryToGuess, language);
 
-    setFloatingScore({ points: finalPoints, show: true });
-    setTimeout(() => setFloatingScore({ points: 0, show: false }), 2000);
+      const nextGuessedCountries = guessedCountries.includes(countryToGuess)
+        ? guessedCountries
+        : [...guessedCountries, countryToGuess];
 
-    // Build updated players map - reset inactivity on active participation
-    const currentPlayerUid = currentPlayer.id;
-    if (currentPlayerUid && session.players[currentPlayerUid]) {
-      const currentPlayerData = session.players[currentPlayerUid];
-      // Ensure countriesGuessed is always an array, never undefined
-      // Track ALL countries the player attempted (both correct and wrong)
-      const existingCountriesGuessed = currentPlayerData.countriesGuessed || [];
-      const newCountriesGuessed = existingCountriesGuessed.includes(countryToGuess)
-        ? existingCountriesGuessed
-        : [...existingCountriesGuessed, countryToGuess];
+      // Track correct vs wrong countries
+      const nextCorrectCountries = result.correct && !correctCountries.includes(countryToGuess)
+        ? [...correctCountries, countryToGuess]
+        : correctCountries;
+      const nextWrongCountries = !result.correct && !wrongCountries.includes(countryToGuess)
+        ? [...wrongCountries, countryToGuess]
+        : wrongCountries;
 
-      // Calculate new score with points penalty from point strike
-      const newScore = Math.max(0, currentPlayerData.score + finalPoints - pointStrikePenalty);
+      // Apply card effects to points
+      let finalPoints = result.points;
+      if (result.correct && currentCardEffects.doublePoints) {
+        finalPoints *= 2;
+        addToast('info', '\u2716\ufe0f Double Points applied!');
+      }
 
-      const updatedPlayers: PlayersMap = {
-        ...session.players,
-        [currentPlayerUid]: {
-          ...currentPlayerData,
-          score: newScore,
-          countriesGuessed: newCountriesGuessed,
-          turnsPlayed: (currentPlayerData.turnsPlayed || 0) + 1,
-          inactiveTurns: 0, // Reset inactivity on active participation
-        }
-      };
+      // Handle point strike on wrong answer
+      let pointStrikePenalty = 0;
+      if (!result.correct && currentCardEffects.pointStrike) {
+        pointStrikePenalty = currentCardEffects.pointStrike.penalty;
+        addToast('error', `\ud83d\udca3 Point Strike: -${pointStrikePenalty} points!`);
+      }
 
-      await updateGameState({
-        players: updatedPlayers,
-        guessedCountries: nextGuessedCountries,
-        correctCountries: nextCorrectCountries,
-        wrongCountries: nextWrongCountries,
-      });
-    }
+      // Update turn state if it exists (dice mode)
+      if (currentTurnState) {
+        await updateTurnState({
+          ...currentTurnState,
+          submittedAnswer: guess,
+          pointsEarned: finalPoints,
+          isCorrect: result.correct,
+          modalOpen: false,
+        });
+      }
 
-    if (result.correct) {
-      addToast('success', `+${finalPoints} ${t('points')} - Correct!`);
-      playToastSound('success');
-    } else {
-      addToast('error', t('wrongGuess', { player: '' }));
-      playToastSound('error');
-    }
+      setFloatingScore({ points: finalPoints, show: true });
+      setTimeout(() => setFloatingScore({ points: 0, show: false }), 2000);
 
-     // Update card system streak
-     if (isCardModeEnabled) {
-       await updateStreak(result.correct);
-     }
+      // Build updated players map - reset inactivity on active participation
+      const currentPlayerUid = currentPlayer.id;
+      if (currentPlayerUid && session.players[currentPlayerUid]) {
+        const currentPlayerData = session.players[currentPlayerUid];
+        // Ensure countriesGuessed is always an array, never undefined
+        // Track ALL countries the player attempted (both correct and wrong)
+        const existingCountriesGuessed = currentPlayerData.countriesGuessed || [];
+        const newCountriesGuessed = existingCountriesGuessed.includes(countryToGuess)
+          ? existingCountriesGuessed
+          : [...existingCountriesGuessed, countryToGuess];
 
-    // Reset solo clicked country and timer after submission
-    if (isSoloMode && soloClickedCountry) {
-      setSoloClickedCountry(null);
-      setSoloClickStartTime(null);
-    }
+        // Calculate new score with points penalty from point strike
+        const newScore = Math.max(0, currentPlayerData.score + finalPoints - pointStrikePenalty);
 
-    // In solo mode, clear turn state immediately so player can play again
-    if (isSoloMode) {
-      await updateTurnState(null);
-    } else {
-      // In multiplayer, wait then move to next turn
-      setTimeout(() => moveToNextTurn(), 2000);
+        const updatedPlayers: PlayersMap = {
+          ...session.players,
+          [currentPlayerUid]: {
+            ...currentPlayerData,
+            score: newScore,
+            countriesGuessed: newCountriesGuessed,
+            turnsPlayed: (currentPlayerData.turnsPlayed || 0) + 1,
+            inactiveTurns: 0, // Reset inactivity on active participation
+          }
+        };
+
+        await updateGameState({
+          players: updatedPlayers,
+          guessedCountries: nextGuessedCountries,
+          correctCountries: nextCorrectCountries,
+          wrongCountries: nextWrongCountries,
+        });
+      }
+
+      if (result.correct) {
+        addToast('success', `+${finalPoints} ${t('points')} - Correct!`);
+        playToastSound('success');
+      } else {
+        addToast('error', t('wrongGuess', { player: '' }));
+        playToastSound('error');
+      }
+
+       // Update card system streak
+       if (isCardModeEnabled) {
+         await updateStreak(result.correct);
+       }
+
+      // Reset solo clicked country and timer after submission
+      if (isSoloMode && soloClickedCountry) {
+        setSoloClickedCountry(null);
+        setSoloClickStartTime(null);
+      }
+
+      // In solo mode, clear turn state immediately so player can play again
+      if (isSoloMode) {
+        await updateTurnState(null);
+      } else {
+        // In multiplayer, wait then move to next turn
+        setTimeout(() => moveToNextTurn(), 2000);
+      }
+    } catch (error) {
+      console.error('[GamePage] handleSubmitGuess error:', error);
+      addToast('error', 'Failed to submit guess. Turn will advance automatically.');
+      // Reset local state so UI isn't stuck
+      if (isSoloMode && soloClickedCountry) {
+        setSoloClickedCountry(null);
+        setSoloClickStartTime(null);
+      }
     }
    }, [currentPlayer, isMyTurn, currentTurnState, updateTurnState, guessedCountries, correctCountries, wrongCountries, session, updateGameState, addToast, t, moveToNextTurn, playToastSound, isSoloMode, soloClickedCountry, currentCountry, isCardModeEnabled, updateStreak, currentCardEffects]);
 
@@ -886,46 +939,71 @@ const GamePageInner = () => {
     
     if (!countryToSkip) return; // No country to skip
 
-    const currentPlayerUid = currentPlayer.id;
-    const currentPlayerData = session.players[currentPlayerUid];
-    if (!currentPlayerData) return;
-
-    // Track skipped country in player's countriesGuessed (for stats)
-    const existingCountriesGuessed = currentPlayerData.countriesGuessed || [];
-    const newCountriesGuessed = existingCountriesGuessed.includes(countryToSkip)
-      ? existingCountriesGuessed
-      : [...existingCountriesGuessed, countryToSkip];
-
-    // Mark country as wrong in global lists
-    const nextGuessedCountries = guessedCountries.includes(countryToSkip)
-      ? guessedCountries
-      : [...guessedCountries, countryToSkip];
-    const nextWrongCountries = wrongCountries.includes(countryToSkip)
-      ? wrongCountries
-      : [...wrongCountries, countryToSkip];
-
-    // Update turn state if it exists (dice mode)
-    if (currentTurnState && currentCountry) {
-      await updateTurnState({
-        ...currentTurnState,
-        submittedAnswer: '[SKIPPED]',
-        pointsEarned: 0,
-        isCorrect: false,
-        modalOpen: false,
-      });
-    }
-
-    addToast('info', t('turnSkipped'));
+    // Close modal immediately to keep UI responsive
     setGuessModalOpen(false);
 
-    // Handle solo mode - update player stats and reset for next country
-    if (isSoloMode) {
+    try {
+      const currentPlayerUid = currentPlayer.id;
+      const currentPlayerData = session.players[currentPlayerUid];
+      if (!currentPlayerData) return;
+
+      // Track skipped country in player's countriesGuessed (for stats)
+      const existingCountriesGuessed = currentPlayerData.countriesGuessed || [];
+      const newCountriesGuessed = existingCountriesGuessed.includes(countryToSkip)
+        ? existingCountriesGuessed
+        : [...existingCountriesGuessed, countryToSkip];
+
+      // Mark country as wrong in global lists
+      const nextGuessedCountries = guessedCountries.includes(countryToSkip)
+        ? guessedCountries
+        : [...guessedCountries, countryToSkip];
+      const nextWrongCountries = wrongCountries.includes(countryToSkip)
+        ? wrongCountries
+        : [...wrongCountries, countryToSkip];
+
+      // Update turn state if it exists (dice mode)
+      if (currentTurnState && currentCountry) {
+        await updateTurnState({
+          ...currentTurnState,
+          submittedAnswer: '[SKIPPED]',
+          pointsEarned: 0,
+          isCorrect: false,
+          modalOpen: false,
+        });
+      }
+
+      addToast('info', t('turnSkipped'));
+
+      // Handle solo mode - update player stats and reset for next country
+      if (isSoloMode) {
+        const updatedPlayers: PlayersMap = {
+          ...session.players,
+          [currentPlayerUid]: {
+            ...currentPlayerData,
+            countriesGuessed: newCountriesGuessed,
+            turnsPlayed: (currentPlayerData.turnsPlayed || 0) + 1,
+          }
+        };
+        await updateGameState({
+          players: updatedPlayers,
+          guessedCountries: nextGuessedCountries,
+          wrongCountries: nextWrongCountries,
+        });
+
+        setSoloClickedCountry(null);
+        setSoloClickStartTime(null);
+        await updateTurnState(null);
+        return; // Don't move to next turn in solo mode
+      }
+
+      // Multiplayer: Skip is an ACTIVE choice, so reset inactivity counter
       const updatedPlayers: PlayersMap = {
         ...session.players,
         [currentPlayerUid]: {
           ...currentPlayerData,
           countriesGuessed: newCountriesGuessed,
           turnsPlayed: (currentPlayerData.turnsPlayed || 0) + 1,
+          inactiveTurns: 0, // Reset - skip is active participation
         }
       };
       await updateGameState({
@@ -934,34 +1012,20 @@ const GamePageInner = () => {
         wrongCountries: nextWrongCountries,
       });
 
-      setSoloClickedCountry(null);
-      setSoloClickStartTime(null);
-      await updateTurnState(null);
-      return; // Don't move to next turn in solo mode
-    }
+       // Reset card streak on skip (counts as wrong)
+       if (isCardModeEnabled) {
+         await updateStreak(false);
+       }
 
-    // Multiplayer: Skip is an ACTIVE choice, so reset inactivity counter
-    const updatedPlayers: PlayersMap = {
-      ...session.players,
-      [currentPlayerUid]: {
-        ...currentPlayerData,
-        countriesGuessed: newCountriesGuessed,
-        turnsPlayed: (currentPlayerData.turnsPlayed || 0) + 1,
-        inactiveTurns: 0, // Reset - skip is active participation
+      setTimeout(() => moveToNextTurn(), 2000);
+    } catch (error) {
+      console.error('[GamePage] handleSkip error:', error);
+      addToast('error', 'Failed to skip turn. Turn will advance automatically.');
+      if (isSoloMode && soloClickedCountry) {
+        setSoloClickedCountry(null);
+        setSoloClickStartTime(null);
       }
-    };
-    await updateGameState({
-      players: updatedPlayers,
-      guessedCountries: nextGuessedCountries,
-      wrongCountries: nextWrongCountries,
-    });
-
-     // Reset card streak on skip (counts as wrong)
-     if (isCardModeEnabled) {
-       await updateStreak(false);
-     }
-
-    setTimeout(() => moveToNextTurn(), 2000);
+    }
    }, [isMyTurn, currentTurnState, currentCountry, guessedCountries, wrongCountries, updateGameState, addToast, t, moveToNextTurn, updateTurnState, session, currentPlayer, navigate, playToastSound, isSoloMode, soloClickedCountry, isCardModeEnabled, updateStreak]);
 
   // Get localized country data
@@ -1112,19 +1176,25 @@ const GamePageInner = () => {
   const handleEndGame = useCallback(async () => {
     if (!session) return;
 
-    const maxTurns = Math.max(...players.map(p => p.turnsPlayed));
-    const isBalanced = players.every(p => p.turnsPlayed === maxTurns);
+    try {
+      const maxTurns = Math.max(...players.map(p => p.turnsPlayed));
+      const isBalanced = players.every(p => p.turnsPlayed === maxTurns);
 
-    if (!isBalanced) {
-      if (!session.isExtraTime) {
-        await updateGameState({ isExtraTime: true });
-        addToast('info', t('fairnessDesc'), 10000);
-        playToastSound('info');
+      if (!isBalanced) {
+        if (!session.isExtraTime) {
+          await updateGameState({ isExtraTime: true });
+          addToast('info', t('fairnessDesc'), 10000);
+          playToastSound('info');
+        }
+        return;
       }
-      return;
-    }
 
-    await endGame();
+      await endGame();
+    } catch (error) {
+      console.error('[GamePage] handleEndGame error:', error);
+      // Still show results even if endGame write fails — other players
+      // or the stale-player failsafe will eventually mark the session finished.
+    }
 
     // Save current user's game results to server (only if not already saved)
     try {
