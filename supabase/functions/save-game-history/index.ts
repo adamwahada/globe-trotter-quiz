@@ -11,7 +11,7 @@ const corsHeaders = {
 const MAX_SCORE_PER_GAME = 500;
 const MAX_COUNTRIES = 250;
 const MAX_DURATION_MINUTES = 120;
-const MAX_PLAYERS = 10;
+const MAX_PLAYERS = 20;
 
 interface GameHistoryEntry {
   user_id: string;
