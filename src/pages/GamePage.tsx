@@ -376,18 +376,10 @@ const GamePageInner = () => {
   // No need for a separate reset effect — modalClosedForTurnRef resets
   // automatically when the turn index changes (checked inline).
 
-  // Sync modal state with session — only opens the modal once per turn
-  useEffect(() => {
-    if (isAgainstTheClock) return;
-    // Don't reopen if we intentionally closed it during THIS turn
-    if (modalClosedForTurnRef.current === currentTurnIndex) return;
-    // Don't open if the turn already has an answer recorded
-    if (currentTurnState?.submittedAnswer) return;
-    // Only open if there's actually a country to guess and it's our turn
-    if (currentTurnState?.modalOpen && currentTurnState?.country && isMyTurn && !guessModalOpen) {
-      setGuessModalOpen(true);
-    }
-  }, [currentTurnState?.modalOpen, currentTurnState?.submittedAnswer, currentTurnState?.country, isMyTurn, guessModalOpen, isAgainstTheClock, currentTurnIndex]);
+  // NOTE: Modal is no longer auto-opened from session sync.
+  // It only opens via explicit user actions: dice roll (handleRollDice)
+  // or country click (solo mode). This prevents unwanted auto-opening
+  // on page refresh or when turn state syncs from Firebase.
 
   // Handle solo click mode timeout (when timer expires without answer)
   const handleSoloClickTimeout = useCallback(async () => {

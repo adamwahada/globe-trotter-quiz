@@ -71,14 +71,26 @@ const Index = () => {
   const [gameAuthMode, setGameAuthMode] = useState<'signin' | 'signup'>('signin');
   const [gameStartSignInOpen, setGameStartSignInOpen] = useState(false);
 
-  // Check for active session on mount
+  // Check for active session on mount and auto-redirect if one exists
   useEffect(() => {
     const check = async () => {
-      await checkActiveSession();
+      const hasSession = await checkActiveSession();
       setIsCheckingSession(false);
+
+      // Auto-redirect to the active session if one exists
+      if (hasSession && isAuthenticated) {
+        const sessionStatus = await resumeSession();
+        if (sessionStatus) {
+          if (sessionStatus === 'waiting' || sessionStatus === 'countdown') {
+            navigate('/waiting-room');
+          } else if (sessionStatus === 'playing') {
+            navigate('/game');
+          }
+        }
+      }
     };
     check();
-  }, [checkActiveSession]);
+  }, [checkActiveSession, isAuthenticated, resumeSession, navigate]);
 
   // Handle invite link with ?join=CODE parameter
   useEffect(() => {
