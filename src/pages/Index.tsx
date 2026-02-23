@@ -153,16 +153,17 @@ const Index = () => {
       return;
     }
 
-    const success = await resumeSession();
-    if (success) {
-      // Navigate based on session status
-      if (session?.status === "waiting" || session?.status === "countdown") {
+    const sessionStatus = await resumeSession();
+    if (sessionStatus) {
+      // Navigate based on the returned session status (avoids stale closure)
+      if (sessionStatus === "waiting" || sessionStatus === "countdown") {
         navigate("/waiting-room");
-      } else if (session?.status === "playing") {
+      } else if (sessionStatus === "playing") {
         navigate("/game");
       }
     } else {
-      addToast("error", "Could not resume session");
+      // resumeSession already cleared zombie state — UI will update
+      addToast("error", "Session expired or no longer available");
     }
   };
 

@@ -32,7 +32,13 @@ import { useToastContext } from '@/contexts/ToastContext';
 export const useFirebaseSession = () => {
   const [session, setSession] = useState<GameSession | null>(null);
   const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  // Start as loading if there's saved session data to restore — prevents
+  // redirect effects from firing before the async restore completes.
+  const [isLoading, setIsLoading] = useState(() => {
+    const savedCode = localStorage.getItem('gameSessionCode');
+    const savedPlayer = localStorage.getItem('currentPlayerId');
+    return !!(savedCode && savedPlayer);
+  });
   const [error, setError] = useState<string | null>(null);
   const [hasActiveSession, setHasActiveSession] = useState(false);
   const { user, tabSessionId } = useAuth();
@@ -151,10 +157,9 @@ export const useFirebaseSession = () => {
       getSessionByCode(savedSessionCode)
         .then((restoredSession) => {
           if (restoredSession && restoredSession.status !== 'finished') {
-            setSession(restoredSession);
-
             // Get player from the players map using the saved playerId (which is now auth.uid)
             if (restoredSession.players && restoredSession.players[savedPlayerId]) {
+              setSession(restoredSession);
               const playerData = restoredSession.players[savedPlayerId];
               setCurrentPlayer({
                 id: savedPlayerId,
@@ -173,6 +178,13 @@ export const useFirebaseSession = () => {
                 playerId: savedPlayerId,
                 timestamp: Date.now(),
               });
+            } else {
+              // Session exists but player was removed — zombie state
+              console.warn('[Restore] Player not found in session, clearing zombie state');
+              clearRecoveryData();
+              setHasActiveSession(false);
+              setSession(null);
+              setCurrentPlayer(null);
             }
           } else {
             clearRecoveryData();
@@ -571,10 +583,18 @@ export const useFirebaseSession = () => {
     clearRecoveryData();
   }, [session?.code]);
 
-  const resumeSession = useCallback(async (): Promise<boolean> => {
+  // Returns the session status string on success (e.g. 'waiting', 'playing'),
+  // or null on failure. On failure, clears all zombie state so new games can be created.
+  const resumeSession = useCallback(async (): Promise<string | null> => {
     const activeCheck = await checkHasActiveSession();
     if (!activeCheck.hasSession || !activeCheck.session || !activeCheck.playerId) {
-      return false;
+      // Session is gone — clear zombie state so user can start a new game
+      console.warn('[resumeSession] No active session found, clearing zombie state');
+      setHasActiveSession(false);
+      setSession(null);
+      setCurrentPlayer(null);
+      clearRecoveryData();
+      return null;
     }
 
     const uid = getCurrentUid();
@@ -584,13 +604,13 @@ export const useFirebaseSession = () => {
       const isValid = await validateUserPresence(uid, tabSessionId);
       if (!isValid) {
         addToast('error', translations[localStorage.getItem('worldquiz_language') as 'en' | 'fr' | 'ar' || 'en'].sessionConflictDesc, 8000);
-        return false;
+        // Tab conflict — don't clear recovery (session is valid, just wrong tab)
+        return null;
       }
     }
 
-    setSession(activeCheck.session);
-
     if (activeCheck.session.players && activeCheck.session.players[activeCheck.playerId]) {
+      setSession(activeCheck.session);
       const playerData = activeCheck.session.players[activeCheck.playerId];
       setCurrentPlayer({
         id: activeCheck.playerId,
@@ -605,9 +625,16 @@ export const useFirebaseSession = () => {
 
       // Update connection
       await updatePlayerConnection(activeCheck.session.code, activeCheck.playerId, true);
-      return true;
+      return activeCheck.session.status;
     }
-    return false;
+
+    // Player not in session — zombie state
+    console.warn('[resumeSession] Player not in session, clearing zombie state');
+    setHasActiveSession(false);
+    setSession(null);
+    setCurrentPlayer(null);
+    clearRecoveryData();
+    return null;
   }, [tabSessionId, addToast]);
 
   const checkActiveSession = useCallback(async (): Promise<boolean> => {

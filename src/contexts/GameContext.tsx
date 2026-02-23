@@ -33,7 +33,7 @@ interface GameContextType {
   }) => Promise<void>;
   updateTurnState: (turnState: TurnState | null) => Promise<void>;
   endGame: () => Promise<void>;
-  resumeSession: () => Promise<boolean>;
+  resumeSession: () => Promise<string | null>;
   checkActiveSession: () => Promise<boolean>;
   getPlayersArray: () => Player[];
 }

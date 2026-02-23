@@ -168,9 +168,9 @@ export const SessionChat: React.FC<SessionChatProps> = ({ isOpen, onClose }) => 
       {/* Transparent backdrop — lets game show through, closes on click */}
       <div className="fixed inset-0 z-40" onClick={onClose} />
 
-      {/* Chat panel — right side, doesn't block game */}
-      <div className="fixed right-0 top-0 bottom-0 z-50 flex items-center justify-end sm:p-4 p-0 pointer-events-none">
-        <div className="pointer-events-auto flex flex-col bg-card/95 backdrop-blur-md border border-border rounded-l-2xl sm:rounded-2xl shadow-2xl w-full sm:w-[360px] h-full sm:h-[540px] overflow-hidden">
+      {/* Chat panel — right side below navbar, doesn't block game */}
+      <div className="fixed right-0 top-16 bottom-0 z-50 flex items-start justify-end sm:p-4 p-0 pointer-events-none">
+        <div className="pointer-events-auto flex flex-col bg-card/95 backdrop-blur-md border border-border rounded-l-2xl sm:rounded-2xl shadow-2xl w-full sm:w-[360px] h-full sm:max-h-[min(540px,calc(100vh-5rem))] overflow-hidden animate-fade-in">
 
           {/* Header */}
           <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-secondary/40 flex-shrink-0">
@@ -192,7 +192,7 @@ export const SessionChat: React.FC<SessionChatProps> = ({ isOpen, onClose }) => 
           </div>
 
           {/* Messages area */}
-          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
+          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2 scrollbar-thin">
             {messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-6">
                 <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">

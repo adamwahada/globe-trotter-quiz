@@ -41,7 +41,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { validateGuess } from '@/utils/inputValidation';
 
 const GamePage = () => {
-  const { session } = useGame();
+  const { session, isLoading } = useGame();
+
+  // While restoring session from localStorage after a page refresh, show nothing
+  if (isLoading) return null;
 
   // Dispatch to Speed Race component when in that mode
   if (session?.gameMode === 'speedRace') {
@@ -56,6 +59,7 @@ const GamePageInner = () => {
   const {
     session,
     currentPlayer,
+    isLoading,
     leaveSession,
     updatePlayerMetadata,
     updateGameState,
@@ -174,6 +178,8 @@ const GamePageInner = () => {
 
   // Redirect if no session or session ended
   useEffect(() => {
+    // Wait for session restore from localStorage before deciding to redirect
+    if (isLoading) return;
     if (!session || session.status === 'finished') {
       if (session?.status === 'finished') {
         setShowResults(true);
@@ -186,7 +192,7 @@ const GamePageInner = () => {
         }
       }
     }
-  }, [session, navigate]);
+  }, [session, navigate, isLoading]);
 
   // Handle countdown to playing transition
   useEffect(() => {
