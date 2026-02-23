@@ -78,6 +78,13 @@
                 },
                 "turnStartTime": {
                     ".validate": "newData.isNumber() || newData.val() === null"
+                },
+                "chat": {
+                    ".read": true,
+                    "$messageId": {
+                        ".write": "auth != null && root.child('sessions').child($sessionCode).child('players').child(auth.uid).exists() || (auth == null && root.child('sessions').child($sessionCode).child('players').child(newData.child('senderId').val()).child('isGuest').val() === true)",
+                        ".validate": "newData.hasChildren(['senderId', 'senderName', 'senderColor', 'content', 'timestamp']) && newData.child('content').isString() && newData.child('content').val().length > 0 && newData.child('content').val().length <= 100 && newData.child('senderName').isString() && newData.child('senderId').isString() && newData.child('senderColor').isString() && newData.child('timestamp').isNumber()"
+                    }
                 }
             }
         },

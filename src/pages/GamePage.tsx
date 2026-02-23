@@ -33,9 +33,10 @@ import { getRandomUnplayedCountry, getFamousPerson, getMapCountryName, getCountr
 import { hasExtendedHints, getFamousPlayer, getFamousSinger, getCountryCapital, getHintAvailability, HintAvailability } from '@/utils/countryHints';
 import { GuidedHintType } from '@/components/Guess/GuessModal';
 import { TURN_TIME_SECONDS, COUNTDOWN_SECONDS, playersMapToArray, PlayersMap } from '@/types/game';
-import { Trophy, LogOut, Volume2, VolumeX, Users, Clock } from 'lucide-react';
+import { Trophy, LogOut, Volume2, VolumeX, Users, Clock, SkipForward } from 'lucide-react';
  import { Sparkles } from 'lucide-react';
 import { removePlayerFromSession, clearRecoveryData } from '@/services/gameSessionService';
+import { SessionChatButton } from '@/components/Messaging/SessionChatButton';
 import { supabase } from '@/integrations/supabase/client';
 import { validateGuess } from '@/utils/inputValidation';
 
@@ -93,6 +94,11 @@ const GamePageInner = () => {
   // quickly incrementing inactiveTurns multiple times and kicking too early.
   const handledTimeoutKeyRef = useRef<string | null>(null);
   const historySavedRef = useRef(false);
+
+  // Tracks whether we intentionally closed the modal (submit/skip/timeout/close)
+  // so the session-sync effect doesn't reopen it before async state propagates.
+  // Stores the turn index to persist the guard for the entire turn.
+  const modalClosedForTurnRef = useRef<number>(-1);
 
   // Card effects state for current turn
   const [currentCardEffects, setCurrentCardEffects] = useState<{
@@ -361,13 +367,21 @@ const GamePageInner = () => {
     }
   }, [currentTurnIndex, isCardModeEnabled, currentPlayer, players, isSoloMode, isAgainstTheClock, addToast, playToastSound]);
 
-  // Sync modal state with session
+  // No need for a separate reset effect — modalClosedForTurnRef resets
+  // automatically when the turn index changes (checked inline).
+
+  // Sync modal state with session — only opens the modal once per turn
   useEffect(() => {
     if (isAgainstTheClock) return;
-    if (currentTurnState?.modalOpen && isMyTurn && !guessModalOpen) {
+    // Don't reopen if we intentionally closed it during THIS turn
+    if (modalClosedForTurnRef.current === currentTurnIndex) return;
+    // Don't open if the turn already has an answer recorded
+    if (currentTurnState?.submittedAnswer) return;
+    // Only open if there's actually a country to guess and it's our turn
+    if (currentTurnState?.modalOpen && currentTurnState?.country && isMyTurn && !guessModalOpen) {
       setGuessModalOpen(true);
     }
-  }, [currentTurnState?.modalOpen, isMyTurn, guessModalOpen, isAgainstTheClock]);
+  }, [currentTurnState?.modalOpen, currentTurnState?.submittedAnswer, currentTurnState?.country, isMyTurn, guessModalOpen, isAgainstTheClock, currentTurnIndex]);
 
   // Handle solo click mode timeout (when timer expires without answer)
   const handleSoloClickTimeout = useCallback(async () => {
@@ -393,6 +407,7 @@ const GamePageInner = () => {
       console.error('[GamePage] handleSoloClickTimeout error:', error);
       addToast('error', t('timeUp'));
     } finally {
+      modalClosedForTurnRef.current = currentTurnIndex;
       setGuessModalOpen(false);
       setSoloClickedCountry(null);
       setSoloClickStartTime(null);
@@ -447,15 +462,15 @@ const GamePageInner = () => {
           startTime: Date.now(),
           country,
           diceRolled: true,
-          modalOpen: false,
+          modalOpen: true,
           submittedAnswer: null,
           pointsEarned: null,
           isCorrect: null,
         };
 
         await updateTurnState(turnState);
-        // NOTE: Do NOT reset turnStartTime here - the timer already started when turn began
-        // The player has a single 35s window for their entire turn (roll + guess)
+        // Auto-open the guess modal immediately after dice roll
+        setGuessModalOpen(true);
       } catch (error) {
         console.error('[GamePage] handleRollDice error:', error);
         addToast('error', 'Failed to roll dice. Turn will advance automatically.');
@@ -700,6 +715,7 @@ const GamePageInner = () => {
 
       addToast('error', t('timeUp'));
       playToastSound('error');
+      modalClosedForTurnRef.current = currentTurnIndex;
       setGuessModalOpen(false);
 
       setTimeout(() => moveToNextTurn(), 2000);
@@ -707,6 +723,7 @@ const GamePageInner = () => {
       console.error('[GamePage] handleTurnTimeout error:', error);
       // The stale-player failsafe will advance the turn if this player can't
       addToast('error', t('timeUp'));
+      modalClosedForTurnRef.current = currentTurnIndex;
       setGuessModalOpen(false);
     }
   }, [isMyTurn, currentTurnState, currentCountry, guessedCountries, wrongCountries, updateGameState, addToast, t, moveToNextTurn, playToastSound, updateTurnState, session, currentPlayer, navigate, currentTurnIndex]);
@@ -815,6 +832,7 @@ const GamePageInner = () => {
     if (!validation.valid) return;
 
     // Close modal immediately (do this BEFORE async work to keep UI responsive)
+    modalClosedForTurnRef.current = currentTurnIndex;
     setGuessModalOpen(false);
 
     try {
@@ -940,6 +958,7 @@ const GamePageInner = () => {
     if (!countryToSkip) return; // No country to skip
 
     // Close modal immediately to keep UI responsive
+    modalClosedForTurnRef.current = currentTurnIndex;
     setGuessModalOpen(false);
 
     try {
@@ -1027,6 +1046,75 @@ const GamePageInner = () => {
       }
     }
    }, [isMyTurn, currentTurnState, currentCountry, guessedCountries, wrongCountries, updateGameState, addToast, t, moveToNextTurn, updateTurnState, session, currentPlayer, navigate, playToastSound, isSoloMode, soloClickedCountry, isCardModeEnabled, updateStreak]);
+
+  // Skip turn directly from the game area (next to dice) - handles both pre-roll and post-roll
+  const handleSkipTurn = useCallback(async () => {
+    if (!isMyTurn || !currentPlayer || !session) return;
+
+    // If a country was already rolled, delegate to existing handleSkip
+    const countryToSkip = isSoloMode && soloClickedCountry ? soloClickedCountry : currentCountry;
+    if (countryToSkip) {
+      await handleSkip();
+      return;
+    }
+
+    // Pre-roll skip: pass the turn entirely without rolling dice
+    modalClosedForTurnRef.current = currentTurnIndex;
+    setGuessModalOpen(false);
+
+    try {
+      const currentPlayerUid = currentPlayer.id;
+      const currentPlayerData = session.players[currentPlayerUid];
+      if (!currentPlayerData) return;
+
+      // Update turn state to record the skip
+      await updateTurnState({
+        playerId: currentPlayerUid,
+        startTime: Date.now(),
+        country: null,
+        diceRolled: false,
+        modalOpen: false,
+        submittedAnswer: '[SKIPPED]',
+        pointsEarned: 0,
+        isCorrect: false,
+      });
+
+      addToast('info', t('turnSkipped'));
+
+      if (isSoloMode) {
+        // Solo mode: just reset for next turn
+        const updatedPlayers: PlayersMap = {
+          ...session.players,
+          [currentPlayerUid]: {
+            ...currentPlayerData,
+            turnsPlayed: (currentPlayerData.turnsPlayed || 0) + 1,
+          }
+        };
+        await updateGameState({ players: updatedPlayers });
+        await updateTurnState(null);
+      } else {
+        // Multiplayer: skip is active participation, reset inactivity
+        const updatedPlayers: PlayersMap = {
+          ...session.players,
+          [currentPlayerUid]: {
+            ...currentPlayerData,
+            turnsPlayed: (currentPlayerData.turnsPlayed || 0) + 1,
+            inactiveTurns: 0,
+          }
+        };
+        await updateGameState({ players: updatedPlayers });
+
+        if (isCardModeEnabled) {
+          await updateStreak(false);
+        }
+
+        setTimeout(() => moveToNextTurn(), 1500);
+      }
+    } catch (error) {
+      console.error('[GamePage] handleSkipTurn error:', error);
+      addToast('error', 'Failed to skip turn.');
+    }
+  }, [isMyTurn, currentPlayer, session, currentCountry, soloClickedCountry, isSoloMode, handleSkip, updateTurnState, updateGameState, addToast, t, moveToNextTurn, isCardModeEnabled, updateStreak, currentTurnIndex]);
 
   // Get localized country data
   const { getCountryDisplayName, getLocalizedHints } = useLocalizedCountry();
@@ -1324,6 +1412,9 @@ const GamePageInner = () => {
               </Button>
             </GameTooltip>
 
+            {/* Session Chat */}
+            <SessionChatButton />
+
             {/* Leaderboard Toggle */}
             <GameTooltip content={t('tooltipLeaderboard')} position="bottom">
               <Button
@@ -1509,13 +1600,45 @@ const GamePageInner = () => {
             </div>
           )}
 
-          {/* Dice - Only for active player */}
-          <div className="flex justify-center py-4">
+          {/* Dice & Skip - Only for active player */}
+          <div className="flex items-center justify-center gap-4 py-4">
             <Dice
               onRoll={handleRollDice}
               disabled={!isMyTurn || !!currentCountry || isRolling}
               isRolling={isRolling}
             />
+            <GameTooltip content={t('tooltipSkip')} position="top">
+              <button
+                onClick={handleSkipTurn}
+                disabled={!isMyTurn || isRolling || isTurnFinished}
+                className={`
+                  relative p-3 rounded-xl bg-gradient-to-br from-secondary to-card
+                  border-2 transition-all duration-300 group
+                  ${!isMyTurn || isRolling || isTurnFinished
+                    ? 'opacity-50 cursor-not-allowed border-border'
+                    : 'hover:border-warning hover:shadow-lg hover:scale-105 cursor-pointer border-border'
+                  }
+                `}
+              >
+                <SkipForward
+                  className={`h-8 w-8 text-warning transition-transform duration-200 ${
+                    !isMyTurn || isRolling || isTurnFinished ? '' : 'group-hover:translate-x-0.5'
+                  }`}
+                />
+                {/* Glow effect */}
+                <div className={`
+                  absolute inset-0 rounded-xl bg-warning/30 blur-lg
+                  transition-opacity duration-300
+                  ${!isMyTurn || isRolling || isTurnFinished ? 'opacity-0' : 'opacity-0 group-hover:opacity-50'}
+                `} />
+                {/* Label */}
+                {!(!isMyTurn || isRolling || isTurnFinished) && (
+                  <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs text-muted-foreground whitespace-nowrap">
+                    {t('turnSkipped')}
+                  </span>
+                )}
+              </button>
+            </GameTooltip>
           </div>
 
           {/* Mini Leaderboard for mobile */}
@@ -1556,6 +1679,7 @@ const GamePageInner = () => {
       <GuessModal
         isOpen={guessModalOpen && isMyTurn}
         onClose={() => {
+          modalClosedForTurnRef.current = currentTurnIndex;
           setGuessModalOpen(false);
           // Also clear modalOpen in turn state so the sync useEffect doesn't reopen it
           if (currentTurnState?.modalOpen) {
