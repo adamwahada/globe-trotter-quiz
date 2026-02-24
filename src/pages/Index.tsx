@@ -81,26 +81,35 @@ const Index = () => {
     isGuest: boolean;
   } | null>(null);
 
+  const { isLoading: authLoading } = useAuth();
+
   // Check for active session on mount and auto-redirect if one exists
   useEffect(() => {
+    // Wait for auth to finish loading before checking sessions
+    if (authLoading) return;
+
     const check = async () => {
       const hasSession = await checkActiveSession();
       setIsCheckingSession(false);
 
       // Auto-redirect to the active session if one exists
       if (hasSession && isAuthenticated) {
-        const sessionStatus = await resumeSession();
-        if (sessionStatus) {
-          if (sessionStatus === 'waiting' || sessionStatus === 'countdown') {
-            navigate('/waiting-room');
-          } else if (sessionStatus === 'playing') {
-            navigate('/game');
+        try {
+          const sessionStatus = await resumeSession();
+          if (sessionStatus) {
+            if (sessionStatus === 'waiting' || sessionStatus === 'countdown') {
+              navigate('/waiting-room');
+            } else if (sessionStatus === 'playing') {
+              navigate('/game');
+            }
           }
+        } catch (err) {
+          console.error('[Index] Auto-redirect failed:', err);
         }
       }
     };
     check();
-  }, [checkActiveSession, isAuthenticated, resumeSession, navigate]);
+  }, [checkActiveSession, isAuthenticated, resumeSession, navigate, authLoading]);
 
   // Handle invite link with ?join=CODE parameter
   useEffect(() => {
