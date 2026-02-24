@@ -48,11 +48,22 @@ export const useFirebaseSession = () => {
   // If the user gets logged out (e.g. session conflict from another device),
   // immediately clear any in-progress game state so the UI can't be used in a
   // half-authenticated state.
+  // IMPORTANT: We must NOT run this while auth is still loading (user===null
+  // on initial render). We use a ref to track whether we ever saw a logged-in
+  // user — only then does losing the user mean a real logout.
+  const hadUserRef = useRef(false);
+
   useEffect(() => {
-    if (user) return;
+    if (user) {
+      hadUserRef.current = true;
+      return;
+    }
     // Don't clear state for guest players (they have no Firebase auth user)
     const guestId = sessionStorage.getItem('guest_player_id');
     if (guestId) return;
+
+    // Only clear if we previously had a user (real logout), not on initial load
+    if (!hadUserRef.current) return;
 
     setSession(null);
     setCurrentPlayer(null);
