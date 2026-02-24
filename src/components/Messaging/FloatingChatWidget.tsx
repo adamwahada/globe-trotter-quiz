@@ -96,16 +96,20 @@ export const FloatingChatWidget: React.FC = () => {
       if (isOpen) {
         lastSeenCountRef.current = totalMessages;
         setUnreadCount(0);
-      } else {
+      } else if (notificationsEnabled) {
         const newMessages = totalMessages - lastSeenCountRef.current;
         const unread = Math.max(0, newMessages);
         setUnreadCount(unread);
 
         // Trigger pulse animation when new messages arrive
-        if (totalMessages > prevMessageCountRef.current && notificationsEnabled) {
+        if (totalMessages > prevMessageCountRef.current) {
           setPulse(true);
           setTimeout(() => setPulse(false), 2000);
         }
+      } else {
+        // Notifications disabled — track seen count but show no badge
+        lastSeenCountRef.current = totalMessages;
+        setUnreadCount(0);
       }
 
       prevMessageCountRef.current = totalMessages;
@@ -270,7 +274,16 @@ export const FloatingChatWidget: React.FC = () => {
 
               {/* Notification toggle */}
               <button
-                onClick={() => setNotificationsEnabled(!notificationsEnabled)}
+                onClick={() => {
+                  const next = !notificationsEnabled;
+                  setNotificationsEnabled(next);
+                  if (!next) {
+                    // Immediately clear badge when muting
+                    setUnreadCount(0);
+                    lastSeenCountRef.current = messages.length;
+                    setPulse(false);
+                  }
+                }}
                 className={`p-1.5 rounded-full transition-colors ${
                   notificationsEnabled
                     ? 'text-red-400 hover:bg-red-600/20'
