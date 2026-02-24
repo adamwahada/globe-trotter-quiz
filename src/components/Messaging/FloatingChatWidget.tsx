@@ -201,7 +201,7 @@ export const FloatingChatWidget: React.FC = () => {
           onClick={() => setIsOpen(true)}
           className={`
             chat-toggle-btn
-            fixed bottom-6 left-6 z-[9999]
+            fixed bottom-24 left-4 z-[9999]
             w-14 h-14 rounded-full
             bg-red-600 hover:bg-red-500
             text-white

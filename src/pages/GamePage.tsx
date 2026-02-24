@@ -460,15 +460,15 @@ const GamePageInner = () => {
           startTime: Date.now(),
           country,
           diceRolled: true,
-          modalOpen: true,
+          modalOpen: false,
           submittedAnswer: null,
           pointsEarned: null,
           isCorrect: null,
         };
 
         await updateTurnState(turnState);
-        // Auto-open the guess modal immediately after dice roll
-        setGuessModalOpen(true);
+        // Set turnStartTime NOW (country determined) — timer starts here
+        await updateGameState({ turnStartTime: Date.now() });
       } catch (error) {
         console.error('[GamePage] handleRollDice error:', error);
         addToast('error', 'Failed to roll dice. Turn will advance automatically.');
@@ -477,7 +477,7 @@ const GamePageInner = () => {
         setIsRolling(false);
       }
     }, 800);
-  }, [isMyTurn, isRolling, currentCountry, guessedCountries, currentPlayer, updateTurnState, addToast, endGame, playDiceSound]);
+  }, [isMyTurn, isRolling, currentCountry, guessedCountries, currentPlayer, updateTurnState, updateGameState, addToast, endGame, playDiceSound]);
 
   // Handle player departures notifications
   useEffect(() => {
@@ -635,7 +635,7 @@ const GamePageInner = () => {
           await updateGameState({
             currentTurn: followingTurn,
             currentTurnState: null,
-            turnStartTime: Date.now(),
+            turnStartTime: null,
             activeCardEffects: remainingEffects,
           });
           return;
@@ -647,7 +647,7 @@ const GamePageInner = () => {
       await updateGameState({
         currentTurn: nextTurn,
         currentTurnState: null,
-        turnStartTime: Date.now(),
+        turnStartTime: null,
       });
     } catch (error) {
       console.error('[GamePage] moveToNextTurn error:', error);
@@ -806,7 +806,7 @@ const GamePageInner = () => {
           updateGameState({
             currentTurn: nextTurn,
             currentTurnState: null,
-            turnStartTime: Date.now(),
+            turnStartTime: null,
           }).catch(err => {
             console.warn('[GamePage] Force-advance failed:', err);
             // Allow retry on failure
@@ -1442,7 +1442,7 @@ const GamePageInner = () => {
       </nav>
 
       {/* Spacer for fixed navbar */}
-      <div className="h-24 md:h-32" />
+      <div className="h-16 md:h-[72px]" />
 
       {/* Mobile Timer or Extra Time Message */}
       <div className="md:hidden p-3 border-b border-border">
@@ -1460,16 +1460,16 @@ const GamePageInner = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col lg:flex-row p-4 gap-4 max-w-7xl mx-auto w-full">
+      <div className="flex-1 flex flex-col lg:flex-row px-2 py-2 gap-3 max-w-7xl mx-auto w-full">
         {/* Left side - Game info and controls */}
-        <div className="lg:w-80 flex flex-col gap-4 shrink-0">
+        <div className="lg:w-64 flex flex-col gap-3 shrink-0">
           {/* Turn Indicator Card - Hide in solo mode */}
           {!isSoloMode && (
-          <div className={`rounded-xl p-4 border-2 transition-all ${isMyTurn
+          <div className={`rounded-xl p-3 border-2 transition-all ${isMyTurn
             ? 'bg-primary/10 border-primary shadow-lg shadow-primary/20 animate-pulse-glow'
             : 'bg-card border-border'
             }`}>
-            <div className="flex items-center gap-3 mb-3">
+            <div className="flex items-center gap-2 mb-2">
               <div className={`w-3 h-3 rounded-full ${isMyTurn ? 'bg-primary animate-ping' : 'bg-muted'}`} />
               <h3 className="font-display text-xl">
                 {isMyTurn
@@ -1531,14 +1531,14 @@ const GamePageInner = () => {
               </>
             )}
 
-            {/* Turn Timer - Visible to all, starts immediately when turn begins (not just after dice roll) */}
+            {/* Turn Timer - Visible to all, starts only after dice roll (country determined) */}
             {session.turnStartTime && (
               <div className="mt-3 pt-3 border-t border-border">
                 <TimerProgress
                   totalSeconds={TURN_TIME_SECONDS}
                   startTime={session.turnStartTime}
                   onComplete={isMyTurn ? handleTurnTimeout : undefined}
-                  label={currentCountry ? t('timeLeft') : `${t('timeLeft')} (${t('rollDice')})`}
+                  label={t('timeLeft')}
                   enableWarningSound={isMyTurn}
                 />
               </div>
@@ -1560,7 +1560,7 @@ const GamePageInner = () => {
 
           {/* Spectator View - Answer Display */}
           {currentTurnState?.submittedAnswer && (
-            <div className={`rounded-xl p-4 border-2 ${currentTurnState.isCorrect
+            <div className={`rounded-xl p-3 border-2 ${currentTurnState.isCorrect
               ? 'bg-success/10 border-success'
               : 'bg-destructive/10 border-destructive'
               }`}>
@@ -1596,7 +1596,7 @@ const GamePageInner = () => {
           )}
 
           {/* Dice & Skip - Only for active player */}
-          <div className="flex items-center justify-center gap-4 py-4">
+          <div className="flex items-center justify-center gap-4 py-2">
             <Dice
               onRoll={handleRollDice}
               disabled={!isMyTurn || !!currentCountry || isRolling}
@@ -1646,7 +1646,7 @@ const GamePageInner = () => {
         </div>
 
         {/* Map Area - Fixed container */}
-        <div className="flex-1 min-h-[500px] lg:min-h-[700px]">
+        <div className="flex-1 min-h-[400px] lg:min-h-[calc(100vh-120px)]">
           <WorldMap
             guessedCountries={guessedCountries}
             correctCountries={correctCountries}
@@ -1661,7 +1661,7 @@ const GamePageInner = () => {
 
         {/* Leaderboard Sidebar - Desktop */}
         {showLeaderboard && (
-          <div className="hidden lg:block w-72 shrink-0 border border-border rounded-xl p-4 bg-card/50 backdrop-blur-sm overflow-y-auto animate-fade-in">
+          <div className="hidden lg:block w-60 shrink-0 border border-border rounded-xl p-3 bg-card/50 backdrop-blur-sm overflow-y-auto animate-fade-in">
             <Leaderboard
               players={players}
               currentPlayerId={currentPlayer?.id}

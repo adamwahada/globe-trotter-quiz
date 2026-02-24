@@ -114,7 +114,7 @@ export interface SessionRecoveryData {
   timestamp: number;
 }
 
-export const TURN_TIME_SECONDS = 35;
+export const TURN_TIME_SECONDS = 30;
 export const COUNTDOWN_SECONDS = 5;
 export const WAITING_ROOM_TIMEOUT = 300; // 5 minutes
 

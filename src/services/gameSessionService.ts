@@ -310,9 +310,9 @@ export const startGameSession = async (code: string): Promise<void> => {
     status: 'playing',
     startTime: Date.now(),
     currentTurn: 0,
-    // IMPORTANT: Set turnStartTime immediately so the first player's timer starts right away
-    // This prevents infinite wait if the first player doesn't roll dice
-    turnStartTime: Date.now(),
+    // turnStartTime is set to null initially; it will be set when the dice is rolled
+    // and the country is determined, so the 30s countdown starts fairly
+    turnStartTime: null,
     currentTurnState: null,
   });
 };
