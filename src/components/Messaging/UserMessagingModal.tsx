@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { MessageSquare, X, Send, Loader2, ArrowDown } from 'lucide-react';
 import { getFirebaseIdToken } from '@/utils/firebaseToken';
 import { useAuth } from '@/contexts/AuthContext';
@@ -175,7 +176,7 @@ export const UserMessagingModal: React.FC<UserMessagingModalProps> = ({ isOpen, 
 
   if (!isOpen || !user) return null;
 
-  return (
+  return createPortal(
     // Modal — fixed floating panel, no backdrop so navbar stays accessible
     <div ref={modalRef} className="fixed z-[9991] bottom-0 right-0 sm:bottom-4 sm:right-4 w-full sm:w-[380px] h-[80vh] sm:h-[500px] flex flex-col bg-card border border-white/10 rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden">
         {/* Header */}
@@ -292,6 +293,7 @@ export const UserMessagingModal: React.FC<UserMessagingModalProps> = ({ isOpen, 
             Press Enter to send · Shift+Enter for new line
           </p>
         </div>
-    </div>
+    </div>,
+    document.body
   );
 };

@@ -10,6 +10,7 @@ import { FeedbackSection } from "@/components/Feedback/FeedbackSection";
 import { FAQSection } from "@/components/LandingPage/FAQSection";
 import { AuthModal } from "@/components/Auth/AuthModal";
 import { GuestJoinModal } from "@/components/Auth/GuestJoinModal";
+import { PendingJoinRequestModal } from "@/components/Modal/PendingJoinRequestModal";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdmin } from "@/contexts/AdminContext";
@@ -53,7 +54,7 @@ const Index = () => {
   const { t } = useLanguage();
   const { isAuthenticated, user } = useAuth();
   const { isAdmin } = useAdmin();
-  const { hasActiveSession, session, resumeSession, checkActiveSession, error: gameError, joinSessionAsGuest } = useGame();
+  const { hasActiveSession, session, resumeSession, checkActiveSession, error: gameError, joinSessionAsGuest, restoreApprovedSession } = useGame();
   const { addToast } = useToastContext();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -70,6 +71,15 @@ const Index = () => {
   const [gameAuthOpen, setGameAuthOpen] = useState(false);
   const [gameAuthMode, setGameAuthMode] = useState<'signin' | 'signup'>('signin');
   const [gameStartSignInOpen, setGameStartSignInOpen] = useState(false);
+  const [inviteChoiceOpen, setInviteChoiceOpen] = useState(false);
+  const [pendingJoinInfo, setPendingJoinInfo] = useState<{
+    code: string;
+    playerId: string;
+    username: string;
+    avatar: string;
+    color: string;
+    isGuest: boolean;
+  } | null>(null);
 
   // Check for active session on mount and auto-redirect if one exists
   useEffect(() => {
@@ -105,9 +115,9 @@ const Index = () => {
       // data from a previous session, don't let it silently block
       // the invite flow.
       if (isAuthenticated) {
-        // Authenticated users get the normal join modal
-        setGameModalOpen(true);
-        addToast("info", `Joining session: ${code}`);
+        // Authenticated users get to choose: join with account or as guest
+        setPendingGuestCode(code);
+        setInviteChoiceOpen(true);
       } else {
         // Non-authenticated users get the guest join modal
         setPendingGuestCode(code);
@@ -118,18 +128,25 @@ const Index = () => {
 
   const handleGuestJoin = async (username: string) => {
     if (!pendingGuestCode) return;
-    // joinSessionAsGuest now throws on failure with a descriptive message,
-    // so simply await it — errors propagate to GuestJoinModal's catch block.
     const success = await joinSessionAsGuest(pendingGuestCode, username);
     if (success) {
       setGuestJoinOpen(false);
       navigate('/waiting-room');
+      return;
     }
-    // If joinSessionAsGuest returned false without throwing, surface a message
-    // (shouldn't normally happen — the function throws on every failure path).
-    if (!success) {
-      throw new Error('Could not join session. Please try again.');
+    // Check if a join request was submitted (closed room)
+    const pendingRaw = localStorage.getItem('pendingJoinRequest');
+    if (pendingRaw) {
+      try {
+        const pending = JSON.parse(pendingRaw);
+        if (pending.code === pendingGuestCode) {
+          setGuestJoinOpen(false);
+          setPendingJoinInfo(pending);
+          return;
+        }
+      } catch { /* ignore */ }
     }
+    throw new Error('Could not join session. Please try again.');
   };
 
 
@@ -651,6 +668,91 @@ const Index = () => {
           setAuthForInviteOpen(true);
         }}
       />
+
+      {/* Invite link choice modal — shown for authenticated users to choose account vs guest */}
+      {inviteChoiceOpen && pendingGuestCode && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={() => { setInviteChoiceOpen(false); setPendingGuestCode(null); }} />
+          <div className="relative w-full max-w-md mx-4 bg-card border border-border rounded-2xl shadow-2xl animate-scale-in overflow-hidden p-6">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-3">
+                <Users className="h-8 w-8 text-primary" />
+              </div>
+              <h2 className="text-2xl font-display text-foreground">Join Session</h2>
+              <p className="text-muted-foreground text-sm mt-1">
+                Session <span className="text-primary font-display tracking-wider">{pendingGuestCode}</span>
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <Button
+                variant="netflix"
+                className="w-full py-6 gap-3"
+                onClick={() => {
+                  setInviteChoiceOpen(false);
+                  setInviteCode(pendingGuestCode);
+                  setGameModalOpen(true);
+                }}
+              >
+                <UserCircle className="h-5 w-5" />
+                Join with my account ({user?.username})
+              </Button>
+
+              <div className="flex items-center gap-4">
+                <div className="flex-1 h-px bg-border" />
+                <span className="text-muted-foreground text-sm">or</span>
+                <div className="flex-1 h-px bg-border" />
+              </div>
+
+              <Button
+                variant="outline"
+                className="w-full py-6 gap-3"
+                onClick={() => {
+                  setInviteChoiceOpen(false);
+                  setGuestJoinOpen(true);
+                }}
+              >
+                <User className="h-5 w-5" />
+                Join as guest
+              </Button>
+            </div>
+
+            <button
+              onClick={() => { setInviteChoiceOpen(false); setPendingGuestCode(null); }}
+              className="absolute top-4 right-4 p-2 rounded-full hover:bg-secondary transition-colors"
+            >
+              <span className="text-muted-foreground text-lg">✕</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Pending join request modal — shown when a join request was submitted to a closed room */}
+      {pendingJoinInfo && (
+        <PendingJoinRequestModal
+          sessionCode={pendingJoinInfo.code}
+          playerId={pendingJoinInfo.playerId}
+          username={pendingJoinInfo.username}
+          avatar={pendingJoinInfo.avatar}
+          color={pendingJoinInfo.color}
+          isGuest={pendingJoinInfo.isGuest}
+          onApproved={async () => {
+            const info = pendingJoinInfo;
+            localStorage.removeItem('pendingJoinRequest');
+            const restored = await restoreApprovedSession(info.code, info.playerId);
+            setPendingJoinInfo(null);
+            if (restored) {
+              navigate('/waiting-room');
+            } else {
+              addToast('error', 'Failed to join after approval. Please try again.');
+            }
+          }}
+          onCancel={() => {
+            localStorage.removeItem('pendingJoinRequest');
+            setPendingJoinInfo(null);
+          }}
+        />
+      )}
     </div>
   );
 };

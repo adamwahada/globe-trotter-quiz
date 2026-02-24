@@ -629,12 +629,12 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
                 {t('shareCode')}
               </p>
 
-              <div className="flex gap-2">
+              <div className="flex gap-2 justify-center">
                 <GameTooltip content="Copy code to clipboard">
                   <Button
                     variant="outline"
                     onClick={copyCode}
-                    className="flex-1 gap-2"
+                    className="gap-2"
                   >
                     {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                     {copied ? 'Copied!' : 'Copy Code'}
@@ -650,7 +650,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
                       addToast('success', t('inviteLinkCopied' as any));
                       setTimeout(() => setLinkCopied(false), 2000);
                     }}
-                    className="flex-1 gap-2"
+                    className="gap-2"
                   >
                     {linkCopied ? <Check className="h-4 w-4" /> : <Link className="h-4 w-4" />}
                     {linkCopied ? 'Copied!' : t('copyInviteLink' as any)}
