@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -24,7 +25,18 @@ import { AdminBans } from "./pages/AdminBans";
 
 const queryClient = new QueryClient();
 
-const App = () => (
+const App = () => {
+  // Global safety net: prevent unhandled promise rejections from crashing to blank page
+  useEffect(() => {
+    const handleRejection = (event: PromiseRejectionEvent) => {
+      console.error("[App] Unhandled rejection:", event.reason);
+      event.preventDefault(); // Prevent the default browser error handling
+    };
+    window.addEventListener("unhandledrejection", handleRejection);
+    return () => window.removeEventListener("unhandledrejection", handleRejection);
+  }, []);
+
+  return (
   <QueryClientProvider client={queryClient}>
     <LanguageProvider>
       <ToastProvider>
@@ -59,6 +71,7 @@ const App = () => (
       </ToastProvider>
     </LanguageProvider>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;

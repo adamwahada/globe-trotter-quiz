@@ -37,6 +37,7 @@ import { Trophy, LogOut, Volume2, VolumeX, Users, Clock, SkipForward } from 'luc
  import { Sparkles } from 'lucide-react';
 import { removePlayerFromSession, clearRecoveryData } from '@/services/gameSessionService';
 import { FloatingChatWidget } from '@/components/Messaging/FloatingChatWidget';
+import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { validateGuess } from '@/utils/inputValidation';
 
@@ -68,6 +69,7 @@ const GamePageInner = () => {
     startGame,
     getPlayersArray,
   } = useGame();
+  const { isLoading: authLoading } = useAuth();
   const { addToast } = useToastContext();
   const { playToastSound, playDiceSound, toggleSound, soundEnabled } = useSound();
   const navigate = useNavigate();
@@ -178,8 +180,8 @@ const GamePageInner = () => {
 
   // Redirect if no session or session ended
   useEffect(() => {
-    // Wait for session restore from localStorage before deciding to redirect
-    if (isLoading) return;
+    // Wait for BOTH session restore and auth restore before deciding to redirect
+    if (isLoading || authLoading) return;
     if (!session || session.status === 'finished') {
       if (session?.status === 'finished') {
         setShowResults(true);
@@ -192,7 +194,7 @@ const GamePageInner = () => {
         }
       }
     }
-  }, [session, navigate, isLoading]);
+  }, [session, navigate, isLoading, authLoading]);
 
   // Handle countdown to playing transition
   useEffect(() => {

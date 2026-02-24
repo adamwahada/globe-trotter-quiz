@@ -25,7 +25,7 @@ import { JoinRequestsModal } from '@/components/Modal/JoinRequestsModal';
 const WaitingRoom = () => {
   const { t } = useLanguage();
   const { session, currentPlayer, isLoading, setReady, updatePlayerMetadata, startCountdown, startGame, leaveSession, getPlayersArray } = useGame();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { addToast } = useToastContext();
   const { playToastSound } = useSound();
   const navigate = useNavigate();
@@ -51,8 +51,8 @@ const WaitingRoom = () => {
   }, [currentPlayer?.id, currentPlayer?.avatar, currentPlayer?.color]);
 
   useEffect(() => {
-    // Wait for session restore from localStorage before deciding to redirect
-    if (isLoading) return;
+    // Wait for BOTH session restore and auth restore before deciding to redirect
+    if (isLoading || authLoading) return;
     if (!session) {
       // Don't redirect guests if their session subscription temporarily drops
       const guestId = sessionStorage.getItem('guest_player_id');
@@ -60,7 +60,7 @@ const WaitingRoom = () => {
         navigate('/');
       }
     }
-  }, [session, navigate, isLoading]);
+  }, [session, navigate, isLoading, authLoading]);
 
   // Navigate to game when status changes to playing
   useEffect(() => {

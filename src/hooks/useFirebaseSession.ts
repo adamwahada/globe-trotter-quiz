@@ -148,57 +148,74 @@ export const useFirebaseSession = () => {
     checkSession();
   }, []);
 
-  // Restore session from localStorage on mount
+  // Restore session from localStorage on mount — retries when user becomes available
+  // so that auth-dependent reads (Firebase rules) succeed after refresh.
+  const sessionRestoredRef = useRef(false);
+
   useEffect(() => {
+    // Skip if we already successfully restored
+    if (sessionRestoredRef.current) return;
+
     const savedSessionCode = localStorage.getItem('gameSessionCode');
     const savedPlayerId = localStorage.getItem('currentPlayerId');
 
-    if (savedSessionCode && savedPlayerId) {
-      setIsLoading(true);
-      getSessionByCode(savedSessionCode)
-        .then((restoredSession) => {
-          if (restoredSession && restoredSession.status !== 'finished') {
-            // Get player from the players map using the saved playerId (which is now auth.uid)
-            if (restoredSession.players && restoredSession.players[savedPlayerId]) {
-              setSession(restoredSession);
-              const playerData = restoredSession.players[savedPlayerId];
-              setCurrentPlayer({
-                id: savedPlayerId,
-                ...playerData
-              });
-              setHasActiveSession(true);
+    if (!savedSessionCode || !savedPlayerId) {
+      setIsLoading(false);
+      return;
+    }
 
-              // Register this session for the current game
-              if (user?.id) {
-                trackUserPresence(user.id, tabSessionId, savedSessionCode);
-              }
+    // For non-guest players, wait until auth is ready before attempting restore
+    const isGuestPlayer = savedPlayerId.startsWith('guest_');
+    if (!isGuestPlayer && !user) {
+      // Auth still loading — keep isLoading true and wait for next render
+      return;
+    }
 
-              // Update recovery data
-              saveRecoveryData({
-                sessionCode: savedSessionCode,
-                playerId: savedPlayerId,
-                timestamp: Date.now(),
-              });
-            } else {
-              // Session exists but player was removed — zombie state
-              console.warn('[Restore] Player not found in session, clearing zombie state');
-              clearRecoveryData();
-              setHasActiveSession(false);
-              setSession(null);
-              setCurrentPlayer(null);
+    setIsLoading(true);
+    getSessionByCode(savedSessionCode)
+      .then((restoredSession) => {
+        if (restoredSession && restoredSession.status !== 'finished') {
+          // Get player from the players map using the saved playerId (which is now auth.uid)
+          if (restoredSession.players && restoredSession.players[savedPlayerId]) {
+            sessionRestoredRef.current = true;
+            setSession(restoredSession);
+            const playerData = restoredSession.players[savedPlayerId];
+            setCurrentPlayer({
+              id: savedPlayerId,
+              ...playerData
+            });
+            setHasActiveSession(true);
+
+            // Register this session for the current game
+            if (user?.id) {
+              trackUserPresence(user.id, tabSessionId, savedSessionCode);
             }
+
+            // Update recovery data
+            saveRecoveryData({
+              sessionCode: savedSessionCode,
+              playerId: savedPlayerId,
+              timestamp: Date.now(),
+            });
           } else {
+            // Session exists but player was removed — zombie state
+            console.warn('[Restore] Player not found in session, clearing zombie state');
             clearRecoveryData();
             setHasActiveSession(false);
+            setSession(null);
+            setCurrentPlayer(null);
           }
-        })
-        .catch(() => {
+        } else {
           clearRecoveryData();
           setHasActiveSession(false);
-        })
-        .finally(() => setIsLoading(false));
-    }
-  }, []);
+        }
+      })
+      .catch(() => {
+        clearRecoveryData();
+        setHasActiveSession(false);
+      })
+      .finally(() => setIsLoading(false));
+  }, [user?.id]);
 
    const createSession = useCallback(async (maxPlayers: number, duration: number, isSoloMode?: boolean, gameMode?: GameMode, cardModeEnabled?: boolean, totalRounds?: number, isOpenRoom?: boolean): Promise<string> => {
     // Get current user's auth.uid
