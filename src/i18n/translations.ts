@@ -154,6 +154,24 @@ export const translations = {
     countrySkipped: 'Country skipped',
     hintUsed: 'Hint used: -1 point',
 
+     // Room Settings
+     openRoom: 'Open Room',
+     openRoomDesc: 'Anyone with the code or link can join automatically',
+     closedRoom: 'Closed Room',
+     closedRoomDesc: 'Only the host can approve join requests',
+     copyInviteLink: 'Copy Invite Link',
+     inviteLinkCopied: 'Invite link copied!',
+     joinRequests: 'Join Requests',
+     pendingRequests: 'Pending Requests',
+     approvePlayer: 'Approve',
+     rejectPlayer: 'Reject',
+     requestSent: 'Join request sent! Waiting for host approval...',
+     requestRejected: 'Your join request was rejected',
+     requestApproved: 'Your join request was approved!',
+     newJoinRequest: 'New join request',
+     playerWantsToJoin: 'wants to join the session',
+     noRequests: 'No pending requests',
+
      // Card Mode
      cardMode: 'Card Mode',
      cardModeDesc: 'Earn cards by winning streaks and use special abilities',
@@ -630,6 +648,24 @@ export const translations = {
     countrySkipped: 'Pays ignoré',
     hintUsed: 'Indice utilisé : -1 point',
 
+     // Room Settings
+     openRoom: 'Salle Ouverte',
+     openRoomDesc: 'Tout le monde avec le code ou le lien peut rejoindre automatiquement',
+     closedRoom: 'Salle Fermée',
+     closedRoomDesc: 'Seul l\'hôte peut approuver les demandes',
+     copyInviteLink: 'Copier le lien d\'invitation',
+     inviteLinkCopied: 'Lien d\'invitation copié !',
+     joinRequests: 'Demandes d\'adhésion',
+     pendingRequests: 'Demandes en attente',
+     approvePlayer: 'Accepter',
+     rejectPlayer: 'Refuser',
+     requestSent: 'Demande envoyée ! En attente de l\'approbation de l\'hôte...',
+     requestRejected: 'Votre demande a été refusée',
+     requestApproved: 'Votre demande a été approuvée !',
+     newJoinRequest: 'Nouvelle demande',
+     playerWantsToJoin: 'veut rejoindre la session',
+     noRequests: 'Aucune demande en attente',
+
      // Card Mode
      cardMode: 'Mode Cartes',
      cardModeDesc: 'Gagnez des cartes avec des séries de victoires et utilisez des capacités spéciales',
@@ -1105,6 +1141,24 @@ export const translations = {
     turnSkipped: 'تم تخطي الدور',
     countrySkipped: 'تم تخطي البلد',
     hintUsed: 'تم استخدام التلميح: -1 نقطة',
+
+     // Room Settings
+     openRoom: 'غرفة مفتوحة',
+     openRoomDesc: 'أي شخص لديه الرمز أو الرابط يمكنه الانضمام تلقائيًا',
+     closedRoom: 'غرفة مغلقة',
+     closedRoomDesc: 'المضيف فقط يمكنه الموافقة على طلبات الانضمام',
+     copyInviteLink: 'نسخ رابط الدعوة',
+     inviteLinkCopied: 'تم نسخ رابط الدعوة!',
+     joinRequests: 'طلبات الانضمام',
+     pendingRequests: 'الطلبات المعلقة',
+     approvePlayer: 'قبول',
+     rejectPlayer: 'رفض',
+     requestSent: 'تم إرسال الطلب! في انتظار موافقة المضيف...',
+     requestRejected: 'تم رفض طلب الانضمام',
+     requestApproved: 'تمت الموافقة على طلبك!',
+     newJoinRequest: 'طلب انضمام جديد',
+     playerWantsToJoin: 'يريد الانضمام إلى الجلسة',
+     noRequests: 'لا توجد طلبات معلقة',
 
      // Card Mode
      cardMode: 'وضع البطاقات',

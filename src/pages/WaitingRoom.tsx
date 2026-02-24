@@ -15,11 +15,12 @@ import { GameTooltip } from '@/components/Tooltip/GameTooltip';
 import { LonePlayerOverlay } from '@/components/Modal/LonePlayerOverlay';
 import { ReconnectionBanner } from '@/components/Banner/ReconnectionBanner';
 import { useSound } from '@/contexts/SoundContext';
-import { COUNTDOWN_SECONDS, WAITING_ROOM_TIMEOUT, playersMapToArray } from '@/types/game';
+import { WAITING_ROOM_TIMEOUT, playersMapToArray } from '@/types/game';
 import { Player } from '@/types/game';
  import { Copy, Check, Users, Clock, Play, LogOut, Link, Zap, Sparkles } from 'lucide-react';
 import { kickUnreadyPlayers, clearRecoveryData } from '@/services/gameSessionService';
 import { FloatingChatWidget } from '@/components/Messaging/FloatingChatWidget';
+import { JoinRequestsModal } from '@/components/Modal/JoinRequestsModal';
 
 const WaitingRoom = () => {
   const { t } = useLanguage();
@@ -111,17 +112,8 @@ const WaitingRoom = () => {
     }
   }, [session?.players, currentPlayer?.id, navigate, addToast]);
 
-  // Handle countdown completion
-  useEffect(() => {
-    if (session?.status === 'countdown' && session.countdownStartTime) {
-      const elapsed = Math.floor((Date.now() - session.countdownStartTime) / 1000);
-      const remaining = COUNTDOWN_SECONDS - elapsed;
-
-      if (remaining <= 0 && session.host === currentPlayer?.id) {
-        startGame();
-      }
-    }
-  }, [session, currentPlayer, startGame]);
+  // Handle countdown completion — CountdownOverlay fires onComplete instantly at 0,
+  // so we no longer need a polling useEffect. The overlay's onComplete callback is used instead.
 
   const copyCode = () => {
     if (session) {
@@ -230,7 +222,12 @@ const WaitingRoom = () => {
 
   // Show countdown overlay
   if (session.status === 'countdown' && session.countdownStartTime) {
-    return <CountdownOverlay startTime={session.countdownStartTime} />;
+    return (
+      <CountdownOverlay
+        startTime={session.countdownStartTime}
+        onComplete={isHost ? startGame : undefined}
+      />
+    );
   }
 
   return (
@@ -242,6 +239,15 @@ const WaitingRoom = () => {
       <Navbar
         rightContent={
           <div className="flex items-center gap-2">
+            {/* Join Request Management (host only, closed rooms) */}
+            {isHost && session.isOpenRoom === false && (
+              <JoinRequestsModal
+                sessionCode={session.code}
+                isHost={isHost}
+                maxPlayers={session.maxPlayers}
+                currentPlayerCount={players.length}
+              />
+            )}
             <GameTooltip content={t('tooltipQuit')} position="bottom">
               <Button variant="outline" onClick={handleLeave} className="gap-2">
                 <LogOut className="h-4 w-4" />

@@ -1,5 +1,5 @@
 import { database, auth, ref, set, onValue, update, remove, get, isFirebaseReady, onDisconnect } from '@/lib/firebase';
-import type { GameSession, Player, PlayerData, PlayersMap, TurnState, SessionRecoveryData } from '@/types/game';
+import type { GameSession, Player, PlayerData, PlayersMap, TurnState, SessionRecoveryData, JoinRequest } from '@/types/game';
 import { playersMapToArray, getPlayerUids } from '@/types/game';
 
 const SESSIONS_PATH = 'sessions';
@@ -345,6 +345,119 @@ export const kickUnreadyPlayers = async (code: string): Promise<string[]> => {
   }
 
   return kickedPlayerIds;
+};
+
+// --- Join Request System (Closed Rooms) ---
+
+// Submit a join request for a closed room
+export const submitJoinRequest = async (
+  code: string,
+  playerId: string,
+  request: JoinRequest
+): Promise<void> => {
+  if (!isFirebaseReady() || !database) {
+    throw new Error('Firebase not ready');
+  }
+  const requestRef = ref(database, `${SESSIONS_PATH}/${code}/joinRequests/${playerId}`);
+  await set(requestRef, request);
+};
+
+// Subscribe to join requests (for host to see incoming requests in real-time)
+export const subscribeToJoinRequests = (
+  code: string,
+  callback: (requests: { [id: string]: JoinRequest } | null) => void
+): (() => void) => {
+  if (!isFirebaseReady() || !database) {
+    callback(null);
+    return () => {};
+  }
+  const requestsRef = ref(database, `${SESSIONS_PATH}/${code}/joinRequests`);
+  const unsubscribe = onValue(requestsRef, (snapshot) => {
+    callback(snapshot.exists() ? snapshot.val() : null);
+  }, () => {
+    callback(null);
+  });
+  return unsubscribe;
+};
+
+// Subscribe to a specific join request status (for the requesting player to watch for approval/rejection)
+export const subscribeToJoinRequestStatus = (
+  code: string,
+  playerId: string,
+  callback: (request: JoinRequest | null) => void
+): (() => void) => {
+  if (!isFirebaseReady() || !database) {
+    callback(null);
+    return () => {};
+  }
+  const requestRef = ref(database, `${SESSIONS_PATH}/${code}/joinRequests/${playerId}`);
+  const unsubscribe = onValue(requestRef, (snapshot) => {
+    callback(snapshot.exists() ? snapshot.val() : null);
+  }, () => {
+    callback(null);
+  });
+  return unsubscribe;
+};
+
+// Approve a join request — moves player data from joinRequests into players
+export const approveJoinRequest = async (
+  code: string,
+  requestPlayerId: string
+): Promise<boolean> => {
+  if (!isFirebaseReady() || !database) return false;
+
+  const session = await getSessionByCode(code);
+  if (!session) return false;
+
+  const request = session.joinRequests?.[requestPlayerId];
+  if (!request || request.status !== 'pending') return false;
+
+  const currentPlayers = playersMapToArray(session.players);
+  if (currentPlayers.length >= session.maxPlayers) return false;
+
+  // Create player data from the request
+  const playerData: PlayerData = {
+    username: request.username,
+    avatar: request.avatar,
+    color: request.color,
+    score: 0,
+    turnsPlayed: 0,
+    countriesGuessed: [],
+    isReady: false,
+    isConnected: true,
+    lastSeen: Date.now(),
+    isGuest: request.isGuest,
+  };
+
+  // Add player to the session
+  const playerRef = ref(database, `${SESSIONS_PATH}/${code}/players/${requestPlayerId}`);
+  await set(playerRef, playerData);
+
+  // Update request status to approved
+  const requestRef = ref(database, `${SESSIONS_PATH}/${code}/joinRequests/${requestPlayerId}/status`);
+  await set(requestRef, 'approved');
+
+  return true;
+};
+
+// Reject a join request
+export const rejectJoinRequest = async (
+  code: string,
+  requestPlayerId: string
+): Promise<void> => {
+  if (!isFirebaseReady() || !database) return;
+  const requestRef = ref(database, `${SESSIONS_PATH}/${code}/joinRequests/${requestPlayerId}/status`);
+  await set(requestRef, 'rejected');
+};
+
+// Cancel a join request (player cancels their own request)
+export const cancelJoinRequest = async (
+  code: string,
+  playerId: string
+): Promise<void> => {
+  if (!isFirebaseReady() || !database) return;
+  const requestRef = ref(database, `${SESSIONS_PATH}/${code}/joinRequests/${playerId}`);
+  await remove(requestRef);
 };
 
 // Update turn state (for realtime sync of turn actions)

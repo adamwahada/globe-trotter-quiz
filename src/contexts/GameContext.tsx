@@ -12,7 +12,7 @@ interface GameContextType {
   isLoading: boolean;
   error: string | null;
   hasActiveSession: boolean;
-   createSession: (maxPlayers: number, duration: number, isSoloMode?: boolean, gameMode?: GameMode, cardModeEnabled?: boolean, totalRounds?: number) => Promise<string>;
+   createSession: (maxPlayers: number, duration: number, isSoloMode?: boolean, gameMode?: GameMode, cardModeEnabled?: boolean, totalRounds?: number, isOpenRoom?: boolean) => Promise<string>;
   joinSession: (code: string, username?: string) => Promise<boolean>;
   joinSessionAsGuest: (code: string, guestUsername: string) => Promise<boolean>;
   leaveSession: () => Promise<void>;
@@ -36,6 +36,7 @@ interface GameContextType {
   resumeSession: () => Promise<string | null>;
   checkActiveSession: () => Promise<boolean>;
   getPlayersArray: () => Player[];
+  restoreApprovedSession: (code: string, playerId: string) => Promise<boolean>;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -61,6 +62,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     resumeSession,
     checkActiveSession,
     getPlayersArray,
+    restoreApprovedSession,
   } = useFirebaseSession();
 
   return (
@@ -84,6 +86,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       resumeSession,
       checkActiveSession,
       getPlayersArray,
+      restoreApprovedSession,
     }}>
       {children}
     </GameContext.Provider>

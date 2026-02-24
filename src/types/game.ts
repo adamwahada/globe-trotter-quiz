@@ -48,6 +48,17 @@ export interface TurnState {
   isCorrect: boolean | null;
 }
 
+// Join request for closed rooms
+export interface JoinRequest {
+  playerId: string;
+  username: string;
+  avatar: string;
+  color: string;
+  isGuest: boolean;
+  timestamp: number;
+  status: 'pending' | 'approved' | 'rejected';
+}
+
 // Speed Race: state for a single round (shared across all players via Firebase)
 export interface SpeedRaceRoundState {
   roundNumber: number;          // 1-indexed current round
@@ -87,6 +98,8 @@ export interface GameSession {
   gameMode?: GameMode;
   cardModeEnabled?: boolean; // Card system enabled for this session
   activeCardEffects?: ActiveCardEffect[]; // Global card effects affecting gameplay
+  isOpenRoom?: boolean; // If true, anyone with code/link joins automatically. If false, host must approve.
+  joinRequests?: { [requestId: string]: JoinRequest }; // Pending join requests for closed rooms
   // Speed Race specific fields
   totalRounds?: number;         // Total rounds for SpeedRace mode
   currentRound?: number;        // Current round index (1-indexed)

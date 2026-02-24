@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Users, Clock, Hash, Copy, Check, User, Dice5, MousePointer, Sparkles, Zap, Minus, Plus } from 'lucide-react';
+import { X, Users, Clock, Hash, Copy, Check, User, Dice5, MousePointer, Sparkles, Zap, Minus, Plus, Lock, Globe, Link } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -11,6 +11,7 @@ import { useNavigate } from 'react-router-dom';
 import { GameTooltip } from '@/components/Tooltip/GameTooltip';
 import { GameStartSignInModal } from './GameStartSignInModal';
 import { GameModeSelector } from './GameModeSelector';
+import { PendingJoinRequestModal } from './PendingJoinRequestModal';
 import { validateSessionCode, validateUsername, MAX_USERNAME_LENGTH } from '@/utils/inputValidation';
 
 interface GameSettingsModalProps {
@@ -22,7 +23,7 @@ interface GameSettingsModalProps {
 export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, onClose, initialJoinCode }) => {
   const { t } = useLanguage();
   const { user, isAuthenticated } = useAuth();
-  const { createSession, joinSession, joinSessionAsGuest, isLoading, error } = useGame();
+  const { createSession, joinSession, joinSessionAsGuest, isLoading, error, restoreApprovedSession } = useGame();
   const { addToast } = useToastContext();
   const navigate = useNavigate();
 
@@ -42,7 +43,17 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
   const [copied, setCopied] = useState(false);
   const [selectedGameMode, setSelectedGameMode] = useState<GameMode>('turnBased');
   const [cardModeEnabled, setCardModeEnabled] = useState(false);
+  const [isOpenRoom, setIsOpenRoom] = useState(true);
+  const [linkCopied, setLinkCopied] = useState(false);
   const [isSignInModalOpen, setIsSignInModalOpen] = useState(false);
+  const [pendingJoinInfo, setPendingJoinInfo] = useState<{
+    code: string;
+    playerId: string;
+    username: string;
+    avatar: string;
+    color: string;
+    isGuest: boolean;
+  } | null>(null);
 
   // Auto-fill session code from invite link
   React.useEffect(() => {
@@ -58,11 +69,14 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
     setSessionCode('');
     setSelectedGameMode('turnBased');
     setCardModeEnabled(false);
+    setIsOpenRoom(true);
+    setLinkCopied(false);
     setUseCustomRounds(false);
     setCustomRounds('');
     setUseCustomPlayers(false);
     setCustomPlayersInput(5);
     setShowCustomPlayersModal(false);
+    setPendingJoinInfo(null);
     onClose();
   };
 
@@ -106,7 +120,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
       }
       try {
         // For speed race, we pass rounds as duration (repurposed field) and totalRounds will be set inside
-        const code = await createSession(p, 30, false, selectedGameMode, false, r);
+        const code = await createSession(p, 30, false, selectedGameMode, false, r, isOpenRoom);
         setGeneratedCode(code);
         addToast('success', t('sessionCreated', { code }));
       } catch (err) {
@@ -115,7 +129,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
       return;
     }
     try {
-      const code = await createSession(effectivePlayers, duration, false, selectedGameMode, cardModeEnabled);
+      const code = await createSession(effectivePlayers, duration, false, selectedGameMode, cardModeEnabled, undefined, isOpenRoom);
       setGeneratedCode(code);
       addToast('success', t('sessionCreated', { code }));
     } catch (err) {
@@ -165,6 +179,17 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
           navigate('/waiting-room');
           onClose();
         } else {
+          // Check if a join request was submitted (closed room)
+          const pendingRaw = localStorage.getItem('pendingJoinRequest');
+          if (pendingRaw) {
+            try {
+              const pending = JSON.parse(pendingRaw);
+              if (pending.code === code) {
+                setPendingJoinInfo(pending);
+                return;
+              }
+            } catch { /* ignore */ }
+          }
           addToast('error', 'Could not join session. Please try again.');
         }
       } catch (err: any) {
@@ -179,6 +204,17 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
         navigate('/waiting-room');
         onClose();
       } else {
+        // Check if a join request was submitted (closed room)
+        const pendingRaw = localStorage.getItem('pendingJoinRequest');
+        if (pendingRaw) {
+          try {
+            const pending = JSON.parse(pendingRaw);
+            if (pending.code === code) {
+              setPendingJoinInfo(pending);
+              return;
+            }
+          } catch { /* ignore */ }
+        }
         addToast('error', error || 'Could not join session. Please try again.');
       }
     } catch (err: any) {
@@ -550,6 +586,22 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
                 </div>
               )}
 
+              {/* Open / Closed Room Toggle */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg border border-border">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-lg ${isOpenRoom ? 'bg-[hsl(var(--success))]/20' : 'bg-primary/20'}`}>
+                      {isOpenRoom ? <Globe className="h-5 w-5 text-[hsl(var(--success))]" /> : <Lock className="h-5 w-5 text-primary" />}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{isOpenRoom ? t('openRoom' as any) : t('closedRoom' as any)}</p>
+                      <p className="text-xs text-muted-foreground">{isOpenRoom ? t('openRoomDesc' as any) : t('closedRoomDesc' as any)}</p>
+                    </div>
+                  </div>
+                  <Switch checked={isOpenRoom} onCheckedChange={setIsOpenRoom} />
+                </div>
+              </div>
+
               <div className="flex gap-3 pt-2">
                 <Button variant="outline" onClick={() => setMode('selectGameMode')} className="flex-1">
                   {t('cancel')}
@@ -577,16 +629,34 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
                 {t('shareCode')}
               </p>
 
-              <GameTooltip content="Copy code to clipboard">
-                <Button
-                  variant="outline"
-                  onClick={copyCode}
-                  className="w-full gap-2"
-                >
-                  {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                  {copied ? 'Copied!' : 'Copy Code'}
-                </Button>
-              </GameTooltip>
+              <div className="flex gap-2">
+                <GameTooltip content="Copy code to clipboard">
+                  <Button
+                    variant="outline"
+                    onClick={copyCode}
+                    className="flex-1 gap-2"
+                  >
+                    {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                    {copied ? 'Copied!' : 'Copy Code'}
+                  </Button>
+                </GameTooltip>
+                <GameTooltip content="Copy invite link">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      const url = `${window.location.origin}/?join=${generatedCode}`;
+                      navigator.clipboard.writeText(url);
+                      setLinkCopied(true);
+                      addToast('success', t('inviteLinkCopied' as any));
+                      setTimeout(() => setLinkCopied(false), 2000);
+                    }}
+                    className="flex-1 gap-2"
+                  >
+                    {linkCopied ? <Check className="h-4 w-4" /> : <Link className="h-4 w-4" />}
+                    {linkCopied ? 'Copied!' : t('copyInviteLink' as any)}
+                  </Button>
+                </GameTooltip>
+              </div>
 
               <Button variant="netflix" onClick={goToWaitingRoom} className="w-full">
                 {t('waitingRoom')}
@@ -665,6 +735,34 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
         navigate('/');
       }}
     />
+
+    {/* Pending Join Request Modal */}
+    {pendingJoinInfo && (
+      <PendingJoinRequestModal
+        sessionCode={pendingJoinInfo.code}
+        playerId={pendingJoinInfo.playerId}
+        username={pendingJoinInfo.username}
+        avatar={pendingJoinInfo.avatar}
+        color={pendingJoinInfo.color}
+        isGuest={pendingJoinInfo.isGuest}
+        onApproved={async () => {
+          const info = pendingJoinInfo!;
+          localStorage.removeItem('pendingJoinRequest');
+          const restored = await restoreApprovedSession(info.code, info.playerId);
+          setPendingJoinInfo(null);
+          if (restored) {
+            navigate('/waiting-room');
+            onClose();
+          } else {
+            addToast('error', 'Failed to join after approval. Please try again.');
+          }
+        }}
+        onCancel={() => {
+          localStorage.removeItem('pendingJoinRequest');
+          setPendingJoinInfo(null);
+        }}
+      />
+    )}
     </>
   );
 };

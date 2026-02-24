@@ -76,6 +76,9 @@
                 "countdownStartTime": {
                     ".validate": "newData.isNumber() || newData.val() === null"
                 },
+                "isOpenRoom": {
+                    ".validate": "newData.isBoolean()"
+                },
                 "turnStartTime": {
                     ".validate": "newData.isNumber() || newData.val() === null"
                 },
@@ -84,6 +87,34 @@
                     "$messageId": {
                         ".write": "auth != null && root.child('sessions').child($sessionCode).child('players').child(auth.uid).exists() || (auth == null && root.child('sessions').child($sessionCode).child('players').child(newData.child('senderId').val()).child('isGuest').val() === true)",
                         ".validate": "newData.hasChildren(['senderId', 'senderName', 'senderColor', 'content', 'timestamp']) && newData.child('content').isString() && newData.child('content').val().length > 0 && newData.child('content').val().length <= 100 && newData.child('senderName').isString() && newData.child('senderId').isString() && newData.child('senderColor').isString() && newData.child('timestamp').isNumber()"
+                    }
+                },
+                "joinRequests": {
+                    ".read": true,
+                    "$playerId": {
+                        ".write": "auth != null && (data.parent().parent().child('creatorId').val() === auth.uid || $playerId === auth.uid || (!data.exists() && $playerId === auth.uid)) || (auth == null && $playerId.beginsWith('guest_') && root.child('sessions').child($sessionCode).child('status').val() === 'waiting')",
+                        ".validate": "newData.hasChildren(['playerId', 'username', 'avatar', 'color', 'isGuest', 'timestamp', 'status'])",
+                        "status": {
+                            ".validate": "newData.isString() && (newData.val() === 'pending' || newData.val() === 'approved' || newData.val() === 'rejected')"
+                        },
+                        "playerId": {
+                            ".validate": "newData.isString()"
+                        },
+                        "username": {
+                            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 20"
+                        },
+                        "avatar": {
+                            ".validate": "newData.isString()"
+                        },
+                        "color": {
+                            ".validate": "newData.isString()"
+                        },
+                        "isGuest": {
+                            ".validate": "newData.isBoolean()"
+                        },
+                        "timestamp": {
+                            ".validate": "newData.isNumber()"
+                        }
                     }
                 }
             }

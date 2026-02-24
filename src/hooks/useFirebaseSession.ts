@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { GameSession, Player, PlayerData, PlayersMap, TurnState, SessionRecoveryData, GameMode } from '@/types/game';
+import type { GameSession, Player, PlayerData, PlayersMap, TurnState, SessionRecoveryData, GameMode, JoinRequest } from '@/types/game';
  import type { ActiveCardEffect } from '@/types/cards';
 import { playersMapToArray, getPlayerUids } from '@/types/game';
 import { translations } from '@/i18n/translations';
@@ -25,6 +25,7 @@ import {
   validateUserPresence,
   getCurrentUid,
   updatePlayerData,
+  submitJoinRequest,
 } from '@/services/gameSessionService';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToastContext } from '@/contexts/ToastContext';
@@ -199,7 +200,7 @@ export const useFirebaseSession = () => {
     }
   }, []);
 
-   const createSession = useCallback(async (maxPlayers: number, duration: number, isSoloMode?: boolean, gameMode?: GameMode, cardModeEnabled?: boolean, totalRounds?: number): Promise<string> => {
+   const createSession = useCallback(async (maxPlayers: number, duration: number, isSoloMode?: boolean, gameMode?: GameMode, cardModeEnabled?: boolean, totalRounds?: number, isOpenRoom?: boolean): Promise<string> => {
     // Get current user's auth.uid
     const uid = getCurrentUid();
     if (!uid || !user) {
@@ -280,6 +281,7 @@ export const useFirebaseSession = () => {
         gameMode: effectiveGameMode,
         cardModeEnabled: cardModeEnabled || false,
         activeCardEffects: [],
+        isOpenRoom: isSoloMode ? true : (isOpenRoom !== false), // Default to open
         // Speed Race specific — only include when applicable (Firebase rejects undefined)
         ...(gameMode === 'speedRace' ? {
           totalRounds: totalRounds || 20,
@@ -361,10 +363,13 @@ export const useFirebaseSession = () => {
         return false;
       }
 
-      // Check if user already in session (using auth.uid)
+      // Check if user already in session (using auth.uid) — restore local state
       if (existingSession.players && existingSession.players[uid]) {
-        setError(translations[localStorage.getItem('worldquiz_language') as ('en' | 'fr' | 'ar') || 'en'].duplicateJoinError);
-        return false;
+        const existingPlayerData = existingSession.players[uid];
+        setCurrentPlayer({ id: uid, ...existingPlayerData });
+        setSession(existingSession);
+        setHasActiveSession(true);
+        return true;
       }
 
       // Use auth.uid as player ID
@@ -382,6 +387,31 @@ export const useFirebaseSession = () => {
         isConnected: true,
         lastSeen: Date.now(),
       };
+
+      // Closed room: submit a join request instead of joining directly
+      if (existingSession.isOpenRoom === false) {
+        const joinReq: JoinRequest = {
+          playerId,
+          username: currentUsername || 'Player',
+          avatar: user?.avatar || '🗺️',
+          color: user?.color || '#4169E1',
+          isGuest: false,
+          timestamp: Date.now(),
+          status: 'pending',
+        };
+        await submitJoinRequest(code, playerId, joinReq);
+        // Store pending info so the UI can show the waiting screen
+        localStorage.setItem('pendingJoinRequest', JSON.stringify({
+          code,
+          playerId,
+          username: joinReq.username,
+          avatar: joinReq.avatar,
+          color: joinReq.color,
+          isGuest: false,
+        }));
+        setError('JOIN_REQUEST_SUBMITTED');
+        return false;
+      }
 
       const success = await addPlayerToSession(code, playerData, undefined, existingSession);
 
@@ -464,6 +494,30 @@ export const useFirebaseSession = () => {
         lastSeen: Date.now(),
         isGuest: true,
       };
+
+      // Closed room: submit a join request instead of joining directly
+      if (existingSession.isOpenRoom === false) {
+        const joinReq: JoinRequest = {
+          playerId: guestId,
+          username: guestUsername,
+          avatar: playerData.avatar,
+          color: playerData.color,
+          isGuest: true,
+          timestamp: Date.now(),
+          status: 'pending',
+        };
+        await submitJoinRequest(code, guestId, joinReq);
+        localStorage.setItem('pendingJoinRequest', JSON.stringify({
+          code,
+          playerId: guestId,
+          username: guestUsername,
+          avatar: playerData.avatar,
+          color: playerData.color,
+          isGuest: true,
+        }));
+        setError('JOIN_REQUEST_SUBMITTED');
+        return false;
+      }
 
       // Pass the pre-validated session to skip a redundant re-fetch inside addPlayerToSession.
       // This avoids any potential permission issues for unauthenticated guests.
@@ -648,6 +702,40 @@ export const useFirebaseSession = () => {
     return playersMapToArray(session?.players);
   }, [session?.players]);
 
+  // Restore session state after a join request is approved
+  const restoreApprovedSession = useCallback(async (code: string, playerId: string): Promise<boolean> => {
+    setIsLoading(true);
+    try {
+      const existingSession = await getSessionByCode(code);
+      if (!existingSession || !existingSession.players?.[playerId]) {
+        setError('Session not found or player not approved');
+        return false;
+      }
+
+      const playerData = existingSession.players[playerId];
+      setCurrentPlayer({ id: playerId, ...playerData });
+      setSession(existingSession);
+      setHasActiveSession(true);
+
+      // Store session recovery data
+      localStorage.setItem('gameSessionCode', code);
+      localStorage.setItem('currentPlayerId', playerId);
+
+      if (playerData.isGuest) {
+        sessionStorage.setItem('guest_player_id', playerId);
+        sessionStorage.setItem('guest_session_code', code);
+        sessionStorage.setItem('guest_username', playerData.username);
+      }
+
+      return true;
+    } catch (err: any) {
+      setError(err?.message || 'Failed to restore session');
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   return {
     session,
     currentPlayer,
@@ -668,5 +756,6 @@ export const useFirebaseSession = () => {
     resumeSession,
     checkActiveSession,
     getPlayersArray,
+    restoreApprovedSession,
   };
 };
