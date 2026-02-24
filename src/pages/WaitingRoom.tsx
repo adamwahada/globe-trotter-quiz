@@ -19,7 +19,7 @@ import { COUNTDOWN_SECONDS, WAITING_ROOM_TIMEOUT, playersMapToArray } from '@/ty
 import { Player } from '@/types/game';
  import { Copy, Check, Users, Clock, Play, LogOut, Link, Zap, Sparkles } from 'lucide-react';
 import { kickUnreadyPlayers, clearRecoveryData } from '@/services/gameSessionService';
-import { SessionChatButton } from '@/components/Messaging/SessionChatButton';
+import { FloatingChatWidget } from '@/components/Messaging/FloatingChatWidget';
 
 const WaitingRoom = () => {
   const { t } = useLanguage();
@@ -242,7 +242,6 @@ const WaitingRoom = () => {
       <Navbar
         rightContent={
           <div className="flex items-center gap-2">
-            <SessionChatButton />
             <GameTooltip content={t('tooltipQuit')} position="bottom">
               <Button variant="outline" onClick={handleLeave} className="gap-2">
                 <LogOut className="h-4 w-4" />
@@ -507,6 +506,9 @@ const WaitingRoom = () => {
           onQuit={handleLeave}
         />
       )}
+
+      {/* Floating Chat Widget */}
+      <FloatingChatWidget />
     </div>
   );
 };

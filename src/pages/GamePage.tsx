@@ -36,7 +36,7 @@ import { TURN_TIME_SECONDS, COUNTDOWN_SECONDS, playersMapToArray, PlayersMap } f
 import { Trophy, LogOut, Volume2, VolumeX, Users, Clock, SkipForward } from 'lucide-react';
  import { Sparkles } from 'lucide-react';
 import { removePlayerFromSession, clearRecoveryData } from '@/services/gameSessionService';
-import { SessionChatButton } from '@/components/Messaging/SessionChatButton';
+import { FloatingChatWidget } from '@/components/Messaging/FloatingChatWidget';
 import { supabase } from '@/integrations/supabase/client';
 import { validateGuess } from '@/utils/inputValidation';
 
@@ -1410,9 +1410,6 @@ const GamePageInner = () => {
               </Button>
             </GameTooltip>
 
-            {/* Session Chat */}
-            <SessionChatButton />
-
             {/* Leaderboard Toggle */}
             <GameTooltip content={t('tooltipLeaderboard')} position="bottom">
               <Button
@@ -1744,6 +1741,9 @@ const GamePageInner = () => {
          onConfirm={handleCountrySelectionConfirm}
          onCancel={handleCountrySelectionCancel}
        />
+
+       {/* Floating Chat Widget */}
+       <FloatingChatWidget />
     </div>
   );
 };
