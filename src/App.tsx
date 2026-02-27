@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -12,16 +12,18 @@ import { ActivityTracker } from "@/components/Auth/ActivityTracker";
 import { GameProvider } from "@/contexts/GameContext";
 import { SoundProvider } from "@/contexts/SoundContext";
 import { ToastContainer } from "@/components/Toast/ToastContainer";
-import { AdminRoute } from "@/components/Admin/AdminRoute";
-import { AdminLayout } from "@/components/Admin/AdminLayout";
-import Index from "./pages/Index";
-import WaitingRoom from "./pages/WaitingRoom";
-import GamePage from "./pages/GamePage";
-import NotFound from "./pages/NotFound";
-import { AdminDashboard } from "./pages/AdminDashboard";
-import { AdminFeedback } from "./pages/AdminFeedback";
-import { AdminMessagesPage } from "./pages/AdminMessagesPage";
-import { AdminBans } from "./pages/AdminBans";
+
+// Lazy-loaded routes for code splitting
+const Index = lazy(() => import("./pages/Index"));
+const WaitingRoom = lazy(() => import("./pages/WaitingRoom"));
+const GamePage = lazy(() => import("./pages/GamePage"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const AdminRoute = lazy(() => import("@/components/Admin/AdminRoute").then(m => ({ default: m.AdminRoute })));
+const AdminLayout = lazy(() => import("@/components/Admin/AdminLayout").then(m => ({ default: m.AdminLayout })));
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard").then(m => ({ default: m.AdminDashboard })));
+const AdminFeedback = lazy(() => import("./pages/AdminFeedback").then(m => ({ default: m.AdminFeedback })));
+const AdminMessagesPage = lazy(() => import("./pages/AdminMessagesPage").then(m => ({ default: m.AdminMessagesPage })));
+const AdminBans = lazy(() => import("./pages/AdminBans").then(m => ({ default: m.AdminBans })));
 
 const queryClient = new QueryClient();
 
@@ -50,18 +52,20 @@ const App = () => {
                   <Sonner />
                   <ToastContainer />
                   <BrowserRouter>
-                    <Routes>
-                      <Route path="/" element={<Index />} />
-                      <Route path="/waiting-room" element={<WaitingRoom />} />
-                      <Route path="/game" element={<GamePage />} />
-                      <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
-                        <Route index element={<AdminDashboard />} />
-                        <Route path="feedback" element={<AdminFeedback />} />
-                        <Route path="messages" element={<AdminMessagesPage />} />
-                        <Route path="bans" element={<AdminBans />} />
-                      </Route>
-                      <Route path="*" element={<NotFound />} />
-                    </Routes>
+                    <Suspense fallback={null}>
+                      <Routes>
+                        <Route path="/" element={<Index />} />
+                        <Route path="/waiting-room" element={<WaitingRoom />} />
+                        <Route path="/game" element={<GamePage />} />
+                        <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
+                          <Route index element={<AdminDashboard />} />
+                          <Route path="feedback" element={<AdminFeedback />} />
+                          <Route path="messages" element={<AdminMessagesPage />} />
+                          <Route path="bans" element={<AdminBans />} />
+                        </Route>
+                        <Route path="*" element={<NotFound />} />
+                      </Routes>
+                    </Suspense>
                   </BrowserRouter>
                 </TooltipProvider>
               </GameProvider>
