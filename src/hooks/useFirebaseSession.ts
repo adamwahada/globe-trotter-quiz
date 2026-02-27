@@ -30,18 +30,105 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { useToastContext } from '@/contexts/ToastContext';
 
+// --- Session cache helpers ---
+const SESSION_CACHE_KEY = 'cachedSession';
+const PLAYER_CACHE_KEY = 'cachedPlayer';
+
+const cacheSession = (s: GameSession | null, p: Player | null) => {
+  try {
+    if (s) {
+      localStorage.setItem(SESSION_CACHE_KEY, JSON.stringify(s));
+    } else {
+      localStorage.removeItem(SESSION_CACHE_KEY);
+    }
+    if (p) {
+      localStorage.setItem(PLAYER_CACHE_KEY, JSON.stringify(p));
+    } else {
+      localStorage.removeItem(PLAYER_CACHE_KEY);
+    }
+  } catch { /* quota exceeded — ignore */ }
+};
+
+const getCachedSession = (): { session: GameSession | null; player: Player | null } => {
+  try {
+    const s = localStorage.getItem(SESSION_CACHE_KEY);
+    const p = localStorage.getItem(PLAYER_CACHE_KEY);
+    return {
+      session: s ? JSON.parse(s) : null,
+      player: p ? JSON.parse(p) : null,
+    };
+  } catch {
+    return { session: null, player: null };
+  }
+};
+
+const clearSessionCache = () => {
+  localStorage.removeItem(SESSION_CACHE_KEY);
+  localStorage.removeItem(PLAYER_CACHE_KEY);
+};
+
 export const useFirebaseSession = () => {
-  const [session, setSession] = useState<GameSession | null>(null);
-  const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null);
-  // Start as loading if there's saved session data to restore — prevents
-  // redirect effects from firing before the async restore completes.
+  // Instantly hydrate from cache for zero-latency restore on refresh
+  const [session, setSessionRaw] = useState<GameSession | null>(() => {
+    const savedCode = localStorage.getItem('gameSessionCode');
+    if (!savedCode) return null;
+    const cached = getCachedSession();
+    // Only use cache if it matches the saved session code and isn't finished
+    if (cached.session?.code === savedCode && cached.session.status !== 'finished') {
+      return cached.session;
+    }
+    return null;
+  });
+  const [currentPlayer, setCurrentPlayerRaw] = useState<Player | null>(() => {
+    const savedCode = localStorage.getItem('gameSessionCode');
+    if (!savedCode) return null;
+    const cached = getCachedSession();
+    if (cached.session?.code === savedCode && cached.session.status !== 'finished') {
+      return cached.player;
+    }
+    return null;
+  });
+
+  // Wrapper setters that also persist to cache
+  const setSession = useCallback((s: GameSession | null) => {
+    setSessionRaw(s);
+    // Cache asynchronously to avoid blocking renders
+    queueMicrotask(() => {
+      setCurrentPlayerRaw(prev => {
+        cacheSession(s, prev);
+        return prev;
+      });
+    });
+  }, []);
+
+  const setCurrentPlayer = useCallback((p: Player | null) => {
+    setCurrentPlayerRaw(p);
+    queueMicrotask(() => {
+      setSessionRaw(prev => {
+        cacheSession(prev, p);
+        return prev;
+      });
+    });
+  }, []);
+
+  // If we hydrated from cache, we're NOT loading — the UI can render immediately.
+  // We only start as loading if we have saved keys but NO cache (stale/corrupt).
   const [isLoading, setIsLoading] = useState(() => {
     const savedCode = localStorage.getItem('gameSessionCode');
     const savedPlayer = localStorage.getItem('currentPlayerId');
-    return !!(savedCode && savedPlayer);
+    if (!savedCode || !savedPlayer) return false;
+    // If we already hydrated from cache, skip loading
+    const cached = getCachedSession();
+    return !(cached.session?.code === savedCode && cached.session.status !== 'finished');
   });
   const [error, setError] = useState<string | null>(null);
-  const [hasActiveSession, setHasActiveSession] = useState(false);
+  const [hasActiveSession, setHasActiveSession] = useState(() => {
+    // Instantly true if we hydrated from cache
+    const savedCode = localStorage.getItem('gameSessionCode');
+    if (!savedCode) return false;
+    const cached = getCachedSession();
+    return !!(cached.session?.code === savedCode && cached.session.status !== 'finished');
+  });
   const { user, tabSessionId } = useAuth();
   const { addToast } = useToastContext();
 
@@ -70,6 +157,7 @@ export const useFirebaseSession = () => {
     setHasActiveSession(false);
     setError(null);
     clearRecoveryData();
+    clearSessionCache();
   }, [user?.id]);
 
   // Subscribe to session updates - use ref to avoid stale closure
@@ -122,6 +210,7 @@ export const useFirebaseSession = () => {
         setSession(null);
         setCurrentPlayer(null);
         clearRecoveryData();
+        clearSessionCache();
       }
     });
 
@@ -212,17 +301,20 @@ export const useFirebaseSession = () => {
             // Session exists but player was removed — zombie state
             console.warn('[Restore] Player not found in session, clearing zombie state');
             clearRecoveryData();
+            clearSessionCache();
             setHasActiveSession(false);
             setSession(null);
             setCurrentPlayer(null);
           }
         } else {
           clearRecoveryData();
+          clearSessionCache();
           setHasActiveSession(false);
         }
       })
       .catch(() => {
         clearRecoveryData();
+        clearSessionCache();
         setHasActiveSession(false);
       })
       .finally(() => setIsLoading(false));
@@ -243,6 +335,7 @@ export const useFirebaseSession = () => {
       if (isSoloMode) {
         console.warn('[createSession] Stale active session found for solo, clearing...');
         clearRecoveryData();
+        clearSessionCache();
       } else {
         setError('You already have an active session. Resume or leave it first.');
         throw new Error('Active session exists');
@@ -588,6 +681,7 @@ export const useFirebaseSession = () => {
       setCurrentPlayer(null);
       setHasActiveSession(false);
       clearRecoveryData();
+      clearSessionCache();
     }
   }, [session?.code, currentPlayer?.id]);
 
@@ -663,6 +757,7 @@ export const useFirebaseSession = () => {
     await endGameSession(session.code);
     setHasActiveSession(false);
     clearRecoveryData();
+    clearSessionCache();
   }, [session?.code]);
 
   // Returns the session status string on success (e.g. 'waiting', 'playing'),
@@ -676,6 +771,7 @@ export const useFirebaseSession = () => {
       setSession(null);
       setCurrentPlayer(null);
       clearRecoveryData();
+      clearSessionCache();
       return null;
     }
 
@@ -716,6 +812,7 @@ export const useFirebaseSession = () => {
     setSession(null);
     setCurrentPlayer(null);
     clearRecoveryData();
+    clearSessionCache();
     return null;
   }, [tabSessionId, addToast]);
 
