@@ -109,6 +109,7 @@ export const FeedbackSection: React.FC<FeedbackSectionProps> = ({ onLoginRequest
                   onClick={() => handleStarClick(star)}
                   onMouseEnter={() => setHoveredStar(star)}
                   onMouseLeave={() => setHoveredStar(0)}
+                  aria-label={`Rate ${star} star${star > 1 ? 's' : ''}`}
                   className="transition-transform hover:scale-125"
                 >
                   <Star
