@@ -1,11 +1,13 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Shield, ShieldOff, UserX, Loader2, RefreshCw, Search, X, Clock, AlertTriangle, CheckCircle2, Ban } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Shield, ShieldOff, UserX, Loader2, RefreshCw, Search, X, Clock, AlertTriangle, CheckCircle2, Ban, Users } from 'lucide-react';
 import { getFirebaseIdToken } from '@/utils/firebaseToken';
 import { Button } from '@/components/ui/button';
 
-const BANS_FN = `https://dzzeaesctendsggfdxra.supabase.co/functions/v1/admin-bans`;
+const SUPABASE_URL = 'https://dzzeaesctendsggfdxra.supabase.co/functions/v1';
+const BANS_FN = `${SUPABASE_URL}/admin-bans`;
+const DASHBOARD_FN = `${SUPABASE_URL}/admin-dashboard`;
 
-interface Ban {
+interface BanRecord {
   id: string;
   user_id: string;
   user_name: string;
@@ -15,6 +17,13 @@ interface Ban {
   banned_at: string;
   expires_at: string | null;
   is_active: boolean;
+}
+
+interface SearchUser {
+  user_id: string;
+  name: string;
+  email: string | null;
+  active_ban: { ban_type: string; expires_at: string | null } | null;
 }
 
 const BAN_TYPE_LABELS: Record<string, string> = {
@@ -47,6 +56,7 @@ function timeRemaining(expiresAt: string | null): string {
   return `${hours}h remaining`;
 }
 
+/* ───── Ban Modal ───── */
 interface BanModalProps {
   userId: string;
   userName: string;
@@ -87,7 +97,7 @@ const BanModal: React.FC<BanModalProps> = ({ userId, userName, userEmail, onClos
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-card border border-border rounded-2xl shadow-2xl max-w-md w-full p-6 flex flex-col gap-5">
-        <button onClick={onClose} className="absolute top-4 right-4 p-1 rounded-full hover:bg-secondary transition-colors">
+        <button onClick={onClose} aria-label="Close" className="absolute top-4 right-4 p-1 rounded-full hover:bg-secondary transition-colors">
           <X className="h-5 w-5 text-muted-foreground" />
         </button>
         <div className="flex items-center gap-3">
@@ -100,7 +110,6 @@ const BanModal: React.FC<BanModalProps> = ({ userId, userName, userEmail, onClos
           </div>
         </div>
 
-        {/* Ban Duration */}
         <div>
           <label className="text-sm font-medium text-foreground mb-2 block">Ban Duration</label>
           <div className="grid grid-cols-2 gap-2">
@@ -122,7 +131,6 @@ const BanModal: React.FC<BanModalProps> = ({ userId, userName, userEmail, onClos
           </div>
         </div>
 
-        {/* Reason */}
         <div>
           <label className="text-sm font-medium text-foreground mb-2 block">Reason <span className="text-muted-foreground font-normal">(optional)</span></label>
           <textarea
@@ -160,16 +168,19 @@ const BanModal: React.FC<BanModalProps> = ({ userId, userName, userEmail, onClos
   );
 };
 
+/* ───── Main Page ───── */
 export const AdminBans: React.FC = () => {
-  const [bans, setBans] = useState<Ban[]>([]);
+  const [bans, setBans] = useState<BanRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [showAll, setShowAll] = useState(false);
-  const [search, setSearch] = useState('');
-  const [banModal, setBanModal] = useState<{ userId: string; userName: string; userEmail: string | null } | null>(null);
   const [unbanning, setUnbanning] = useState<string | null>(null);
-  const [manualUserId, setManualUserId] = useState('');
-  const [manualUserName, setManualUserName] = useState('');
-  const [manualUserEmail, setManualUserEmail] = useState('');
+  const [banModal, setBanModal] = useState<{ userId: string; userName: string; userEmail: string | null } | null>(null);
+
+  // User search state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchUser[]>([]);
+  const [searching, setSearching] = useState(false);
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchBans = useCallback(async () => {
     setLoading(true);
@@ -190,6 +201,33 @@ export const AdminBans: React.FC = () => {
 
   useEffect(() => { fetchBans(); }, [fetchBans]);
 
+  // Live search with debounce
+  useEffect(() => {
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    if (searchQuery.trim().length < 2) {
+      setSearchResults([]);
+      setSearching(false);
+      return;
+    }
+    setSearching(true);
+    searchTimer.current = setTimeout(async () => {
+      try {
+        const token = await getFirebaseIdToken();
+        if (!token) return;
+        const res = await fetch(`${DASHBOARD_FN}?action=search-users&q=${encodeURIComponent(searchQuery.trim())}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setSearchResults(data.users || []);
+        }
+      } finally {
+        setSearching(false);
+      }
+    }, 350);
+    return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };
+  }, [searchQuery]);
+
   const handleUnban = async (userId: string) => {
     setUnbanning(userId);
     try {
@@ -201,16 +239,24 @@ export const AdminBans: React.FC = () => {
         body: JSON.stringify({ user_id: userId }),
       });
       fetchBans();
+      // Refresh search results too
+      if (searchQuery.trim().length >= 2) {
+        setSearchQuery(prev => prev); // trigger re-search via effect
+      }
     } finally {
       setUnbanning(null);
     }
   };
 
-  const filtered = bans.filter(b =>
-    b.user_name.toLowerCase().includes(search.toLowerCase()) ||
-    (b.user_email || '').toLowerCase().includes(search.toLowerCase()) ||
-    b.user_id.toLowerCase().includes(search.toLowerCase())
-  );
+  const handleBanned = () => {
+    fetchBans();
+    // Re-trigger search
+    if (searchQuery.trim().length >= 2) {
+      const q = searchQuery;
+      setSearchQuery('');
+      setTimeout(() => setSearchQuery(q), 100);
+    }
+  };
 
   const activeBans = bans.filter(b => {
     if (!b.is_active) return false;
@@ -251,145 +297,165 @@ export const AdminBans: React.FC = () => {
         </div>
       </div>
 
-      {/* Manual ban form */}
+      {/* Search users section */}
       <div className="bg-card border border-border rounded-xl p-4">
         <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-          <UserX className="h-4 w-4 text-destructive" />
-          Ban a User by ID
+          <Users className="h-4 w-4 text-primary" />
+          Search &amp; Ban Users
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
-            value={manualUserId}
-            onChange={e => setManualUserId(e.target.value)}
-            placeholder="User ID (Firebase UID)"
-            className="bg-background border border-border rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Search by name, email or user ID..."
+            className="w-full pl-9 pr-10 py-2.5 bg-background border border-border rounded-xl text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
           />
-          <input
-            value={manualUserName}
-            onChange={e => setManualUserName(e.target.value)}
-            placeholder="Display name"
-            className="bg-background border border-border rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
-          />
-          <input
-            value={manualUserEmail}
-            onChange={e => setManualUserEmail(e.target.value)}
-            placeholder="Email (optional)"
-            className="bg-background border border-border rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
-          />
+          {searchQuery && (
+            <button onClick={() => { setSearchQuery(''); setSearchResults([]); }} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" aria-label="Clear search">
+              <X className="h-4 w-4" />
+            </button>
+          )}
         </div>
-        <Button
-          className="mt-3 bg-destructive text-destructive-foreground hover:bg-destructive/90"
-          size="sm"
-          disabled={!manualUserId.trim() || !manualUserName.trim()}
-          onClick={() => {
-            if (manualUserId.trim() && manualUserName.trim()) {
-              setBanModal({ userId: manualUserId.trim(), userName: manualUserName.trim(), userEmail: manualUserEmail.trim() || null });
-            }
-          }}
-        >
-          <Ban className="h-4 w-4" />
-          Ban This User
-        </Button>
-      </div>
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <input
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Search by name, email or user ID..."
-          className="w-full pl-9 pr-4 py-2.5 bg-card border border-border rounded-xl text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
-        />
-        {search && (
-          <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-            <X className="h-4 w-4" />
-          </button>
-        )}
-      </div>
-
-      {/* Bans list */}
-      {loading ? (
-        <div className="space-y-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-20 bg-muted rounded-xl animate-pulse" />
-          ))}
-        </div>
-      ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
-          <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
-            <CheckCircle2 className="h-8 w-8 text-muted-foreground/40" />
+        {/* Search results */}
+        {searching && (
+          <div className="flex items-center gap-2 mt-3 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" /> Searching...
           </div>
-          <p className="text-sm font-medium text-foreground">No bans found</p>
-          <p className="text-xs text-muted-foreground">No active bans at the moment</p>
-        </div>
-      ) : (
-        <div className="space-y-3 overflow-y-auto">
-          {filtered.map((ban) => {
-            const isExpired = ban.expires_at && new Date(ban.expires_at) <= new Date();
-            const isActive = ban.is_active && !isExpired;
-            return (
-              <div
-                key={ban.id}
-                className={`flex items-start gap-4 p-4 rounded-xl border transition-colors ${
-                  isActive
-                    ? 'bg-card border-border hover:border-primary/20'
-                    : 'bg-muted/20 border-border/50 opacity-60'
-                }`}
-              >
-                {/* Avatar */}
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-lg font-bold ${isActive ? 'bg-destructive/10 text-destructive' : 'bg-muted text-muted-foreground'}`}>
-                  {ban.user_name.charAt(0).toUpperCase()}
-                </div>
+        )}
 
-                {/* Info */}
+        {!searching && searchQuery.trim().length >= 2 && searchResults.length === 0 && (
+          <p className="mt-3 text-sm text-muted-foreground">No users found matching "{searchQuery}"</p>
+        )}
+
+        {searchResults.length > 0 && (
+          <div className="mt-3 space-y-2 max-h-72 overflow-y-auto">
+            {searchResults.map((user) => (
+              <div key={user.user_id} className="flex items-center gap-3 p-3 rounded-xl bg-background border border-border hover:border-primary/20 transition-colors">
+                <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center text-sm font-bold text-foreground flex-shrink-0">
+                  {user.name.charAt(0).toUpperCase()}
+                </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-semibold text-foreground">{ban.user_name}</span>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${BAN_TYPE_COLORS[ban.ban_type]}`}>
-                      {BAN_TYPE_LABELS[ban.ban_type]}
-                    </span>
-                    {!isActive && (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border text-muted-foreground bg-muted/50 border-border">
-                        {isExpired ? 'Expired' : 'Lifted'}
+                    <span className="text-sm font-semibold text-foreground truncate">{user.name}</span>
+                    {user.active_ban && (
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${BAN_TYPE_COLORS[user.active_ban.ban_type] || 'text-destructive bg-destructive/10 border-destructive/30'}`}>
+                        Banned – {BAN_TYPE_LABELS[user.active_ban.ban_type] || user.active_ban.ban_type}
                       </span>
                     )}
                   </div>
-                  {ban.user_email && <p className="text-xs text-muted-foreground mt-0.5">{ban.user_email}</p>}
-                  {ban.reason && <p className="text-xs text-muted-foreground mt-1 italic">"{ban.reason}"</p>}
-                  <div className="flex items-center gap-3 mt-1.5 text-[10px] text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      Banned {formatDate(ban.banned_at)}
-                    </span>
-                    {ban.expires_at && (
-                      <span className={isExpired ? 'text-muted-foreground' : 'text-warning'}>
-                        {timeRemaining(ban.expires_at)}
-                      </span>
-                    )}
-                  </div>
+                  {user.email && <p className="text-xs text-muted-foreground truncate">{user.email}</p>}
+                  <p className="text-[10px] text-muted-foreground/60 truncate">{user.user_id}</p>
                 </div>
-
-                {/* Actions */}
-                {isActive && (
+                {user.active_ban ? (
                   <button
-                    onClick={() => handleUnban(ban.user_id)}
-                    disabled={unbanning === ban.user_id}
+                    onClick={() => handleUnban(user.user_id)}
+                    disabled={unbanning === user.user_id}
                     className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary text-muted-foreground hover:text-foreground hover:bg-muted transition-colors text-xs font-medium border border-border disabled:opacity-50"
                   >
-                    {unbanning === ban.user_id ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <ShieldOff className="h-3.5 w-3.5" />
-                    )}
+                    {unbanning === user.user_id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShieldOff className="h-3.5 w-3.5" />}
                     Unban
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setBanModal({ userId: user.user_id, userName: user.name, userEmail: user.email })}
+                    className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground transition-colors text-xs font-medium border border-destructive/30 hover:border-destructive"
+                  >
+                    <Ban className="h-3.5 w-3.5" />
+                    Ban
                   </button>
                 )}
               </div>
-            );
-          })}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Active bans list */}
+      <div>
+        <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+          <UserX className="h-4 w-4 text-destructive" />
+          {showAll ? 'All Bans' : 'Active Bans'}
+        </h3>
+
+        {loading ? (
+          <div className="space-y-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="h-20 bg-muted rounded-xl animate-pulse" />
+            ))}
+          </div>
+        ) : bans.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
+            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
+              <CheckCircle2 className="h-8 w-8 text-muted-foreground/40" />
+            </div>
+            <p className="text-sm font-medium text-foreground">No bans found</p>
+            <p className="text-xs text-muted-foreground">No active bans at the moment</p>
+          </div>
+        ) : (
+          <div className="space-y-3 overflow-y-auto">
+            {bans.map((ban) => {
+              const isExpired = ban.expires_at && new Date(ban.expires_at) <= new Date();
+              const isActive = ban.is_active && !isExpired;
+              return (
+                <div
+                  key={ban.id}
+                  className={`flex items-start gap-4 p-4 rounded-xl border transition-colors ${
+                    isActive
+                      ? 'bg-card border-border hover:border-primary/20'
+                      : 'bg-muted/20 border-border/50 opacity-60'
+                  }`}
+                >
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-lg font-bold ${isActive ? 'bg-destructive/10 text-destructive' : 'bg-muted text-muted-foreground'}`}>
+                    {ban.user_name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-semibold text-foreground">{ban.user_name}</span>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${BAN_TYPE_COLORS[ban.ban_type]}`}>
+                        {BAN_TYPE_LABELS[ban.ban_type]}
+                      </span>
+                      {!isActive && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border text-muted-foreground bg-muted/50 border-border">
+                          {isExpired ? 'Expired' : 'Lifted'}
+                        </span>
+                      )}
+                    </div>
+                    {ban.user_email && <p className="text-xs text-muted-foreground mt-0.5">{ban.user_email}</p>}
+                    {ban.reason && <p className="text-xs text-muted-foreground mt-1 italic">"{ban.reason}"</p>}
+                    <div className="flex items-center gap-3 mt-1.5 text-[10px] text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        Banned {formatDate(ban.banned_at)}
+                      </span>
+                      {ban.expires_at && (
+                        <span className={isExpired ? 'text-muted-foreground' : 'text-warning'}>
+                          {timeRemaining(ban.expires_at)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {isActive && (
+                    <button
+                      onClick={() => handleUnban(ban.user_id)}
+                      disabled={unbanning === ban.user_id}
+                      className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary text-muted-foreground hover:text-foreground hover:bg-muted transition-colors text-xs font-medium border border-border disabled:opacity-50"
+                    >
+                      {unbanning === ban.user_id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <ShieldOff className="h-3.5 w-3.5" />
+                      )}
+                      Unban
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {banModal && (
         <BanModal
@@ -397,7 +463,7 @@ export const AdminBans: React.FC = () => {
           userName={banModal.userName}
           userEmail={banModal.userEmail}
           onClose={() => setBanModal(null)}
-          onBanned={fetchBans}
+          onBanned={handleBanned}
         />
       )}
     </div>
