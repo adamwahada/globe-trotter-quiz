@@ -233,6 +233,80 @@ serve(async (req) => {
       });
     }
 
+    if (action === 'search-users') {
+      const query = (url.searchParams.get('q') || '').trim().toLowerCase();
+      if (!query || query.length < 2) {
+        return new Response(JSON.stringify({ users: [] }), {
+          status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Gather user info from game_history and feedback tables
+      const [ghRes, fbRes, bansRes] = await Promise.all([
+        supabase.from('game_history').select('user_id'),
+        supabase.from('feedback').select('user_id, username, email'),
+        supabase.from('bans').select('user_id, user_name, user_email, ban_type, expires_at, is_active, banned_at').eq('is_active', true),
+      ]);
+
+      // Build a map of user_id -> { name, email }
+      const userMap: Record<string, { name: string; email: string | null }> = {};
+
+      // From feedback (has username & email)
+      for (const row of (fbRes.data || [])) {
+        if (!userMap[row.user_id]) {
+          userMap[row.user_id] = { name: row.username || row.user_id, email: row.email || null };
+        } else {
+          if (row.username && userMap[row.user_id].name === row.user_id) userMap[row.user_id].name = row.username;
+          if (row.email && !userMap[row.user_id].email) userMap[row.user_id].email = row.email;
+        }
+      }
+
+      // From bans (has user_name & user_email)
+      for (const row of (bansRes.data || [])) {
+        if (!userMap[row.user_id]) {
+          userMap[row.user_id] = { name: row.user_name, email: row.user_email || null };
+        } else {
+          if (row.user_name && userMap[row.user_id].name === row.user_id) userMap[row.user_id].name = row.user_name;
+          if (row.user_email && !userMap[row.user_id].email) userMap[row.user_id].email = row.user_email;
+        }
+      }
+
+      // From game_history (only user_id)
+      for (const row of (ghRes.data || [])) {
+        if (!userMap[row.user_id]) {
+          userMap[row.user_id] = { name: row.user_id, email: null };
+        }
+      }
+
+      // Build active bans lookup
+      const now = new Date();
+      const activeBans: Record<string, { ban_type: string; expires_at: string | null }> = {};
+      for (const b of (bansRes.data || [])) {
+        if (b.is_active && (!b.expires_at || new Date(b.expires_at) > now)) {
+          activeBans[b.user_id] = { ban_type: b.ban_type, expires_at: b.expires_at };
+        }
+      }
+
+      // Filter by query
+      const results = Object.entries(userMap)
+        .filter(([uid, info]) =>
+          uid.toLowerCase().includes(query) ||
+          info.name.toLowerCase().includes(query) ||
+          (info.email || '').toLowerCase().includes(query)
+        )
+        .slice(0, 20)
+        .map(([uid, info]) => ({
+          user_id: uid,
+          name: info.name,
+          email: info.email,
+          active_ban: activeBans[uid] || null,
+        }));
+
+      return new Response(JSON.stringify({ users: results }), {
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     return new Response(JSON.stringify({ error: 'Invalid action' }), {
       status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
