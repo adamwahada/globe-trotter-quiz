@@ -427,6 +427,7 @@ const Index = () => {
           <div className="relative">
             <button
               onClick={() => scrollCarousel("left")}
+              aria-label="Scroll left"
               className="absolute left-2 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-card/80 backdrop-blur border border-primary/30 flex items-center justify-center text-primary hover:bg-primary/20 transition-colors md:left-4"
             >
               <ChevronLeft className="h-5 w-5" />
@@ -434,6 +435,7 @@ const Index = () => {
 
             <button
               onClick={() => scrollCarousel("right")}
+              aria-label="Scroll right"
               className="absolute right-2 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-card/80 backdrop-blur border border-primary/30 flex items-center justify-center text-primary hover:bg-primary/20 transition-colors md:right-4"
             >
               <ChevronRight className="h-5 w-5" />
