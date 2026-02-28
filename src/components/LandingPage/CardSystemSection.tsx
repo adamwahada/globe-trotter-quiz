@@ -57,9 +57,9 @@ const GlassCard: React.FC<{ cardType: CardType; t: any; isRTL: boolean }> = ({ c
 
           {/* Text */}
           <div className="space-y-2 w-full">
-            <h4 className={`text-base sm:text-lg font-semibold text-foreground/90 tracking-tight ${isRTL ? 'font-sans' : ''}`}>
+            <h3 className={`text-base sm:text-lg font-semibold text-foreground/90 tracking-tight ${isRTL ? 'font-sans' : ''}`}>
               {t(cardNameKeys[cardType] as any)}
-            </h4>
+            </h3>
             <p className={`text-[11px] sm:text-xs text-muted-foreground/70 leading-relaxed line-clamp-3 ${isRTL ? 'font-sans leading-loose' : ''}`}>
               {t(cardDescKeys[cardType] as any)}
             </p>

@@ -578,7 +578,7 @@ const Index = () => {
                     <button.icon className="h-5 w-5" />
                   </div>
                   <div className="min-w-0">
-                    <h4 className="font-semibold text-foreground text-sm mb-1">{button.title}</h4>
+                    <h3 className="font-semibold text-foreground text-sm mb-1">{button.title}</h3>
                     <p className="text-xs text-muted-foreground leading-relaxed">{button.description}</p>
                   </div>
                 </div>
