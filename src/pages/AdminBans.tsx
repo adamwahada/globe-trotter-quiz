@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Shield, ShieldOff, UserX, Loader2, RefreshCw, Search, X, Clock, AlertTriangle, CheckCircle2, Ban, Users } from 'lucide-react';
+import { Shield, ShieldOff, UserX, Loader2, RefreshCw, Search, X, Clock, AlertTriangle, CheckCircle2, Ban, Users, History } from 'lucide-react';
 import { getFirebaseIdToken } from '@/utils/firebaseToken';
 import { Button } from '@/components/ui/button';
+import { PlayerProfileModal } from '@/components/Admin/PlayerProfileModal';
 
 const SUPABASE_URL = 'https://dzzeaesctendsggfdxra.supabase.co/functions/v1';
 const BANS_FN = `${SUPABASE_URL}/admin-bans`;
@@ -168,6 +169,106 @@ const BanModal: React.FC<BanModalProps> = ({ userId, userName, userEmail, onClos
   );
 };
 
+/* ───── Ban History Modal ───── */
+const BanHistoryModal: React.FC<{
+  userId: string;
+  userName: string;
+  userEmail: string | null;
+  onClose: () => void;
+}> = ({ userId, userName, userEmail, onClose }) => {
+  const [history, setHistory] = useState<BanRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const token = await getFirebaseIdToken();
+        if (!token) return;
+        const res = await fetch(`${BANS_FN}?action=user-ban-history&user_id=${encodeURIComponent(userId)}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setHistory(data.history || []);
+        }
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [userId]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-card border border-border rounded-2xl shadow-2xl max-w-lg w-full p-6 max-h-[80vh] flex flex-col">
+        <button onClick={onClose} className="absolute top-4 right-4 p-1 rounded-full hover:bg-secondary transition-colors">
+          <X className="h-5 w-5 text-muted-foreground" />
+        </button>
+        <div className="flex items-center gap-3 mb-1">
+          <div className="w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center">
+            <History className="h-5 w-5 text-destructive" />
+          </div>
+          <div>
+            <h3 className="font-display text-lg text-foreground">Ban History</h3>
+            <p className="text-sm text-muted-foreground">{userName}{userEmail ? ` · ${userEmail}` : ''}</p>
+          </div>
+        </div>
+
+        <div className="overflow-y-auto flex-1 space-y-3 mt-4 pr-1">
+          {loading ? (
+            Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="h-20 bg-muted rounded-xl animate-pulse" />
+            ))
+          ) : history.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 gap-2 text-center">
+              <CheckCircle2 className="h-8 w-8 text-muted-foreground/40" />
+              <p className="text-sm text-muted-foreground">No ban history for this user</p>
+            </div>
+          ) : (
+            history.map((ban) => {
+              const isExpired = ban.expires_at && new Date(ban.expires_at) <= new Date();
+              const isActive = ban.is_active && !isExpired;
+              return (
+                <div
+                  key={ban.id}
+                  className={`p-4 rounded-xl border ${
+                    isActive ? 'bg-destructive/5 border-destructive/30' : 'bg-muted/20 border-border/50'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 flex-wrap mb-2">
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${BAN_TYPE_COLORS[ban.ban_type]}`}>
+                      {BAN_TYPE_LABELS[ban.ban_type]}
+                    </span>
+                    {isActive ? (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-destructive/10 text-destructive border border-destructive/30">
+                        Active
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border">
+                        {isExpired ? 'Expired' : 'Lifted'}
+                      </span>
+                    )}
+                  </div>
+                  {ban.reason && <p className="text-xs text-muted-foreground italic mb-2">"{ban.reason}"</p>}
+                  <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {formatDate(ban.banned_at)}
+                    </span>
+                    {ban.expires_at && (
+                      <span>→ {formatDate(ban.expires_at)}</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 /* ───── Main Page ───── */
 export const AdminBans: React.FC = () => {
   const [bans, setBans] = useState<BanRecord[]>([]);
@@ -175,6 +276,8 @@ export const AdminBans: React.FC = () => {
   const [showAll, setShowAll] = useState(false);
   const [unbanning, setUnbanning] = useState<string | null>(null);
   const [banModal, setBanModal] = useState<{ userId: string; userName: string; userEmail: string | null } | null>(null);
+  const [banHistoryModal, setBanHistoryModal] = useState<{ userId: string; userName: string; userEmail: string | null } | null>(null);
+  const [profileUser, setProfileUser] = useState<{ userId: string; userName: string; userEmail: string | null } | null>(null);
 
   // User search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -239,9 +342,8 @@ export const AdminBans: React.FC = () => {
         body: JSON.stringify({ user_id: userId }),
       });
       fetchBans();
-      // Refresh search results too
       if (searchQuery.trim().length >= 2) {
-        setSearchQuery(prev => prev); // trigger re-search via effect
+        setSearchQuery(prev => prev);
       }
     } finally {
       setUnbanning(null);
@@ -250,12 +352,15 @@ export const AdminBans: React.FC = () => {
 
   const handleBanned = () => {
     fetchBans();
-    // Re-trigger search
     if (searchQuery.trim().length >= 2) {
       const q = searchQuery;
       setSearchQuery('');
       setTimeout(() => setSearchQuery(q), 100);
     }
+  };
+
+  const handleProfileBan = (userId: string, userName: string, userEmail: string | null) => {
+    setBanModal({ userId, userName, userEmail });
   };
 
   const activeBans = bans.filter(b => {
@@ -318,7 +423,6 @@ export const AdminBans: React.FC = () => {
           )}
         </div>
 
-        {/* Search results */}
         {searching && (
           <div className="flex items-center gap-2 mt-3 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" /> Searching...
@@ -333,12 +437,21 @@ export const AdminBans: React.FC = () => {
           <div className="mt-3 space-y-2 max-h-72 overflow-y-auto">
             {searchResults.map((user) => (
               <div key={user.user_id} className="flex items-center gap-3 p-3 rounded-xl bg-background border border-border hover:border-primary/20 transition-colors">
-                <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center text-sm font-bold text-foreground flex-shrink-0">
+                <button
+                  onClick={() => setProfileUser({ userId: user.user_id, userName: user.name, userEmail: user.email })}
+                  className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center text-sm font-bold text-foreground flex-shrink-0 hover:ring-2 hover:ring-primary/50 transition-all"
+                  title="View profile"
+                >
                   {user.name.charAt(0).toUpperCase()}
-                </div>
+                </button>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-semibold text-foreground truncate">{user.name}</span>
+                    <span
+                      className="text-sm font-semibold text-foreground truncate cursor-pointer hover:text-primary transition-colors"
+                      onClick={() => setProfileUser({ userId: user.user_id, userName: user.name, userEmail: user.email })}
+                    >
+                      {user.name}
+                    </span>
                     {user.active_ban && (
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${BAN_TYPE_COLORS[user.active_ban.ban_type] || 'text-destructive bg-destructive/10 border-destructive/30'}`}>
                         Banned – {BAN_TYPE_LABELS[user.active_ban.ban_type] || user.active_ban.ban_type}
@@ -407,12 +520,20 @@ export const AdminBans: React.FC = () => {
                       : 'bg-muted/20 border-border/50 opacity-60'
                   }`}
                 >
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-lg font-bold ${isActive ? 'bg-destructive/10 text-destructive' : 'bg-muted text-muted-foreground'}`}>
+                  <button
+                    onClick={() => setProfileUser({ userId: ban.user_id, userName: ban.user_name, userEmail: ban.user_email })}
+                    className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-lg font-bold hover:ring-2 hover:ring-primary/50 transition-all ${isActive ? 'bg-destructive/10 text-destructive' : 'bg-muted text-muted-foreground'}`}
+                  >
                     {ban.user_name.charAt(0).toUpperCase()}
-                  </div>
+                  </button>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-semibold text-foreground">{ban.user_name}</span>
+                      <span
+                        className="text-sm font-semibold text-foreground cursor-pointer hover:text-primary transition-colors"
+                        onClick={() => setProfileUser({ userId: ban.user_id, userName: ban.user_name, userEmail: ban.user_email })}
+                      >
+                        {ban.user_name}
+                      </span>
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${BAN_TYPE_COLORS[ban.ban_type]}`}>
                         {BAN_TYPE_LABELS[ban.ban_type]}
                       </span>
@@ -436,20 +557,29 @@ export const AdminBans: React.FC = () => {
                       )}
                     </div>
                   </div>
-                  {isActive && (
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     <button
-                      onClick={() => handleUnban(ban.user_id)}
-                      disabled={unbanning === ban.user_id}
-                      className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary text-muted-foreground hover:text-foreground hover:bg-muted transition-colors text-xs font-medium border border-border disabled:opacity-50"
+                      onClick={() => setBanHistoryModal({ userId: ban.user_id, userName: ban.user_name, userEmail: ban.user_email })}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors text-xs font-medium border border-border"
+                      title="View ban history"
                     >
-                      {unbanning === ban.user_id ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <ShieldOff className="h-3.5 w-3.5" />
-                      )}
-                      Unban
+                      <History className="h-3.5 w-3.5" />
                     </button>
-                  )}
+                    {isActive && (
+                      <button
+                        onClick={() => handleUnban(ban.user_id)}
+                        disabled={unbanning === ban.user_id}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary text-muted-foreground hover:text-foreground hover:bg-muted transition-colors text-xs font-medium border border-border disabled:opacity-50"
+                      >
+                        {unbanning === ban.user_id ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <ShieldOff className="h-3.5 w-3.5" />
+                        )}
+                        Unban
+                      </button>
+                    )}
+                  </div>
                 </div>
               );
             })}
@@ -464,6 +594,25 @@ export const AdminBans: React.FC = () => {
           userEmail={banModal.userEmail}
           onClose={() => setBanModal(null)}
           onBanned={handleBanned}
+        />
+      )}
+
+      {banHistoryModal && (
+        <BanHistoryModal
+          userId={banHistoryModal.userId}
+          userName={banHistoryModal.userName}
+          userEmail={banHistoryModal.userEmail}
+          onClose={() => setBanHistoryModal(null)}
+        />
+      )}
+
+      {profileUser && (
+        <PlayerProfileModal
+          userId={profileUser.userId}
+          userName={profileUser.userName}
+          userEmail={profileUser.userEmail}
+          onClose={() => setProfileUser(null)}
+          onBan={handleProfileBan}
         />
       )}
     </div>

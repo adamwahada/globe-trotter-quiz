@@ -163,6 +163,24 @@ serve(async (req) => {
       });
     }
 
+    // Get full ban history for a specific user
+    if (action === 'user-ban-history') {
+      const userId = url.searchParams.get('user_id');
+      if (!userId) return new Response(JSON.stringify({ error: 'Missing user_id' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+
+      const { data, error } = await supabase
+        .from('bans')
+        .select('*')
+        .eq('user_id', userId)
+        .order('banned_at', { ascending: false });
+
+      if (error) throw error;
+      return new Response(JSON.stringify({ history: data || [] }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     return new Response(JSON.stringify({ error: 'Unknown action' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   } catch (err) {
     console.error('[admin-bans] error:', err);
