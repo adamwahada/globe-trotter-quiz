@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { MessageSquare, Send, Loader2, ArrowLeft, Clock } from 'lucide-react';
+import { MessageSquare, Send, Loader2, ArrowLeft, Clock, ChevronDown } from 'lucide-react';
 import { getFirebaseIdToken } from '@/utils/firebaseToken';
 import { supabase } from '@/integrations/supabase/client';
-import { useOutletContext } from 'react-router-dom';
+import { useOutletContext, useLocation } from 'react-router-dom';
+import { PlayerProfileModal } from '@/components/Admin/PlayerProfileModal';
 
 const ADMIN_FN = `https://dzzeaesctendsggfdxra.supabase.co/functions/v1/admin-messages`;
 
@@ -50,6 +51,7 @@ interface OutletContext {
 
 export const AdminMessages: React.FC = () => {
   const outletCtx = useOutletContext<OutletContext | null>();
+  const location = useLocation();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConv, setSelectedConv] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -57,8 +59,22 @@ export const AdminMessages: React.FC = () => {
   const [loadingMsgs, setLoadingMsgs] = useState(false);
   const [reply, setReply] = useState('');
   const [sending, setSending] = useState(false);
+  const [showScrollBtn, setShowScrollBtn] = useState(false);
+  const [profileUser, setProfileUser] = useState<{ userId: string; userName: string; userEmail: string | null } | null>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const channelRef = useRef<any>(null);
+
+  const scrollToBottom = () => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleScroll = () => {
+    const el = messagesContainerRef.current;
+    if (!el) return;
+    const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    setShowScrollBtn(distFromBottom > 100);
+  };
 
   const fetchConversations = useCallback(async () => {
     setLoadingConvs(true);
@@ -71,7 +87,6 @@ export const AdminMessages: React.FC = () => {
       if (res.ok) {
         const data = await res.json();
         const convs: Conversation[] = data.conversations || [];
-        // Sort: unread first, then by time
         convs.sort((a, b) => {
           if (b.unread_count !== a.unread_count) return b.unread_count - a.unread_count;
           return new Date(b.last_message_time).getTime() - new Date(a.last_message_time).getTime();
@@ -79,14 +94,23 @@ export const AdminMessages: React.FC = () => {
         setConversations(convs);
         const totalUnread = convs.reduce((acc, c) => acc + c.unread_count, 0);
         outletCtx?.setMessagesUnread?.(totalUnread);
+        return convs;
       }
     } finally {
       setLoadingConvs(false);
     }
+    return [];
   }, [outletCtx]);
 
   useEffect(() => {
-    fetchConversations();
+    fetchConversations().then((convs) => {
+      // Auto-open user from navigation state (e.g. from PlayerProfileModal)
+      const state = location.state as any;
+      if (state?.openUserId && convs && convs.length > 0) {
+        const conv = convs.find((c: Conversation) => c.sender_id === state.openUserId);
+        if (conv) loadConversation(conv);
+      }
+    });
 
     channelRef.current = supabase
       .channel('admin-messages-all')
@@ -127,7 +151,7 @@ export const AdminMessages: React.FC = () => {
   };
 
   useEffect(() => {
-    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+    setTimeout(() => scrollToBottom(), 100);
   }, [messages]);
 
   const sendReply = async () => {
@@ -166,9 +190,9 @@ export const AdminMessages: React.FC = () => {
   const totalUnread = conversations.reduce((acc, c) => acc + c.unread_count, 0);
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-[calc(100vh-8rem)]">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4 flex-shrink-0">
         <div>
           <h2 className="text-2xl font-display text-foreground flex items-center gap-2">
             <MessageSquare className="h-6 w-6 text-primary" />
@@ -182,7 +206,7 @@ export const AdminMessages: React.FC = () => {
           <p className="text-muted-foreground text-sm mt-0.5">{conversations.length} conversation{conversations.length !== 1 ? 's' : ''}</p>
         </div>
         <button
-          onClick={fetchConversations}
+          onClick={() => fetchConversations()}
           className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 px-3 py-1.5 rounded-lg hover:bg-secondary border border-border"
         >
           <Clock className="h-3.5 w-3.5" />
@@ -250,10 +274,17 @@ export const AdminMessages: React.FC = () => {
         {/* Conversation view */}
         {selectedConv && (
           <div className="flex flex-col flex-1 min-h-0 bg-card border border-border rounded-xl overflow-hidden">
-            {/* Conv header */}
-            <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-secondary/40 flex-shrink-0">
+            {/* Conv header - clickable to open profile */}
+            <div
+              className="flex items-center gap-3 px-4 py-3 border-b border-border bg-secondary/40 flex-shrink-0 cursor-pointer hover:bg-secondary/60 transition-colors"
+              onClick={() => setProfileUser({
+                userId: selectedConv.sender_id,
+                userName: selectedConv.sender_name,
+                userEmail: selectedConv.sender_email,
+              })}
+            >
               <button
-                onClick={() => setSelectedConv(null)}
+                onClick={(e) => { e.stopPropagation(); setSelectedConv(null); }}
                 className="lg:hidden p-1.5 rounded-full hover:bg-secondary transition-colors text-muted-foreground"
               >
                 <ArrowLeft className="h-4 w-4" />
@@ -267,10 +298,15 @@ export const AdminMessages: React.FC = () => {
                   <p className="text-xs text-muted-foreground">{selectedConv.sender_email}</p>
                 )}
               </div>
+              <span className="text-[10px] text-muted-foreground">Click for profile</span>
             </div>
 
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+            {/* Messages - fixed height scrollable */}
+            <div
+              ref={messagesContainerRef}
+              onScroll={handleScroll}
+              className="flex-1 overflow-y-auto px-4 py-4 space-y-3 relative"
+            >
               {loadingMsgs ? (
                 <div className="flex items-center justify-center h-full">
                   <Loader2 className="h-6 w-6 text-primary animate-spin" />
@@ -304,6 +340,19 @@ export const AdminMessages: React.FC = () => {
               <div ref={bottomRef} />
             </div>
 
+            {/* Scroll to bottom button */}
+            {showScrollBtn && (
+              <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-10" style={{ position: 'sticky', bottom: '76px', display: 'flex', justifyContent: 'center' }}>
+                <button
+                  onClick={scrollToBottom}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary text-primary-foreground shadow-lg hover:opacity-90 transition-opacity text-xs font-medium"
+                >
+                  <ChevronDown className="h-3.5 w-3.5" />
+                  Scroll to bottom
+                </button>
+              </div>
+            )}
+
             {/* Reply input */}
             <div className="flex-shrink-0 border-t border-border bg-secondary/20 px-3 py-3">
               <div className="flex items-end gap-2">
@@ -329,6 +378,16 @@ export const AdminMessages: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Player Profile Modal */}
+      {profileUser && (
+        <PlayerProfileModal
+          userId={profileUser.userId}
+          userName={profileUser.userName}
+          userEmail={profileUser.userEmail}
+          onClose={() => setProfileUser(null)}
+        />
+      )}
     </div>
   );
 };
