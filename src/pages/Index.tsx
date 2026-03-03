@@ -50,6 +50,7 @@ import {
   BookHeart,
 } from "lucide-react";
 import { FloatingContactIcons } from "@/components/Contact/FloatingContactIcons";
+import { ProjectStoryModal } from "@/components/Contact/ProjectStoryModal";
 
 // Use public path for preloaded image - matches index.html preload
 const worldMapBg = "/world-map-bg.webp";
@@ -76,6 +77,7 @@ const Index = () => {
   const [gameAuthMode, setGameAuthMode] = useState<'signin' | 'signup'>('signin');
   const [gameStartSignInOpen, setGameStartSignInOpen] = useState(false);
   const [inviteChoiceOpen, setInviteChoiceOpen] = useState(false);
+  const [projectStoryOpen, setProjectStoryOpen] = useState(false);
   const [pendingJoinInfo, setPendingJoinInfo] = useState<{
     code: string;
     playerId: string;
@@ -621,7 +623,8 @@ const Index = () => {
       </section>
 
       {/* Floating Contact Icons */}
-      <FloatingContactIcons />
+      <FloatingContactIcons onProjectStoryClick={() => setProjectStoryOpen(true)} />
+      <ProjectStoryModal isOpen={projectStoryOpen} onClose={() => setProjectStoryOpen(false)} />
 
       {/* Footer */}
       <footer className="relative z-10 py-8 px-4 border-t border-border bg-background/80 backdrop-blur-sm">
@@ -649,14 +652,13 @@ const Index = () => {
               </a>
             </GameTooltip>
             <GameTooltip content="The story behind this project" position="top">
-              <a
-                href="/project-story"
-                onClick={(e) => { e.preventDefault(); navigate('/project-story'); }}
-                className="group flex items-center gap-2 px-4 py-2 rounded-full border border-border bg-card/60 transition-all duration-300 hover:border-primary/50 hover:bg-primary/10 hover:scale-105 hover:shadow-[0_0_20px_hsl(357_92%_47%/0.3)]"
+              <button
+                onClick={() => setProjectStoryOpen(true)}
+                className="group w-10 h-10 rounded-full border border-border bg-card/60 flex items-center justify-center transition-all duration-300 hover:border-primary/50 hover:bg-primary/10 hover:scale-110 hover:shadow-[0_0_20px_hsl(357_92%_47%/0.3)]"
+                aria-label="Project Story"
               >
                 <BookHeart className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors duration-300" />
-                <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors duration-300">Project Story</span>
-              </a>
+              </button>
             </GameTooltip>
         </div>
       </footer>
