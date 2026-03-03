@@ -18,6 +18,7 @@ const Index = lazy(() => import("./pages/Index"));
 const WaitingRoom = lazy(() => import("./pages/WaitingRoom"));
 const GamePage = lazy(() => import("./pages/GamePage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const ProjectStory = lazy(() => import("./pages/ProjectStory"));
 const AdminRoute = lazy(() => import("@/components/Admin/AdminRoute").then(m => ({ default: m.AdminRoute })));
 const AdminLayout = lazy(() => import("@/components/Admin/AdminLayout").then(m => ({ default: m.AdminLayout })));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard").then(m => ({ default: m.AdminDashboard })));
@@ -57,6 +58,7 @@ const App = () => {
                         <Route path="/" element={<Index />} />
                         <Route path="/waiting-room" element={<WaitingRoom />} />
                         <Route path="/game" element={<GamePage />} />
+                        <Route path="/project-story" element={<ProjectStory />} />
                         <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
                           <Route index element={<AdminDashboard />} />
                           <Route path="feedback" element={<AdminFeedback />} />
