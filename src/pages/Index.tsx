@@ -45,7 +45,11 @@ import {
   Building,
   Music2,
   Shield,
+  Github,
+  Linkedin,
+  BookHeart,
 } from "lucide-react";
+import { FloatingContactIcons } from "@/components/Contact/FloatingContactIcons";
 
 // Use public path for preloaded image - matches index.html preload
 const worldMapBg = "/world-map-bg.webp";
@@ -616,10 +620,47 @@ const Index = () => {
         </div>
       </section>
 
+      {/* Floating Contact Icons */}
+      <FloatingContactIcons />
+
       {/* Footer */}
       <footer className="relative z-10 py-8 px-4 border-t border-border bg-background/80 backdrop-blur-sm">
-        <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="max-w-4xl mx-auto flex flex-col items-center gap-4">
           <p className="text-sm text-muted-foreground">{t("footerText")}</p>
+          <div className="flex items-center gap-6">
+            <GameTooltip content="Contact me on: LinkedIn" position="top">
+              <a
+                href="https://www.linkedin.com/in/adam-wahada-1828aa266/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group w-10 h-10 rounded-full border border-border bg-card/60 flex items-center justify-center transition-all duration-300 hover:border-primary/50 hover:bg-primary/10 hover:scale-110 hover:shadow-[0_0_20px_hsl(357_92%_47%/0.3)]"
+                aria-label="LinkedIn"
+              >
+                <Linkedin className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors duration-300" />
+              </a>
+            </GameTooltip>
+            <GameTooltip content="Contact me on: GitHub" position="top">
+              <a
+                href="https://github.com/adamwahada"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group w-10 h-10 rounded-full border border-border bg-card/60 flex items-center justify-center transition-all duration-300 hover:border-primary/50 hover:bg-primary/10 hover:scale-110 hover:shadow-[0_0_20px_hsl(357_92%_47%/0.3)]"
+                aria-label="GitHub"
+              >
+                <Github className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors duration-300" />
+              </a>
+            </GameTooltip>
+            <GameTooltip content="The story behind this project" position="top">
+              <a
+                href="/project-story"
+                onClick={(e) => { e.preventDefault(); navigate('/project-story'); }}
+                className="group flex items-center gap-2 px-4 py-2 rounded-full border border-border bg-card/60 transition-all duration-300 hover:border-primary/50 hover:bg-primary/10 hover:scale-105 hover:shadow-[0_0_20px_hsl(357_92%_47%/0.3)]"
+              >
+                <BookHeart className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors duration-300" />
+                <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors duration-300">Project Story</span>
+              </a>
+            </GameTooltip>
+          </div>
         </div>
       </footer>
 
