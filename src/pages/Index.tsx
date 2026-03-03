@@ -625,9 +625,7 @@ const Index = () => {
 
       {/* Footer */}
       <footer className="relative z-10 py-8 px-4 border-t border-border bg-background/80 backdrop-blur-sm">
-        <div className="max-w-4xl mx-auto flex flex-col items-center gap-4">
-          <p className="text-sm text-muted-foreground">{t("footerText")}</p>
-          <div className="flex items-center gap-6">
+
             <GameTooltip content="Contact me on: LinkedIn" position="top">
               <a
                 href="https://www.linkedin.com/in/adam-wahada-1828aa266/"
