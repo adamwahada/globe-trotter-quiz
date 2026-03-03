@@ -625,7 +625,7 @@ const Index = () => {
 
       {/* Footer */}
       <footer className="relative z-10 py-8 px-4 border-t border-border bg-background/80 backdrop-blur-sm">
-
+        <div className="max-w-7xl mx-auto flex items-center justify-center gap-6">
             <GameTooltip content="Contact me on: LinkedIn" position="top">
               <a
                 href="https://www.linkedin.com/in/adam-wahada-1828aa266/"
@@ -658,7 +658,6 @@ const Index = () => {
                 <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors duration-300">Project Story</span>
               </a>
             </GameTooltip>
-          </div>
         </div>
       </footer>
 
