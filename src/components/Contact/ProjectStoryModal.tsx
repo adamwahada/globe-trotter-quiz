@@ -74,7 +74,7 @@ export const ProjectStoryModal: React.FC<ProjectStoryModalProps> = ({ isOpen, on
 
       {/* Modal content */}
       <div
-        className={`relative w-[95vw] max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl transition-all duration-700 ${
+        className={`relative w-[95vw] max-w-2xl max-h-[85vh] overflow-hidden rounded-2xl transition-all duration-700 ${
           animateIn ? 'scale-100 translate-y-0' : 'scale-90 translate-y-8'
         }`}
         style={{
