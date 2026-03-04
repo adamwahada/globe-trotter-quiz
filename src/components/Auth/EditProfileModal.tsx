@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Camera, Lock, Eye, EyeOff, Check, Loader2 } from 'lucide-react';
+import { X, Eye, EyeOff, Check, Loader2 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToastContext } from '@/contexts/ToastContext';
@@ -42,6 +42,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showCurrentPw, setShowCurrentPw] = useState(false);
   const [showNewPw, setShowNewPw] = useState(false);
+  const [showConfirmPw, setShowConfirmPw] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
 
   if (!isOpen || !user) return null;
@@ -127,8 +128,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
 
           {/* Profile Picture Selection */}
           <div>
-            <label className="flex items-center gap-2 text-sm font-medium text-foreground mb-3">
-              <Camera className="h-4 w-4 text-primary" />
+            <label className="text-sm font-medium text-foreground mb-3 block">
               {t('profilePicture')}
             </label>
             <div className="grid grid-cols-8 gap-2">
@@ -184,7 +184,6 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
               onClick={() => setShowPasswordSection(!showPasswordSection)}
               className="flex items-center gap-2 text-sm font-medium text-foreground hover:text-primary transition-colors"
             >
-              <Lock className="h-4 w-4" />
               {t('changePassword')}
             </button>
 
@@ -227,13 +226,22 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
                 </div>
 
                 {/* Confirm New Password */}
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder={t('confirmNewPassword')}
-                  className="w-full px-4 py-2.5 rounded-xl bg-secondary/50 border border-border text-foreground placeholder:text-muted-foreground focus:border-primary outline-none text-sm"
-                />
+                <div className="relative">
+                  <input
+                    type={showConfirmPw ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder={t('confirmNewPassword')}
+                    className="w-full px-4 py-2.5 rounded-xl bg-secondary/50 border border-border text-foreground placeholder:text-muted-foreground focus:border-primary outline-none text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPw(!showConfirmPw)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showConfirmPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
 
                 <button
                   onClick={handleChangePassword}
