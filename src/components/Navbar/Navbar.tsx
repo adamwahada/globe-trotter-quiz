@@ -40,7 +40,7 @@ export const Navbar: React.FC<NavbarProps> = ({ variant = 'default', rightConten
             : 'bg-transparent py-4'
         }`}
       >
-        <div className="flex items-center justify-between px-2 md:px-3 max-w-7xl mx-auto">
+        <div className="flex items-center justify-between px-3 md:px-6 w-full">
           <Logo size={scrolled ? 'sm' : 'md'} />
           
           <div className="flex items-center gap-2">
