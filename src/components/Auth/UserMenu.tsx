@@ -7,6 +7,7 @@ import { useAdmin } from '@/contexts/AdminContext';
 import { GameTooltip } from '@/components/Tooltip/GameTooltip';
 import { GameHistoryModal } from '@/components/History/GameHistoryModal';
 import { AchievementsModal } from '@/components/History/AchievementsModal';
+import { EditProfileModal } from '@/components/Auth/EditProfileModal';
 
 export const UserMenu: React.FC = () => {
   const { t } = useLanguage();
@@ -16,6 +17,7 @@ export const UserMenu: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [showAchievementsModal, setShowAchievementsModal] = useState(false);
+  const [showEditProfile, setShowEditProfile] = useState(false);
 
   if (!user) return null;
 
@@ -27,7 +29,7 @@ export const UserMenu: React.FC = () => {
     .slice(0, 2);
 
   const menuItems = [
-    { icon: Settings, label: t('editProfile'), action: () => {} },
+    { icon: Settings, label: t('editProfile'), action: () => setShowEditProfile(true) },
     { icon: History, label: t('gameHistory'), action: () => setShowHistoryModal(true) },
     { icon: Trophy, label: t('achievements'), action: () => setShowAchievementsModal(true) },
   ];
@@ -150,6 +152,10 @@ export const UserMenu: React.FC = () => {
       <AchievementsModal
         isOpen={showAchievementsModal}
         onClose={() => setShowAchievementsModal(false)}
+      />
+      <EditProfileModal
+        isOpen={showEditProfile}
+        onClose={() => setShowEditProfile(false)}
       />
     </div>
   );
