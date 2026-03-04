@@ -13,8 +13,8 @@ export const Logo: React.FC<LogoProps> = ({ size = "md" }) => {
   const location = useLocation();
 
   const sizeClasses = {
-    sm: "h-14",
-    md: "h-20",
+    sm: "h-[4.375rem]",
+    md: "h-[6.25rem]",
     lg: "h-28",
   };
 
@@ -29,8 +29,8 @@ export const Logo: React.FC<LogoProps> = ({ size = "md" }) => {
 
   // Intrinsic dimensions for proper aspect ratio hints
   const dimensions = {
-    sm: { height: 56, width: 168 },
-    md: { height: 80, width: 240 },
+    sm: { height: 70, width: 210 },
+    md: { height: 100, width: 300 },
     lg: { height: 112, width: 336 },
   };
 
