@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import {
   auth,
   signInWithEmailAndPassword,
@@ -201,6 +202,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         color,
         stats: { totalGames: 0, wins: 0, avgScore: 0 },
       }));
+
+      // Store username in Supabase for uniqueness
+      await supabase
+        .from('usernames')
+        .upsert({ user_id: firebaseUser.uid, username }, { onConflict: 'user_id' });
     } finally {
       setIsLoading(false);
     }
