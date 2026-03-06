@@ -260,6 +260,9 @@ export const translations = {
     wrongPassword: 'Current password is incorrect',
     passwordTooShort: 'Password must be at least 6 characters',
     profileUpdated: 'Profile updated successfully',
+    enterCurrentPassword: 'Enter your current password to continue',
+    enterNewPassword: 'Set your new password',
+    verify: 'Verify',
 
     // Notifications
     playerJoined: '{player} joined the session',
@@ -764,6 +767,9 @@ export const translations = {
     wrongPassword: 'Le mot de passe actuel est incorrect',
     passwordTooShort: 'Le mot de passe doit comporter au moins 6 caractères',
     profileUpdated: 'Profil mis à jour avec succès',
+    enterCurrentPassword: 'Entrez votre mot de passe actuel pour continuer',
+    enterNewPassword: 'Définissez votre nouveau mot de passe',
+    verify: 'Vérifier',
 
     // Notifications
     playerJoined: '{player} a rejoint la session',
@@ -1268,6 +1274,9 @@ export const translations = {
     wrongPassword: 'كلمة المرور الحالية غير صحيحة',
     passwordTooShort: 'يجب أن تتكون كلمة المرور من 6 أحرف على الأقل',
     profileUpdated: 'تم تحديث الملف الشخصي بنجاح',
+    enterCurrentPassword: 'أدخل كلمة المرور الحالية للمتابعة',
+    enterNewPassword: 'قم بتعيين كلمة المرور الجديدة',
+    verify: 'تحقق',
 
     // Notifications
     playerJoined: 'انضم {player} إلى الجلسة',
