@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -101,7 +102,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
     }
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={handleClose} />
 
@@ -239,6 +240,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
