@@ -336,13 +336,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
               <Button
                 variant="netflix"
                 className="flex-1 py-6"
-                disabled={isLoading || !email}
+                disabled={isLoading || !email || resetCooldown > 0}
                 onClick={async () => {
                   if (!email) { addToast('error', t('enterEmailFirst') || 'Please enter your email address.'); return; }
                   if (!auth) { addToast('error', 'Firebase not initialized'); return; }
                   try {
                     await sendPasswordResetEmail(auth, email);
                     addToast('success', t('passwordResetSent') || 'Password reset email sent! Check your inbox.');
+                    setResetCooldown(60);
                     setMode('signin');
                   } catch (error: any) {
                     if (error?.code === 'auth/user-not-found') {
