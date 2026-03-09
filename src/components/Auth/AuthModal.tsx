@@ -183,8 +183,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
         code === 'auth/wrong-password' ||
         code === 'auth/user-not-found'
       ) {
-        // Show an inline prompt — the account might be Google-only (no password set yet)
-        setShowSetPasswordPrompt(true);
+        // Only show the Google password-setup prompt if the email actually has a Google provider linked
+        if (auth && email) {
+          try {
+            const methods = await fetchSignInMethodsForEmail(auth, email);
+            if (methods.includes('google.com')) {
+              setShowSetPasswordPrompt(true);
+            } else {
+              addToast('error', t('invalidCredentials'));
+            }
+          } catch {
+            addToast('error', t('invalidCredentials'));
+          }
+        } else {
+          addToast('error', t('invalidCredentials'));
+        }
       } else if (code === 'auth/invalid-email') {
         addToast('error', 'Invalid email address');
       } else if (code === 'auth/weak-password') {
