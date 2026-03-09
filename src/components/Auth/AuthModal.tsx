@@ -485,13 +485,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
                     type="button"
                     variant="netflix"
                     className="flex-1 h-9 text-xs"
-                    disabled={isSendingReset || !email}
+                    disabled={isSendingReset || !email || resetCooldown > 0}
                     onClick={async () => {
                       if (!auth || !email) return;
                       setIsSendingReset(true);
                       try {
                         await sendPasswordResetEmail(auth, email);
                         addToast('success', 'Password setup email sent! Check your inbox, then come back to sign in with your email.');
+                        setResetCooldown(60);
                         setShowSetPasswordPrompt(false);
                       } catch (err: any) {
                         addToast('error', err?.message || 'Failed to send email.');
@@ -500,7 +501,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
                       }
                     }}
                   >
-                    {isSendingReset ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Send password setup email'}
+                    {isSendingReset ? <Loader2 className="h-3 w-3 animate-spin" /> : resetCooldown > 0 ? `Wait ${resetCooldown}s` : 'Send password setup email'}
                   </Button>
                 </div>
               </div>
