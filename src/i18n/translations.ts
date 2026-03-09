@@ -1306,6 +1306,8 @@ export const translations = {
     enterEmailFirst: 'يرجى إدخال بريدك الإلكتروني أولاً.',
     passwordResetSent: 'تم إرسال بريد إعادة تعيين كلمة المرور! تحقق من صندوق الوارد.',
     noAccountWithEmail: 'لم يتم العثور على حساب بهذا البريد الإلكتروني.',
+    noActiveAccount: 'لا يوجد حساب نشط بهذا البريد الإلكتروني.',
+    continueAsGuest: 'متابعة كضيف',
     emailExists: 'البريد الإلكتروني مسجل بالفعل',
 
     // Tooltips
