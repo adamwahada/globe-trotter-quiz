@@ -354,7 +354,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
                   }
                 }}
               >
-                {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : (t('confirm') || 'Confirm')}
+                {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : resetCooldown > 0 ? `Wait ${resetCooldown}s` : (t('confirm') || 'Confirm')}
               </Button>
             </div>
 
