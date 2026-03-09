@@ -70,6 +70,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
       setShowPassword(false);
       setShowConfirmPassword(false);
       setShowSetPasswordPrompt(false);
+      setShowNoAccountPrompt(false);
       pendingGoogleCredential.current = null;
     }
   }, [isOpen, initialMode]);
