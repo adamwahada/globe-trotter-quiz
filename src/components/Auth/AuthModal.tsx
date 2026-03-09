@@ -45,6 +45,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
   const [showSetPasswordPrompt, setShowSetPasswordPrompt] = useState(false);
   const [rememberMe, setRememberMe] = useState(() => localStorage.getItem('worldquiz_remember_me') === 'true');
 
+  // Cooldown timer for reset email (60s)
+  useEffect(() => {
+    if (resetCooldown <= 0) return;
+    const timer = setTimeout(() => setResetCooldown(prev => prev - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [resetCooldown]);
+
   // Stored Google credential pending account linking
   const pendingGoogleCredential = useRef<AuthCredential | null>(null);
 
