@@ -286,6 +286,8 @@ export const translations = {
     enterEmailFirst: 'Please enter your email address first.',
     passwordResetSent: 'Password reset email sent! Check your inbox.',
     noAccountWithEmail: 'No account found with this email.',
+    noActiveAccount: 'There is no active account with this email address.',
+    continueAsGuest: 'Continue as Guest',
     emailExists: 'Email already registered',
 
     // Tooltips
