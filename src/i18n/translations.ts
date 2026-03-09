@@ -796,6 +796,8 @@ export const translations = {
     enterEmailFirst: 'Veuillez entrer votre adresse email d\'abord.',
     passwordResetSent: 'Email de réinitialisation envoyé ! Vérifiez votre boîte de réception.',
     noAccountWithEmail: 'Aucun compte trouvé avec cet email.',
+    noActiveAccount: 'Aucun compte actif avec cette adresse email.',
+    continueAsGuest: 'Continuer en tant qu\'invité',
     emailExists: 'Email déjà enregistré',
 
     // Tooltips
