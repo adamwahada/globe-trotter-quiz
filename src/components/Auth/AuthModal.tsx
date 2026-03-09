@@ -40,6 +40,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [isSendingReset, setIsSendingReset] = useState(false);
+  const [resetCooldown, setResetCooldown] = useState(0);
   // When email/password fails and the account might be Google-only, show inline prompt
   const [showSetPasswordPrompt, setShowSetPasswordPrompt] = useState(false);
   const [rememberMe, setRememberMe] = useState(() => localStorage.getItem('worldquiz_remember_me') === 'true');
