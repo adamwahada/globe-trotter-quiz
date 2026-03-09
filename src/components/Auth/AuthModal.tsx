@@ -44,6 +44,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
   // When email/password fails and the account might be Google-only, show inline prompt
   const [showSetPasswordPrompt, setShowSetPasswordPrompt] = useState(false);
   const [rememberMe, setRememberMe] = useState(() => localStorage.getItem('worldquiz_remember_me') === 'true');
+  const [showNoAccountPrompt, setShowNoAccountPrompt] = useState(false);
 
   // Cooldown timer for reset email (60s)
   useEffect(() => {
@@ -69,6 +70,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
       setShowPassword(false);
       setShowConfirmPassword(false);
       setShowSetPasswordPrompt(false);
+      setShowNoAccountPrompt(false);
       pendingGoogleCredential.current = null;
     }
   }, [isOpen, initialMode]);
@@ -322,44 +324,85 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => { setEmail(e.target.value); setShowNoAccountPrompt(false); }}
                 placeholder={t('email')}
                 required
                 className="w-full pl-11 pr-4 py-3 bg-secondary border border-border rounded-lg focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-foreground placeholder:text-muted-foreground"
               />
             </div>
 
+            {/* No account found prompt */}
+            {showNoAccountPrompt && (
+              <div className="flex flex-col gap-3 p-4 rounded-lg bg-destructive/10 border border-destructive/20">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+                  <p className="text-sm text-foreground/80">
+                    {t('noActiveAccount') || 'There is no active account with this email address.'}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="netflix"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => { setShowNoAccountPrompt(false); setMode('signup'); }}
+                  >
+                    {t('createAccount') || 'Create Account'}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => { setShowNoAccountPrompt(false); onClose(); }}
+                  >
+                    {t('continueAsGuest') || 'Continue as Guest'}
+                  </Button>
+                </div>
+              </div>
+            )}
+
             <div className="flex gap-3">
-              <Button variant="outline" className="flex-1 py-6" onClick={() => setMode('signin')}>
+              <Button variant="outline" className="flex-1 py-6" onClick={() => { setShowNoAccountPrompt(false); setMode('signin'); }}>
                 {t('cancel') || 'Cancel'}
               </Button>
               <Button
                 variant="netflix"
                 className="flex-1 py-6"
-                disabled={isLoading || !email || resetCooldown > 0}
+                disabled={isSendingReset || !email || resetCooldown > 0}
                 onClick={async () => {
                   if (!email) { addToast('error', t('enterEmailFirst') || 'Please enter your email address.'); return; }
                   if (!auth) { addToast('error', 'Firebase not initialized'); return; }
+                  setIsSendingReset(true);
                   try {
+                    // Check if this email has any account
+                    const methods = await fetchSignInMethodsForEmail(auth, email);
+                    if (!methods || methods.length === 0) {
+                      setShowNoAccountPrompt(true);
+                      setIsSendingReset(false);
+                      return;
+                    }
                     await sendPasswordResetEmail(auth, email);
                     addToast('success', t('passwordResetSent') || 'Password reset email sent! Check your inbox.');
                     setResetCooldown(60);
+                    setShowNoAccountPrompt(false);
                     setMode('signin');
                   } catch (error: any) {
                     if (error?.code === 'auth/user-not-found') {
-                      addToast('error', t('noAccountWithEmail') || 'No account found with this email.');
+                      setShowNoAccountPrompt(true);
                     } else {
                       addToast('error', error?.message || 'Failed to send reset email.');
                     }
+                  } finally {
+                    setIsSendingReset(false);
                   }
                 }}
               >
-                {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : resetCooldown > 0 ? `Wait ${resetCooldown}s` : (t('confirm') || 'Confirm')}
+                {isSendingReset ? <Loader2 className="h-5 w-5 animate-spin" /> : resetCooldown > 0 ? `Wait ${resetCooldown}s` : (t('confirm') || 'Confirm')}
               </Button>
             </div>
 
             <div className="pt-2 text-center">
-              <button onClick={() => setMode('signin')} className="text-primary text-sm font-medium hover:underline">
+              <button onClick={() => { setShowNoAccountPrompt(false); setMode('signin'); }} className="text-primary text-sm font-medium hover:underline">
                 {t('backToSignIn') || 'Back to Sign In'}
               </button>
             </div>

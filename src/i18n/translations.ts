@@ -286,6 +286,8 @@ export const translations = {
     enterEmailFirst: 'Please enter your email address first.',
     passwordResetSent: 'Password reset email sent! Check your inbox.',
     noAccountWithEmail: 'No account found with this email.',
+    noActiveAccount: 'There is no active account with this email address.',
+    continueAsGuest: 'Continue as Guest',
     emailExists: 'Email already registered',
 
     // Tooltips
@@ -794,6 +796,8 @@ export const translations = {
     enterEmailFirst: 'Veuillez entrer votre adresse email d\'abord.',
     passwordResetSent: 'Email de réinitialisation envoyé ! Vérifiez votre boîte de réception.',
     noAccountWithEmail: 'Aucun compte trouvé avec cet email.',
+    noActiveAccount: 'Aucun compte actif avec cette adresse email.',
+    continueAsGuest: 'Continuer en tant qu\'invité',
     emailExists: 'Email déjà enregistré',
 
     // Tooltips
@@ -1302,6 +1306,8 @@ export const translations = {
     enterEmailFirst: 'يرجى إدخال بريدك الإلكتروني أولاً.',
     passwordResetSent: 'تم إرسال بريد إعادة تعيين كلمة المرور! تحقق من صندوق الوارد.',
     noAccountWithEmail: 'لم يتم العثور على حساب بهذا البريد الإلكتروني.',
+    noActiveAccount: 'لا يوجد حساب نشط بهذا البريد الإلكتروني.',
+    continueAsGuest: 'متابعة كضيف',
     emailExists: 'البريد الإلكتروني مسجل بالفعل',
 
     // Tooltips
