@@ -40,9 +40,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [isSendingReset, setIsSendingReset] = useState(false);
+  const [resetCooldown, setResetCooldown] = useState(0);
   // When email/password fails and the account might be Google-only, show inline prompt
   const [showSetPasswordPrompt, setShowSetPasswordPrompt] = useState(false);
   const [rememberMe, setRememberMe] = useState(() => localStorage.getItem('worldquiz_remember_me') === 'true');
+
+  // Cooldown timer for reset email (60s)
+  useEffect(() => {
+    if (resetCooldown <= 0) return;
+    const timer = setTimeout(() => setResetCooldown(prev => prev - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [resetCooldown]);
 
   // Stored Google credential pending account linking
   const pendingGoogleCredential = useRef<AuthCredential | null>(null);
@@ -328,13 +336,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
               <Button
                 variant="netflix"
                 className="flex-1 py-6"
-                disabled={isLoading || !email}
+                disabled={isLoading || !email || resetCooldown > 0}
                 onClick={async () => {
                   if (!email) { addToast('error', t('enterEmailFirst') || 'Please enter your email address.'); return; }
                   if (!auth) { addToast('error', 'Firebase not initialized'); return; }
                   try {
                     await sendPasswordResetEmail(auth, email);
                     addToast('success', t('passwordResetSent') || 'Password reset email sent! Check your inbox.');
+                    setResetCooldown(60);
                     setMode('signin');
                   } catch (error: any) {
                     if (error?.code === 'auth/user-not-found') {
@@ -345,7 +354,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
                   }
                 }}
               >
-                {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : (t('confirm') || 'Confirm')}
+                {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : resetCooldown > 0 ? `Wait ${resetCooldown}s` : (t('confirm') || 'Confirm')}
               </Button>
             </div>
 
@@ -476,13 +485,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
                     type="button"
                     variant="netflix"
                     className="flex-1 h-9 text-xs"
-                    disabled={isSendingReset || !email}
+                    disabled={isSendingReset || !email || resetCooldown > 0}
                     onClick={async () => {
                       if (!auth || !email) return;
                       setIsSendingReset(true);
                       try {
                         await sendPasswordResetEmail(auth, email);
                         addToast('success', 'Password setup email sent! Check your inbox, then come back to sign in with your email.');
+                        setResetCooldown(60);
                         setShowSetPasswordPrompt(false);
                       } catch (err: any) {
                         addToast('error', err?.message || 'Failed to send email.');
@@ -491,7 +501,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
                       }
                     }}
                   >
-                    {isSendingReset ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Send password setup email'}
+                    {isSendingReset ? <Loader2 className="h-3 w-3 animate-spin" /> : resetCooldown > 0 ? `Wait ${resetCooldown}s` : 'Send password setup email'}
                   </Button>
                 </div>
               </div>
