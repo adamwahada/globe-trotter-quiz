@@ -434,7 +434,7 @@ export const AdminBans: React.FC = () => {
         )}
 
         {searchResults.length > 0 && (
-          <div className="mt-3 space-y-2 max-h-72 overflow-y-auto">
+          <div className="mt-3 space-y-2 max-h-72 overflow-y-auto custom-scrollbar">
             {searchResults.map((user) => (
               <div key={user.user_id} className="flex items-center gap-3 p-3 rounded-xl bg-background border border-border hover:border-primary/20 transition-colors">
                 <button
