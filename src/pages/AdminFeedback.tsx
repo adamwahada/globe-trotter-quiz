@@ -141,7 +141,7 @@ const CommentModal: React.FC<{ comment: string; onClose: () => void }> = ({ comm
         <MessageSquare className="h-5 w-5 text-primary" />
         <h3 className="font-display text-lg text-foreground">Full Comment</h3>
       </div>
-      <div className="overflow-y-auto flex-1">
+      <div className="overflow-y-auto flex-1 custom-scrollbar">
         <p className="text-foreground whitespace-pre-wrap leading-relaxed break-words">{comment}</p>
       </div>
     </div>
