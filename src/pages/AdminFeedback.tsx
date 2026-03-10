@@ -96,7 +96,7 @@ const EmailComposeModal: React.FC<{
         </div>
 
         {/* Recipients list */}
-        <div className="bg-secondary/60 rounded-xl p-3 max-h-40 overflow-y-auto space-y-1.5">
+        <div className="bg-secondary/60 rounded-xl p-3 max-h-40 overflow-y-auto custom-scrollbar space-y-1.5">
           {emails.map((email) => (
             <div key={email} className="flex items-center justify-between gap-2">
               <span className="text-sm font-mono text-foreground truncate">{email}</span>
