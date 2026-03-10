@@ -214,7 +214,7 @@ const BanHistoryModal: React.FC<{
           </div>
         </div>
 
-        <div className="overflow-y-auto flex-1 space-y-3 mt-4 pr-1">
+        <div className="overflow-y-auto flex-1 space-y-3 mt-4 pr-1 custom-scrollbar">
           {loading ? (
             Array.from({ length: 3 }).map((_, i) => (
               <div key={i} className="h-20 bg-muted rounded-xl animate-pulse" />
