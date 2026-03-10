@@ -190,7 +190,7 @@ export const SessionChat: React.FC<SessionChatProps> = ({ isOpen, onClose }) => 
         </div>
 
         {/* Messages area */}
-        <div className="flex-1 overflow-y-auto px-3 py-3 space-y-2 scrollbar-thin">
+        <div className="flex-1 overflow-y-auto px-3 py-3 space-y-2 custom-scrollbar">
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-6 py-8">
               <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">

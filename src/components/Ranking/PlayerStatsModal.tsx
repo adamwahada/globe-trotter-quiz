@@ -64,7 +64,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
           </Button>
         </div>
 
-        <div className="p-4 space-y-4 overflow-y-auto flex-1">
+        <div className="p-4 space-y-4 overflow-y-auto flex-1 custom-scrollbar">
           {/* Stats Grid */}
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-success/10 border border-success/30 rounded-lg p-3 text-center">

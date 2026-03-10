@@ -78,7 +78,7 @@ export const GameHistoryModal: React.FC<GameHistoryModalProps> = ({ isOpen, onCl
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto scrollbar-thin">
+        <div className="flex-1 overflow-y-auto custom-scrollbar">
           {loading ? (
             <div className="text-center py-8 text-muted-foreground">{t('loading')}</div>
           ) : sortedHistory.length === 0 ? (

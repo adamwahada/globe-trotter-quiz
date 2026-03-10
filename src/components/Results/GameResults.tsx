@@ -65,7 +65,7 @@ export const GameResults: React.FC<GameResultsProps> = ({ isOpen, players, onPla
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4">
       <div className="absolute inset-0 bg-background/90 backdrop-blur-md" />
       
-      <div className="relative w-full max-w-xl mx-4 bg-card border border-border rounded-xl shadow-2xl animate-scale-in overflow-hidden max-h-[90vh] overflow-y-auto">
+      <div className="relative w-full max-w-xl mx-4 bg-card border border-border rounded-xl shadow-2xl animate-scale-in overflow-hidden max-h-[90vh] overflow-y-auto custom-scrollbar">
         <div className="p-4">
           {/* Header */}
           <div className="text-center mb-4">

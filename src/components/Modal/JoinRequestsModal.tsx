@@ -138,7 +138,7 @@ export const JoinRequestsModal: React.FC<JoinRequestsModalProps> = ({
               </div>
 
               {/* Requests list */}
-              <div className="space-y-3 max-h-[400px] overflow-y-auto">
+              <div className="space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar">
                 {pendingRequests.length === 0 ? (
                   <div className="text-center py-8">
                     <Users className="h-12 w-12 text-muted-foreground/40 mx-auto mb-3" />

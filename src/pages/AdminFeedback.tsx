@@ -96,7 +96,7 @@ const EmailComposeModal: React.FC<{
         </div>
 
         {/* Recipients list */}
-        <div className="bg-secondary/60 rounded-xl p-3 max-h-40 overflow-y-auto space-y-1.5">
+        <div className="bg-secondary/60 rounded-xl p-3 max-h-40 overflow-y-auto custom-scrollbar space-y-1.5">
           {emails.map((email) => (
             <div key={email} className="flex items-center justify-between gap-2">
               <span className="text-sm font-mono text-foreground truncate">{email}</span>
@@ -141,7 +141,7 @@ const CommentModal: React.FC<{ comment: string; onClose: () => void }> = ({ comm
         <MessageSquare className="h-5 w-5 text-primary" />
         <h3 className="font-display text-lg text-foreground">Full Comment</h3>
       </div>
-      <div className="overflow-y-auto flex-1">
+      <div className="overflow-y-auto flex-1 custom-scrollbar">
         <p className="text-foreground whitespace-pre-wrap leading-relaxed break-words">{comment}</p>
       </div>
     </div>
@@ -195,7 +195,7 @@ const UserHistoryModal: React.FC<{
           <p className="text-muted-foreground text-sm mb-4">
             {username || 'Anonymous'}{email ? ` · ${email}` : ''}
           </p>
-          <div className="overflow-y-auto flex-1 space-y-3 pr-1">
+          <div className="overflow-y-auto flex-1 space-y-3 pr-1 custom-scrollbar">
             {loading ? (
               Array.from({ length: 3 }).map((_, i) => (
                 <div key={i} className="h-20 bg-muted rounded-lg animate-pulse" />
