@@ -231,7 +231,7 @@ export const CardModal: React.FC<CardModalProps> = ({
             </div>
 
             {/* Shop Tab */}
-            <TabsContent value="shop" className="mt-0 px-5 pb-5 pt-3 flex-1 overflow-y-auto scrollbar-hide">
+            <TabsContent value="shop" className="mt-0 px-5 pb-5 pt-3 flex-1 overflow-y-auto custom-scrollbar">
               <div className="space-y-4">
                 {groupedShopCards.map(({ key, icon: Icon, label, color, cards }) => (
                   <div key={key}>
