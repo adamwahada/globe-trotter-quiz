@@ -300,7 +300,7 @@ export const GuessModal: React.FC<GuessModalProps> = ({
         onClick={onClose}
       />
 
-      <div className="relative w-full max-w-xl mx-4 bg-card border border-border rounded-2xl shadow-2xl animate-scale-in overflow-hidden max-h-[90vh] overflow-y-auto">
+      <div className="relative w-full max-w-xl mx-4 bg-card border border-border rounded-2xl shadow-2xl animate-scale-in overflow-hidden max-h-[90vh] overflow-y-auto custom-scrollbar">
         <div className="p-6 sm:p-8">
           {/* Timer - full width at top */}
           <div className="mb-6 pr-12">

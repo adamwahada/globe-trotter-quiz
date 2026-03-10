@@ -282,7 +282,7 @@ export const CardModal: React.FC<CardModalProps> = ({
             </TabsContent>
 
             {/* My Cards Tab */}
-            <TabsContent value="myCards" className="mt-0 px-5 pb-5 pt-3 flex-1 overflow-y-auto scrollbar-hide">
+            <TabsContent value="myCards" className="mt-0 px-5 pb-5 pt-3 flex-1 overflow-y-auto custom-scrollbar">
               {/* Fusion Controls */}
               {canFuse && (
                 <div className="mb-3 p-2.5 bg-secondary/20 rounded-lg border border-border/40">

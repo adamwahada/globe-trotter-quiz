@@ -1663,7 +1663,7 @@ const GamePageInner = () => {
 
         {/* Leaderboard Sidebar - Desktop */}
         {showLeaderboard && (
-          <div className="hidden lg:block w-60 shrink-0 border border-border rounded-xl p-3 bg-card/50 backdrop-blur-sm overflow-y-auto animate-fade-in">
+          <div className="hidden lg:block w-60 shrink-0 border border-border rounded-xl p-3 bg-card/50 backdrop-blur-sm overflow-y-auto custom-scrollbar animate-fade-in">
             <Leaderboard
               players={players}
               currentPlayerId={currentPlayer?.id}

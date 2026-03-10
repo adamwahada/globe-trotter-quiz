@@ -200,7 +200,7 @@ export const UserMessagingModal: React.FC<UserMessagingModalProps> = ({ isOpen, 
         <div
           ref={scrollContainerRef}
           onScroll={handleScroll}
-          className="flex-1 overflow-y-auto px-4 py-4 space-y-3 scrollbar-thin relative"
+          className="flex-1 overflow-y-auto px-4 py-4 space-y-3 custom-scrollbar relative"
         >
           {loading ? (
             <div className="flex items-center justify-center h-full">

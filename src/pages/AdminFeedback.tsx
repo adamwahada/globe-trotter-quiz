@@ -195,7 +195,7 @@ const UserHistoryModal: React.FC<{
           <p className="text-muted-foreground text-sm mb-4">
             {username || 'Anonymous'}{email ? ` · ${email}` : ''}
           </p>
-          <div className="overflow-y-auto flex-1 space-y-3 pr-1">
+          <div className="overflow-y-auto flex-1 space-y-3 pr-1 custom-scrollbar">
             {loading ? (
               Array.from({ length: 3 }).map((_, i) => (
                 <div key={i} className="h-20 bg-muted rounded-lg animate-pulse" />

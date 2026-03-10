@@ -305,7 +305,7 @@ export const AdminMessages: React.FC = () => {
             <div
               ref={messagesContainerRef}
               onScroll={handleScroll}
-              className="flex-1 overflow-y-auto px-4 py-4 space-y-3 relative"
+              className="flex-1 overflow-y-auto px-4 py-4 space-y-3 custom-scrollbar relative"
             >
               {loadingMsgs ? (
                 <div className="flex items-center justify-center h-full">

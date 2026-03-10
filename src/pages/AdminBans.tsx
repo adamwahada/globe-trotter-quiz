@@ -507,7 +507,7 @@ export const AdminBans: React.FC = () => {
             <p className="text-xs text-muted-foreground">No active bans at the moment</p>
           </div>
         ) : (
-          <div className="space-y-3 overflow-y-auto">
+          <div className="space-y-3 overflow-y-auto custom-scrollbar">
             {bans.map((ban) => {
               const isExpired = ban.expires_at && new Date(ban.expires_at) <= new Date();
               const isActive = ban.is_active && !isExpired;
