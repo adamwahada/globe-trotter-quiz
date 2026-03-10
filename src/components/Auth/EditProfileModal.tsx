@@ -11,6 +11,7 @@ import {
   reauthenticateWithCredential,
   updatePassword,
 } from '@/lib/firebase';
+import { validateUsername, MAX_USERNAME_LENGTH } from '@/utils/inputValidation';
 
 interface EditProfileModalProps {
   isOpen: boolean;
