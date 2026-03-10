@@ -174,13 +174,18 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium text-foreground mb-2 block">{t('username')}</label>
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl bg-secondary/50 border border-border text-foreground placeholder:text-muted-foreground focus:border-primary outline-none text-sm"
-                maxLength={20}
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value.slice(0, MAX_USERNAME_LENGTH))}
+                  className="w-full px-4 py-2.5 pr-16 rounded-xl bg-secondary/50 border border-border text-foreground placeholder:text-muted-foreground focus:border-primary outline-none text-sm"
+                  maxLength={MAX_USERNAME_LENGTH}
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                  {username.length}/{MAX_USERNAME_LENGTH}
+                </span>
+              </div>
             </div>
             <button
               onClick={handleSaveUsername}
