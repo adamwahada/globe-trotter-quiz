@@ -216,7 +216,7 @@ export const AdminMessages: React.FC = () => {
 
       <div className="flex gap-4 flex-1 min-h-0">
         {/* Conversations list */}
-        <div className={`flex flex-col gap-2 overflow-y-auto ${selectedConv ? 'hidden lg:flex lg:w-72 flex-shrink-0' : 'w-full'}`}>
+        <div className={`flex flex-col gap-2 overflow-y-auto custom-scrollbar ${selectedConv ? 'hidden lg:flex lg:w-72 flex-shrink-0' : 'w-full'}`}>
           {loadingConvs ? (
             Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="h-20 bg-muted rounded-xl animate-pulse" />
