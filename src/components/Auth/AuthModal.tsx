@@ -157,6 +157,19 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
           addToast('error', 'Passwords do not match');
           return;
         }
+
+        // Check username uniqueness before creating account
+        const { data: existingUsername } = await supabase
+          .from('usernames')
+          .select('id')
+          .ilike('username', username.trim())
+          .maybeSingle();
+
+        if (existingUsername) {
+          addToast('error', t('usernameAlreadyUsed') || 'This username is already taken. Please choose another one.');
+          return;
+        }
+
         await signUp(email, password, username.trim());
         addToast('success', 'Account created successfully!');
       } else {
