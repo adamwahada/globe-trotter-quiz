@@ -11,6 +11,7 @@ import {
   reauthenticateWithCredential,
   updatePassword,
 } from '@/lib/firebase';
+import { validateUsername, MAX_USERNAME_LENGTH } from '@/utils/inputValidation';
 
 interface EditProfileModalProps {
   isOpen: boolean;
@@ -60,13 +61,20 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
       return;
     }
 
+    // Validate format
+    const validation = validateUsername(trimmed);
+    if (!validation.valid) {
+      addToast('error', validation.error || 'Invalid username');
+      return;
+    }
+
     setLoading(true);
     try {
-      // Check uniqueness
+      // Check uniqueness (case-insensitive)
       const { data: existing } = await supabase
         .from('usernames')
         .select('id')
-        .eq('username', trimmed)
+        .ilike('username', trimmed)
         .neq('user_id', user.id)
         .maybeSingle();
 
@@ -166,13 +174,18 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium text-foreground mb-2 block">{t('username')}</label>
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl bg-secondary/50 border border-border text-foreground placeholder:text-muted-foreground focus:border-primary outline-none text-sm"
-                maxLength={20}
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value.slice(0, MAX_USERNAME_LENGTH))}
+                  className="w-full px-4 py-2.5 pr-16 rounded-xl bg-secondary/50 border border-border text-foreground placeholder:text-muted-foreground focus:border-primary outline-none text-sm"
+                  maxLength={MAX_USERNAME_LENGTH}
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                  {username.length}/{MAX_USERNAME_LENGTH}
+                </span>
+              </div>
             </div>
             <button
               onClick={handleSaveUsername}

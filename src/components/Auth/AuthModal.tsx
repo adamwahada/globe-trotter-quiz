@@ -19,6 +19,7 @@ import {
 } from '@/lib/firebase';
 import type { AuthCredential } from '@/lib/firebase';
 import { validateUsername, MAX_USERNAME_LENGTH } from '@/utils/inputValidation';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -157,6 +158,19 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
           addToast('error', 'Passwords do not match');
           return;
         }
+
+        // Check username uniqueness before creating account
+        const { data: existingUsername } = await supabase
+          .from('usernames')
+          .select('id')
+          .ilike('username', username.trim())
+          .maybeSingle();
+
+        if (existingUsername) {
+          addToast('error', t('usernameAlreadyUsed') || 'This username is already taken. Please choose another one.');
+          return;
+        }
+
         await signUp(email, password, username.trim());
         addToast('success', 'Account created successfully!');
       } else {
@@ -422,8 +436,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
                   placeholder={t('username')}
                   required
                   maxLength={MAX_USERNAME_LENGTH}
-                  className="w-full pl-11 pr-4 py-3 bg-secondary border border-border rounded-lg focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-foreground placeholder:text-muted-foreground"
+                  className="w-full pl-11 pr-12 py-3 bg-secondary border border-border rounded-lg focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-foreground placeholder:text-muted-foreground"
                 />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                  {username.length}/{MAX_USERNAME_LENGTH}
+                </span>
               </div>
             )}
 

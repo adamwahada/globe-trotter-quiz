@@ -203,7 +203,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         stats: { totalGames: 0, wins: 0, avgScore: 0 },
       }));
 
-      // Store username in Supabase for uniqueness
+      // Store username in Supabase for uniqueness (case-insensitive unique index enforces at DB level)
       await supabase
         .from('usernames')
         .upsert({ user_id: firebaseUser.uid, username }, { onConflict: 'user_id' });
