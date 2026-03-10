@@ -61,13 +61,20 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
       return;
     }
 
+    // Validate format
+    const validation = validateUsername(trimmed);
+    if (!validation.valid) {
+      addToast('error', validation.error || 'Invalid username');
+      return;
+    }
+
     setLoading(true);
     try {
-      // Check uniqueness
+      // Check uniqueness (case-insensitive)
       const { data: existing } = await supabase
         .from('usernames')
         .select('id')
-        .eq('username', trimmed)
+        .ilike('username', trimmed)
         .neq('user_id', user.id)
         .maybeSingle();
 
