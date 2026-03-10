@@ -19,6 +19,7 @@ import {
 } from '@/lib/firebase';
 import type { AuthCredential } from '@/lib/firebase';
 import { validateUsername, MAX_USERNAME_LENGTH } from '@/utils/inputValidation';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AuthModalProps {
   isOpen: boolean;
