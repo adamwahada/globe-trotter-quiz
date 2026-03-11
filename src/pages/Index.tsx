@@ -336,7 +336,7 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background relative overflow-x-hidden">
+    <div className="min-h-screen bg-background relative overflow-x-hidden custom-scrollbar-slim">
       {/* Background World Map Image */}
       <div
         className="fixed inset-0 bg-cover bg-center"
