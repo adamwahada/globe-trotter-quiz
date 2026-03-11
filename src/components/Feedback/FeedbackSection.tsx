@@ -92,7 +92,7 @@ export const FeedbackSection: React.FC<FeedbackSectionProps> = ({ onLoginRequest
       } else {
         message = "We really appreciate that you enjoy the experience! We hope upcoming feature improvements will make it even better.";
       }
-      addToast('success', message);
+      addToast('success', message, 10000);
       setHidden(true);
     } catch (error) {
       console.error('Failed to submit feedback:', error);
