@@ -82,7 +82,17 @@ export const FeedbackSection: React.FC<FeedbackSectionProps> = ({ onLoginRequest
         throw new Error(data.error || 'Failed to submit feedback');
       }
       localStorage.setItem(`${FEEDBACK_COOLDOWN_PREFIX}${user?.id}`, Date.now().toString());
-      addToast('success', t('feedbackThankYou'));
+      
+      // Personalized message based on rating
+      let message: string;
+      if (rating <= 2) {
+        message = "We're sorry to hear that. We're actively working on improvements and truly value our community's input to deliver the best experience possible.";
+      } else if (rating === 3) {
+        message = "Thank you for your feedback! Your input helps us keep improving.";
+      } else {
+        message = "We really appreciate that you enjoy the experience! We hope upcoming feature improvements will make it even better.";
+      }
+      addToast('success', message);
       setHidden(true);
     } catch (error) {
       console.error('Failed to submit feedback:', error);
