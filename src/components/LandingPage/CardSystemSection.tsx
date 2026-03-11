@@ -123,10 +123,14 @@ export const CardSystemSection: React.FC = () => {
         </div>
       </div>
 
-      {/* Footer hint */}
-      <p className="relative mt-14 text-xs text-muted-foreground/40 tracking-widest uppercase">
-        {t('cardSystemHow' as any)}
-      </p>
+      {/* How it works note */}
+      <div className="relative mt-14 max-w-lg mx-auto px-4">
+        <div className="rounded-xl border border-primary/20 bg-primary/5 backdrop-blur-sm px-6 py-4 text-center">
+          <p className="text-sm text-muted-foreground leading-relaxed italic">
+            {t('cardSystemHow' as any)}
+          </p>
+        </div>
+      </div>
     </section>
   );
 };
