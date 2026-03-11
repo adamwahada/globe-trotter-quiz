@@ -191,6 +191,25 @@
   }
 }
 
+/* Slim red scrollbar for landing page */
+.custom-scrollbar-slim::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar-slim::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar-slim::-webkit-scrollbar-thumb {
+  background: hsl(var(--primary) / 0.3);
+  border-radius: 9999px;
+}
+.custom-scrollbar-slim::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary) / 0.5);
+}
+.custom-scrollbar-slim {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--primary) / 0.3) transparent;
+}
+
 @keyframes toast-slide-in {
   from {
     transform: translateX(100%);
