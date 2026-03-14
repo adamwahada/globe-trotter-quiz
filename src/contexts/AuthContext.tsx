@@ -188,20 +188,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (!auth) throw new Error('Firebase not initialized');
     setIsLoading(true);
     try {
-      const { user: firebaseUser } = await createUserWithEmailAndPassword(auth, email, password);
-
-      // Update display name
-      await firebaseUpdateProfile(firebaseUser, { displayName: username });
-
-      // Store initial user data
+      // Pre-store user data BEFORE creating account so onAuthStateChanged picks up the chosen username
       const avatar = avatars[Math.floor(Math.random() * avatars.length)];
       const color = colors[Math.floor(Math.random() * colors.length)];
+
+      const { user: firebaseUser } = await createUserWithEmailAndPassword(auth, email, password);
+
+      // Store in localStorage immediately (before onAuthStateChanged can read it)
       localStorage.setItem(`user_${firebaseUser.uid}`, JSON.stringify({
         username,
         avatar,
         color,
         stats: { totalGames: 0, wins: 0, avgScore: 0 },
       }));
+
+      // Update Firebase display name
+      await firebaseUpdateProfile(firebaseUser, { displayName: username });
+
+      // Force update the user state with the correct username
+      setUser(mapFirebaseUser(firebaseUser));
 
       // Store username in Supabase for uniqueness (case-insensitive unique index enforces at DB level)
       await supabase
