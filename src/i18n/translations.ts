@@ -509,6 +509,17 @@ export const translations = {
     rankUp: '↑ {n}',
     rankDown: '↓ {n}',
     rankSame: '—',
+
+    // Daily Roll
+    dailyRollTooltip: 'Daily Bonus Roll',
+    dailyRollTitle: 'Daily Bonus',
+    dailyRollSubtitle: 'Roll once a day for a chance to win rewards!',
+    dailyRollAction: 'Roll Now!',
+    dailyRolling: 'Rolling...',
+    dailyRollWon: '🎉 You won! Bonus coming soon...',
+    dailyRollUsed: "You've already rolled today!",
+    dailyRollResets: 'Resets in',
+    dailyRollComingSoon: 'Bonuses coming soon — stay tuned!',
   },
 
   fr: {
@@ -1019,6 +1030,17 @@ export const translations = {
     rankUp: '↑ {n}',
     rankDown: '↓ {n}',
     rankSame: '—',
+
+    // Daily Roll
+    dailyRollTooltip: 'Bonus Quotidien',
+    dailyRollTitle: 'Bonus du Jour',
+    dailyRollSubtitle: 'Lancez une fois par jour pour gagner des récompenses !',
+    dailyRollAction: 'Lancer !',
+    dailyRolling: 'Lancement...',
+    dailyRollWon: '🎉 Vous avez gagné ! Bonus bientôt disponible...',
+    dailyRollUsed: 'Vous avez déjà lancé aujourd\'hui !',
+    dailyRollResets: 'Réinitialisation dans',
+    dailyRollComingSoon: 'Les bonus arrivent bientôt — restez connecté !',
   },
 
   ar: {
@@ -1529,6 +1551,17 @@ export const translations = {
     rankUp: '↑ {n}',
     rankDown: '↓ {n}',
     rankSame: '—',
+
+    // Daily Roll
+    dailyRollTooltip: 'مكافأة يومية',
+    dailyRollTitle: 'المكافأة اليومية',
+    dailyRollSubtitle: 'ألقِ مرة واحدة يومياً للفوز بمكافآت!',
+    dailyRollAction: 'ألقِ الآن!',
+    dailyRolling: 'جاري الإلقاء...',
+    dailyRollWon: '🎉 لقد فزت! المكافآت قادمة قريباً...',
+    dailyRollUsed: 'لقد ألقيت بالفعل اليوم!',
+    dailyRollResets: 'يُعاد في',
+    dailyRollComingSoon: 'المكافآت قادمة قريباً — ترقبوا!',
   },
 };
 

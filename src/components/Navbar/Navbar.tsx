@@ -9,6 +9,7 @@ import { GameTooltip } from '@/components/Tooltip/GameTooltip';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { MessageIcon } from '@/components/Messaging/MessageIcon';
+import { DailyRollButton } from '@/components/DailyRoll/DailyRollButton';
 
 interface NavbarProps {
   variant?: 'default' | 'game';
@@ -45,6 +46,7 @@ export const Navbar: React.FC<NavbarProps> = ({ variant = 'default', rightConten
           
           <div className="flex items-center gap-2">
             <SoundToggle />
+            <DailyRollButton />
             <MessageIcon />
             <LanguageSwitcher />
             
