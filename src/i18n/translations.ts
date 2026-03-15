@@ -1030,6 +1030,17 @@ export const translations = {
     rankUp: '↑ {n}',
     rankDown: '↓ {n}',
     rankSame: '—',
+
+    // Daily Roll
+    dailyRollTooltip: 'Bonus Quotidien',
+    dailyRollTitle: 'Bonus du Jour',
+    dailyRollSubtitle: 'Lancez une fois par jour pour gagner des récompenses !',
+    dailyRollAction: 'Lancer !',
+    dailyRolling: 'Lancement...',
+    dailyRollWon: '🎉 Vous avez gagné ! Bonus bientôt disponible...',
+    dailyRollUsed: 'Vous avez déjà lancé aujourd\'hui !',
+    dailyRollResets: 'Réinitialisation dans',
+    dailyRollComingSoon: 'Les bonus arrivent bientôt — restez connecté !',
   },
 
   ar: {
