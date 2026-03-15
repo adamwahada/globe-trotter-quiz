@@ -9,6 +9,7 @@ import { GameTooltip } from '@/components/Tooltip/GameTooltip';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { MessageIcon } from '@/components/Messaging/MessageIcon';
+import { DailyRollButton } from '@/components/DailyRoll/DailyRollButton';
 
 interface NavbarProps {
   variant?: 'default' | 'game';
