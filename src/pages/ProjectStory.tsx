@@ -1,6 +1,6 @@
 import React from 'react';
 import { Navbar } from '@/components/Navbar/Navbar';
-import { Github, Linkedin, ArrowLeft, Heart, Sparkles, Users, Gamepad2 } from 'lucide-react';
+import { Github, Linkedin, ArrowLeft, Heart, Sparkles, Users, Gamepad2, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { GameTooltip } from '@/components/Tooltip/GameTooltip';
 import { useNavigate } from 'react-router-dom';
