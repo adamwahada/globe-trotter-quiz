@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Heart, Gamepad2, Sparkles, Users, Linkedin, Github, Zap } from 'lucide-react';
+import { X, Heart, Gamepad2, Sparkles, Users, Linkedin, Github, Zap, HelpCircle } from 'lucide-react';
 import { GameTooltip } from '@/components/Tooltip/GameTooltip';
 
 const LINKEDIN_URL = 'https://www.linkedin.com/in/adam-wahada-1828aa266/';
