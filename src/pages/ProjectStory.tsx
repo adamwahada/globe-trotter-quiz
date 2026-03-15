@@ -72,6 +72,18 @@ const ProjectStory = () => {
             </p>
           </div>
 
+          <div className="card-netflix p-8 space-y-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                <HelpCircle className="h-5 w-5 text-primary" />
+              </div>
+              <h2 className="text-2xl font-display text-foreground">Need Help?</h2>
+            </div>
+            <p className="text-muted-foreground leading-relaxed text-lg">
+              All game rules and modes are explained in the "How to Play" section. If you have more questions, feel free to reach out to the admin—I'm happy to help!
+            </p>
+          </div>
+
           {/* Connect section */}
           <div className="card-netflix p-8 text-center space-y-6">
             <div className="flex items-center justify-center gap-3 mb-2">

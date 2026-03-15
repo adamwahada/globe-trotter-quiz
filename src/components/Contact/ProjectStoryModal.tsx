@@ -37,6 +37,7 @@ export const ProjectStoryModal: React.FC<ProjectStoryModalProps> = ({ isOpen, on
     { icon: Heart, title: 'The Beginning', text: 'My interest in geography and maps started at a young age. What began as a small idea eventually grew into a full application that I designed and built from scratch.' },
     { icon: Gamepad2, title: 'The Vision', text: 'The app lets players challenge friends in quizzes, combining learning with social interaction in a fun way.' },
     { icon: Sparkles, title: "What's Next", text: "I plan to add new game modes in the future, inspired by user suggestions. Feedback and collaboration are always welcome." },
+    { icon: HelpCircle, title: 'Need Help?', text: 'All game rules and modes are explained in the "How to Play" section. If you have more questions, feel free to reach out to the admin—I\'m happy to help!' },
     { icon: Users, title: 'Connect', text: null },
   ];
 
