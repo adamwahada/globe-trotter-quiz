@@ -48,17 +48,33 @@ const colors = ['#E50914', '#1DB954', '#4169E1', '#FF6B35', '#9B59B6', '#00CED1'
 // 6 hours inactivity timeout for session expiry
 const INACTIVITY_TIMEOUT_MS = 6 * 60 * 60 * 1000;
 const ACTIVITY_STORAGE_KEY = 'worldquiz_last_activity';
+const PENDING_SIGNUP_USERNAME_KEY = 'worldquiz_pending_signup_username';
 
 // Convert Firebase user to our User type
 const mapFirebaseUser = (firebaseUser: FirebaseUser): User => {
   // Try to get stored user data from localStorage
   const storedData = localStorage.getItem(`user_${firebaseUser.uid}`);
-  const parsedData = storedData ? JSON.parse(storedData) : {};
+  let parsedData: any = {};
+
+  if (storedData) {
+    try {
+      parsedData = JSON.parse(storedData);
+    } catch {
+      parsedData = {};
+    }
+  }
+
+  const pendingSignupUsername = localStorage.getItem(PENDING_SIGNUP_USERNAME_KEY)?.trim();
 
   return {
     id: firebaseUser.uid,
     email: firebaseUser.email || '',
-    username: firebaseUser.displayName || parsedData.username || firebaseUser.email?.split('@')[0] || 'Player',
+    username:
+      parsedData.username?.trim() ||
+      pendingSignupUsername ||
+      firebaseUser.displayName ||
+      firebaseUser.email?.split('@')[0] ||
+      'Player',
     avatar: parsedData.avatar || avatars[Math.floor(Math.random() * avatars.length)],
     color: parsedData.color || colors[Math.floor(Math.random() * colors.length)],
     stats: parsedData.stats || {
@@ -187,31 +203,39 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const signUp = async (email: string, password: string, username: string) => {
     if (!auth) throw new Error('Firebase not initialized');
     setIsLoading(true);
+
+    const normalizedUsername = username.trim();
+    localStorage.setItem(PENDING_SIGNUP_USERNAME_KEY, normalizedUsername);
+
     try {
-      // Pre-store user data BEFORE creating account so onAuthStateChanged picks up the chosen username
       const avatar = avatars[Math.floor(Math.random() * avatars.length)];
       const color = colors[Math.floor(Math.random() * colors.length)];
 
       const { user: firebaseUser } = await createUserWithEmailAndPassword(auth, email, password);
 
-      // Store in localStorage immediately (before onAuthStateChanged can read it)
+      // Persist chosen username immediately for this uid
       localStorage.setItem(`user_${firebaseUser.uid}`, JSON.stringify({
-        username,
+        username: normalizedUsername,
         avatar,
         color,
         stats: { totalGames: 0, wins: 0, avgScore: 0 },
       }));
 
-      // Update Firebase display name
-      await firebaseUpdateProfile(firebaseUser, { displayName: username });
+      // Keep Firebase profile aligned with the chosen username
+      await firebaseUpdateProfile(firebaseUser, { displayName: normalizedUsername });
 
-      // Force update the user state with the correct username
+      // Force immediate in-app state sync
       setUser(mapFirebaseUser(firebaseUser));
 
-      // Store username in Supabase for uniqueness (case-insensitive unique index enforces at DB level)
+      // Store username for uniqueness checks
       await supabase
         .from('usernames')
-        .upsert({ user_id: firebaseUser.uid, username }, { onConflict: 'user_id' });
+        .upsert({ user_id: firebaseUser.uid, username: normalizedUsername }, { onConflict: 'user_id' });
+
+      localStorage.removeItem(PENDING_SIGNUP_USERNAME_KEY);
+    } catch (error) {
+      localStorage.removeItem(PENDING_SIGNUP_USERNAME_KEY);
+      throw error;
     } finally {
       setIsLoading(false);
     }

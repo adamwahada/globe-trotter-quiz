@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Eye, EyeOff, Loader2, User, Lock, ChevronLeft } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -10,6 +10,7 @@ import {
   EmailAuthProvider,
   reauthenticateWithCredential,
   updatePassword,
+  updateProfile as firebaseUpdateProfile,
 } from '@/lib/firebase';
 import { validateUsername, MAX_USERNAME_LENGTH } from '@/utils/inputValidation';
 
@@ -34,6 +35,12 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
   const [showNewPw, setShowNewPw] = useState(false);
   const [showConfirmPw, setShowConfirmPw] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && user) {
+      setUsername(user.username);
+    }
+  }, [isOpen, user?.username]);
 
   if (!isOpen || !user) return null;
 
@@ -84,7 +91,12 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
         return;
       }
 
-      // Upsert username record
+      // Keep auth profile and database in sync with chosen username
+      const firebaseUser = auth?.currentUser;
+      if (firebaseUser) {
+        await firebaseUpdateProfile(firebaseUser, { displayName: trimmed });
+      }
+
       await supabase
         .from('usernames')
         .upsert({ user_id: user.id, username: trimmed, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
