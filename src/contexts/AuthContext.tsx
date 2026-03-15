@@ -48,17 +48,33 @@ const colors = ['#E50914', '#1DB954', '#4169E1', '#FF6B35', '#9B59B6', '#00CED1'
 // 6 hours inactivity timeout for session expiry
 const INACTIVITY_TIMEOUT_MS = 6 * 60 * 60 * 1000;
 const ACTIVITY_STORAGE_KEY = 'worldquiz_last_activity';
+const PENDING_SIGNUP_USERNAME_KEY = 'worldquiz_pending_signup_username';
 
 // Convert Firebase user to our User type
 const mapFirebaseUser = (firebaseUser: FirebaseUser): User => {
   // Try to get stored user data from localStorage
   const storedData = localStorage.getItem(`user_${firebaseUser.uid}`);
-  const parsedData = storedData ? JSON.parse(storedData) : {};
+  let parsedData: any = {};
+
+  if (storedData) {
+    try {
+      parsedData = JSON.parse(storedData);
+    } catch {
+      parsedData = {};
+    }
+  }
+
+  const pendingSignupUsername = localStorage.getItem(PENDING_SIGNUP_USERNAME_KEY)?.trim();
 
   return {
     id: firebaseUser.uid,
     email: firebaseUser.email || '',
-    username: firebaseUser.displayName || parsedData.username || firebaseUser.email?.split('@')[0] || 'Player',
+    username:
+      parsedData.username?.trim() ||
+      pendingSignupUsername ||
+      firebaseUser.displayName ||
+      firebaseUser.email?.split('@')[0] ||
+      'Player',
     avatar: parsedData.avatar || avatars[Math.floor(Math.random() * avatars.length)],
     color: parsedData.color || colors[Math.floor(Math.random() * colors.length)],
     stats: parsedData.stats || {

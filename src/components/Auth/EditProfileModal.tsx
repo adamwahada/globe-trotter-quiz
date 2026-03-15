@@ -10,6 +10,7 @@ import {
   EmailAuthProvider,
   reauthenticateWithCredential,
   updatePassword,
+  updateProfile as firebaseUpdateProfile,
 } from '@/lib/firebase';
 import { validateUsername, MAX_USERNAME_LENGTH } from '@/utils/inputValidation';
 
