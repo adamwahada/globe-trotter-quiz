@@ -36,6 +36,12 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
   const [showConfirmPw, setShowConfirmPw] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    if (isOpen && user) {
+      setUsername(user.username);
+    }
+  }, [isOpen, user?.username]);
+
   if (!isOpen || !user) return null;
 
   const resetState = () => {
