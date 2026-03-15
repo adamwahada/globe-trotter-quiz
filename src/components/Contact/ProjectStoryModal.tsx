@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Heart, Gamepad2, Sparkles, Users, Linkedin, Github, Zap } from 'lucide-react';
+import { X, Heart, Gamepad2, Sparkles, Users, Linkedin, Github, Zap, HelpCircle } from 'lucide-react';
 import { GameTooltip } from '@/components/Tooltip/GameTooltip';
 
 const LINKEDIN_URL = 'https://www.linkedin.com/in/adam-wahada-1828aa266/';
@@ -19,7 +19,7 @@ export const ProjectStoryModal: React.FC<ProjectStoryModalProps> = ({ isOpen, on
       requestAnimationFrame(() => setAnimateIn(true));
       setActiveSection(0);
       const interval = setInterval(() => {
-        setActiveSection(prev => (prev < 3 ? prev + 1 : prev));
+        setActiveSection(prev => (prev < 4 ? prev + 1 : prev));
       }, 400);
       return () => clearInterval(interval);
     } else {
@@ -34,9 +34,10 @@ export const ProjectStoryModal: React.FC<ProjectStoryModalProps> = ({ isOpen, on
   };
 
   const sections = [
-    { icon: Heart, title: 'The Beginning', text: 'My passion for world maps and geography started at a young age. This project began as a small idea and quickly grew into a full-fledged application that I built from scratch.' },
+    { icon: Heart, title: 'The Beginning', text: 'My interest in geography and maps started at a young age. What began as a small idea eventually grew into a full application that I designed and built from scratch.' },
     { icon: Gamepad2, title: 'The Vision', text: 'The app lets players challenge friends in quizzes, combining learning with social interaction in a fun way.' },
     { icon: Sparkles, title: "What's Next", text: "I plan to add new game modes in the future, inspired by user suggestions. Feedback and collaboration are always welcome." },
+    { icon: HelpCircle, title: 'Need Help?', text: 'All game rules and modes are explained in the "How to Play" section. If you have more questions, feel free to reach out to the admin—I\'m happy to help!' },
     { icon: Users, title: 'Connect', text: null },
   ];
 

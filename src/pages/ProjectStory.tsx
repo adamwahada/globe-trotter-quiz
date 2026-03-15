@@ -1,6 +1,6 @@
 import React from 'react';
 import { Navbar } from '@/components/Navbar/Navbar';
-import { Github, Linkedin, ArrowLeft, Heart, Sparkles, Users, Gamepad2 } from 'lucide-react';
+import { Github, Linkedin, ArrowLeft, Heart, Sparkles, Users, Gamepad2, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { GameTooltip } from '@/components/Tooltip/GameTooltip';
 import { useNavigate } from 'react-router-dom';
@@ -44,7 +44,7 @@ const ProjectStory = () => {
               <h2 className="text-2xl font-display text-foreground">The Beginning</h2>
             </div>
             <p className="text-muted-foreground leading-relaxed text-lg">
-              My passion for world maps and geography started at a young age. This project began as a small idea and quickly grew into a full-fledged application that I built from scratch.
+              My interest in geography and maps started at a young age. What began as a small idea eventually grew into a full application that I designed and built from scratch.
             </p>
           </div>
 
@@ -69,6 +69,18 @@ const ProjectStory = () => {
             </div>
             <p className="text-muted-foreground leading-relaxed text-lg">
               I plan to add new game modes in the future, inspired by user suggestions. Feedback and collaboration are always welcome—if you're interested in my work or want to share ideas, feel free to reach out.
+            </p>
+          </div>
+
+          <div className="card-netflix p-8 space-y-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                <HelpCircle className="h-5 w-5 text-primary" />
+              </div>
+              <h2 className="text-2xl font-display text-foreground">Need Help?</h2>
+            </div>
+            <p className="text-muted-foreground leading-relaxed text-lg">
+              All game rules and modes are explained in the "How to Play" section. If you have more questions, feel free to reach out to the admin—I'm happy to help!
             </p>
           </div>
 
