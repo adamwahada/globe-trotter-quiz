@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Eye, EyeOff, Loader2, User, Lock, ChevronLeft } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
