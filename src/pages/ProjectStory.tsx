@@ -44,7 +44,7 @@ const ProjectStory = () => {
               <h2 className="text-2xl font-display text-foreground">The Beginning</h2>
             </div>
             <p className="text-muted-foreground leading-relaxed text-lg">
-              My passion for world maps and geography started at a young age. This project began as a small idea and quickly grew into a full-fledged application that I built from scratch.
+              My interest in geography and maps started at a young age. What began as a small idea eventually grew into a full application that I designed and built from scratch.
             </p>
           </div>
 
