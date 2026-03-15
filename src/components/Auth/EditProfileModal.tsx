@@ -91,7 +91,12 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
         return;
       }
 
-      // Upsert username record
+      // Keep auth profile and database in sync with chosen username
+      const firebaseUser = auth?.currentUser;
+      if (firebaseUser) {
+        await firebaseUpdateProfile(firebaseUser, { displayName: trimmed });
+      }
+
       await supabase
         .from('usernames')
         .upsert({ user_id: user.id, username: trimmed, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });

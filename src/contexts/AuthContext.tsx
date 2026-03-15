@@ -203,31 +203,39 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const signUp = async (email: string, password: string, username: string) => {
     if (!auth) throw new Error('Firebase not initialized');
     setIsLoading(true);
+
+    const normalizedUsername = username.trim();
+    localStorage.setItem(PENDING_SIGNUP_USERNAME_KEY, normalizedUsername);
+
     try {
-      // Pre-store user data BEFORE creating account so onAuthStateChanged picks up the chosen username
       const avatar = avatars[Math.floor(Math.random() * avatars.length)];
       const color = colors[Math.floor(Math.random() * colors.length)];
 
       const { user: firebaseUser } = await createUserWithEmailAndPassword(auth, email, password);
 
-      // Store in localStorage immediately (before onAuthStateChanged can read it)
+      // Persist chosen username immediately for this uid
       localStorage.setItem(`user_${firebaseUser.uid}`, JSON.stringify({
-        username,
+        username: normalizedUsername,
         avatar,
         color,
         stats: { totalGames: 0, wins: 0, avgScore: 0 },
       }));
 
-      // Update Firebase display name
-      await firebaseUpdateProfile(firebaseUser, { displayName: username });
+      // Keep Firebase profile aligned with the chosen username
+      await firebaseUpdateProfile(firebaseUser, { displayName: normalizedUsername });
 
-      // Force update the user state with the correct username
+      // Force immediate in-app state sync
       setUser(mapFirebaseUser(firebaseUser));
 
-      // Store username in Supabase for uniqueness (case-insensitive unique index enforces at DB level)
+      // Store username for uniqueness checks
       await supabase
         .from('usernames')
-        .upsert({ user_id: firebaseUser.uid, username }, { onConflict: 'user_id' });
+        .upsert({ user_id: firebaseUser.uid, username: normalizedUsername }, { onConflict: 'user_id' });
+
+      localStorage.removeItem(PENDING_SIGNUP_USERNAME_KEY);
+    } catch (error) {
+      localStorage.removeItem(PENDING_SIGNUP_USERNAME_KEY);
+      throw error;
     } finally {
       setIsLoading(false);
     }
