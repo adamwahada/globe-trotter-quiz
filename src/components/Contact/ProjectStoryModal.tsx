@@ -19,7 +19,7 @@ export const ProjectStoryModal: React.FC<ProjectStoryModalProps> = ({ isOpen, on
       requestAnimationFrame(() => setAnimateIn(true));
       setActiveSection(0);
       const interval = setInterval(() => {
-        setActiveSection(prev => (prev < 3 ? prev + 1 : prev));
+        setActiveSection(prev => (prev < 4 ? prev + 1 : prev));
       }, 400);
       return () => clearInterval(interval);
     } else {
