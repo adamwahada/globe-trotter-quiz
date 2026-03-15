@@ -1551,6 +1551,17 @@ export const translations = {
     rankUp: '↑ {n}',
     rankDown: '↓ {n}',
     rankSame: '—',
+
+    // Daily Roll
+    dailyRollTooltip: 'مكافأة يومية',
+    dailyRollTitle: 'المكافأة اليومية',
+    dailyRollSubtitle: 'ألقِ مرة واحدة يومياً للفوز بمكافآت!',
+    dailyRollAction: 'ألقِ الآن!',
+    dailyRolling: 'جاري الإلقاء...',
+    dailyRollWon: '🎉 لقد فزت! المكافآت قادمة قريباً...',
+    dailyRollUsed: 'لقد ألقيت بالفعل اليوم!',
+    dailyRollResets: 'يُعاد في',
+    dailyRollComingSoon: 'المكافآت قادمة قريباً — ترقبوا!',
   },
 };
 

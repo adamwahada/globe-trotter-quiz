@@ -46,6 +46,7 @@ export const Navbar: React.FC<NavbarProps> = ({ variant = 'default', rightConten
           
           <div className="flex items-center gap-2">
             <SoundToggle />
+            <DailyRollButton />
             <MessageIcon />
             <LanguageSwitcher />
             
