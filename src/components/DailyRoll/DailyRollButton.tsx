@@ -56,7 +56,7 @@ export const DailyRollButton: React.FC = () => {
 
   if (!isAuthenticated) return null;
 
-  const handleRollComplete = () => {
+  const handleRollComplete = (_prizeIndex: number) => {
     if (user?.id) {
       markRolledToday(user.id);
       setAlreadyRolled(true);
