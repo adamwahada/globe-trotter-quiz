@@ -77,30 +77,34 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
 
     setLoading(true);
     try {
-      // Check uniqueness (case-insensitive)
-      const { data: existing } = await supabase
-        .from('usernames')
-        .select('id')
-        .ilike('username', trimmed)
-        .neq('user_id', user.id)
-        .maybeSingle();
+      // Keep auth profile in sync with chosen username
+      const firebaseUser = auth?.currentUser;
+      if (!firebaseUser) throw new Error('No user');
 
-      if (existing) {
+      // Persist via secure edge function (validates ownership + uniqueness server-side)
+      const idToken = await firebaseUser.getIdToken();
+      const res = await fetch('https://dzzeaesctendsggfdxra.supabase.co/functions/v1/manage-username', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({ username: trimmed }),
+      });
+
+      if (res.status === 409) {
         addToast('error', t('usernameAlreadyUsed'));
         setLoading(false);
         return;
       }
-
-      // Keep auth profile and database in sync with chosen username
-      const firebaseUser = auth?.currentUser;
-      if (firebaseUser) {
-        await firebaseUpdateProfile(firebaseUser, { displayName: trimmed });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        addToast('error', err.error || 'Error');
+        setLoading(false);
+        return;
       }
 
-      await supabase
-        .from('usernames')
-        .upsert({ user_id: user.id, username: trimmed, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
-
+      await firebaseUpdateProfile(firebaseUser, { displayName: trimmed });
       updateProfile({ username: trimmed });
       addToast('success', t('profileUpdated'));
       handleClose();
