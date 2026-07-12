@@ -228,9 +228,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUser(mapFirebaseUser(firebaseUser));
 
       // Store username for uniqueness checks
-      await supabase
-        .from('usernames')
-        .upsert({ user_id: firebaseUser.uid, username: normalizedUsername }, { onConflict: 'user_id' });
+      // Store username via secure edge function (validates Firebase token)
+      try {
+        const idToken = await firebaseUser.getIdToken();
+        await fetch('https://dzzeaesctendsggfdxra.supabase.co/functions/v1/manage-username', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`,
+          },
+          body: JSON.stringify({ username: normalizedUsername }),
+        });
+      } catch (e) {
+        console.error('Failed to persist username:', e);
+      }
 
       localStorage.removeItem(PENDING_SIGNUP_USERNAME_KEY);
     } catch (error) {
