@@ -1,5 +1,5 @@
 import { database, auth, ref, set, onValue, update, remove, get, isFirebaseReady, onDisconnect } from '@/lib/firebase';
-import type { GameSession, Player, PlayerData, PlayersMap, TurnState, SessionRecoveryData, JoinRequest } from '@/types/game';
+import type { GameSession, Player, PlayerData, PlayersMap, TurnState, SessionRecoveryData, JoinRequest, LMSPlayerState } from '@/types/game';
 import { playersMapToArray, getPlayerUids } from '@/types/game';
 
 const SESSIONS_PATH = 'sessions';
@@ -267,19 +267,47 @@ export const deleteSession = async (code: string): Promise<void> => {
 // Update game state (for realtime sync during gameplay)
 export const updateGameState = async (
   code: string,
-  gameState: {
-    currentTurn?: number;
-    currentTurnState?: TurnState | null;
-    players?: PlayersMap;
-    guessedCountries?: string[];
-    correctCountries?: string[];
-    wrongCountries?: string[];
-    status?: 'waiting' | 'countdown' | 'playing' | 'finished';
-    turnStartTime?: number | null;
-    isExtraTime?: boolean;
-  }
+  gameState: Partial<GameSession>
 ): Promise<void> => {
   await updateSession(code, gameState);
+};
+
+/** Update one player's LMS state via Firebase path keys (avoids clobbering other players). */
+export const updateLmsPlayerState = async (
+  code: string,
+  playerId: string,
+  updates: Partial<LMSPlayerState>
+): Promise<void> => {
+  const uid = getCurrentUid();
+  const guestId = typeof sessionStorage !== 'undefined'
+    ? sessionStorage.getItem('guest_player_id')
+    : null;
+
+  if (!uid && !guestId) {
+    throw new Error('No player identity found to update session');
+  }
+
+  const pathUpdates: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(updates)) {
+    pathUpdates[`lmsPlayerStates/${playerId}/${key}`] = value;
+  }
+
+  if (!isFirebaseReady() || !database) {
+    const localSession = localStorage.getItem(`session_${code}`);
+    if (localSession) {
+      const session = JSON.parse(localSession) as GameSession;
+      const current = session.lmsPlayerStates?.[playerId] || { hearts: 0, isEliminated: false };
+      session.lmsPlayerStates = {
+        ...(session.lmsPlayerStates || {}),
+        [playerId]: { ...current, ...updates },
+      };
+      localStorage.setItem(`session_${code}`, JSON.stringify(session));
+    }
+    return;
+  }
+
+  const sessionRef = ref(database, `${SESSIONS_PATH}/${code}`);
+  await update(sessionRef, pathUpdates);
 };
 
 // Update a specific player's data in the players map

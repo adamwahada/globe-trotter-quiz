@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { fetchGameHistoryServer } from '@/services/scoringService';
+import { useScrollLock } from '@/hooks/useScrollLock';
 
 interface GameHistoryEntry {
   id: string;
@@ -53,6 +54,8 @@ export const GameHistoryModal: React.FC<GameHistoryModalProps> = ({ isOpen, onCl
       default: return sorted.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     }
   }, [history, sortBy]);
+
+  useScrollLock(isOpen);
 
   if (!isOpen) return null;
 

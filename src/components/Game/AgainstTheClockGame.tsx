@@ -24,6 +24,7 @@ import { isCorrectGuess as localIsCorrectGuess } from '@/utils/scoring';
 import { getCountryFlag, preloadCountryFlag, preloadAllCountryFlags, getFamousPerson } from '@/utils/countryData';
 import { hasExtendedHints, getFamousPlayer, getFamousSinger, getCountryCapital, getHintAvailability } from '@/utils/countryHints';
 import { GuidedHintType } from '@/components/Guess/GuessModal';
+import { getHintTimePenaltySeconds } from '@/utils/hintPenalties';
 import { playersMapToArray, TURN_TIME_SECONDS } from '@/types/game';
 import { Trophy, LogOut, Volume2, VolumeX, Clock, Zap } from 'lucide-react';
 import { clearRecoveryData } from '@/services/gameSessionService';
@@ -48,11 +49,11 @@ export const AgainstTheClockGame: React.FC<AgainstTheClockGameProps> = ({ onShow
   const navigate = useNavigate();
 
   const [guessModalOpen, setGuessModalOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
   const [floatingScore, setFloatingScore] = useState<{ points: number; show: boolean }>({ points: 0, show: false });
   const [showRankingModal, setShowRankingModal] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [countrySelectTime, setCountrySelectTime] = useState<number | null>(null);
+  const countrySelectTimeRef = useRef<number | null>(null);
   const [showLastMinuteWarning, setShowLastMinuteWarning] = useState(false);
   const [remainingGameSeconds, setRemainingGameSeconds] = useState(0);
   const lastMinuteTriggeredRef = useRef(false);
@@ -67,15 +68,6 @@ export const AgainstTheClockGame: React.FC<AgainstTheClockGameProps> = ({ onShow
   // Per-player guessed countries - only what THIS player has guessed
   const currentPlayerData = currentPlayer?.id ? session?.players[currentPlayer.id] : null;
   const myGuessedCountries = currentPlayerData?.countriesGuessed || [];
-
-  // Handle scroll for navbar blur effect
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
 
   // Preload all country flags when game starts
   useEffect(() => {
@@ -121,7 +113,9 @@ export const AgainstTheClockGame: React.FC<AgainstTheClockGameProps> = ({ onShow
 
     preloadCountryFlag(countryName);
     setSelectedCountry(countryName);
-    setCountrySelectTime(Date.now());
+    const startTime = Date.now();
+    countrySelectTimeRef.current = startTime;
+    setCountrySelectTime(startTime);
     setGuessModalOpen(true);
   }, [currentPlayer, session, myGuessedCountries, addToast, t]);
 
@@ -180,6 +174,7 @@ export const AgainstTheClockGame: React.FC<AgainstTheClockGameProps> = ({ onShow
 
     setSelectedCountry(null);
     setCountrySelectTime(null);
+    countrySelectTimeRef.current = null;
   }, [selectedCountry, currentPlayer, session, language, updateGameState, addToast, t, playToastSound]);
 
   // Handle skip
@@ -212,6 +207,7 @@ export const AgainstTheClockGame: React.FC<AgainstTheClockGameProps> = ({ onShow
     addToast('info', t('countrySkipped'));
     setSelectedCountry(null);
     setCountrySelectTime(null);
+    countrySelectTimeRef.current = null;
   }, [selectedCountry, currentPlayer, session, updateGameState, addToast, t]);
 
   // Handle timeout (timer expired while guessing)
@@ -244,7 +240,17 @@ export const AgainstTheClockGame: React.FC<AgainstTheClockGameProps> = ({ onShow
     setGuessModalOpen(false);
     setSelectedCountry(null);
     setCountrySelectTime(null);
+    countrySelectTimeRef.current = null;
   }, [selectedCountry, currentPlayer, session, updateGameState, addToast, t, playToastSound]);
+
+  const applyHintTimePenalty = useCallback((penaltySeconds: number): boolean => {
+    const current = countrySelectTimeRef.current ?? countrySelectTime;
+    if (!current) return false;
+    const newStart = current - penaltySeconds * 1000;
+    countrySelectTimeRef.current = newStart;
+    setCountrySelectTime(newStart);
+    return true;
+  }, [countrySelectTime]);
 
   // Handle hints - async with error handling to prevent point deduction on failure
   const handleUseHint = useCallback(async (type: 'letter' | 'famous' | 'flag'): Promise<string> => {
@@ -265,24 +271,33 @@ export const AgainstTheClockGame: React.FC<AgainstTheClockGameProps> = ({ onShow
     };
 
     try {
+      const timePenalty = getHintTimePenaltySeconds(type);
+      const timeApplied = applyHintTimePenalty(timePenalty);
+
       if (type === 'flag') {
         await updateGameState({ players: updatedPlayers });
-        if (countrySelectTime) {
-          setCountrySelectTime(countrySelectTime - 10000);
-        }
-        addToast('info', t('hintUsed') + ' (-1 point, -10 seconds)');
+        const costMessage = timeApplied
+          ? ` (-1 point, -${timePenalty} seconds)`
+          : ' (-1 point)';
+        addToast('info', t('hintUsed') + costMessage);
         return getCountryFlag(selectedCountry);
       }
 
       await updateGameState({ players: updatedPlayers });
 
       if (type === 'famous') {
-        addToast('info', t('hintUsed') + ' (-0.5 point)');
+        const costMessage = timeApplied
+          ? ` (-0.5 point, -${timePenalty} seconds)`
+          : ' (-0.5 point)';
+        addToast('info', t('hintUsed') + costMessage);
         const localizedHints = getLocalizedHints(selectedCountry);
         return localizedHints.famousPerson || getFamousPerson(selectedCountry) || 'No famous person data found';
       }
 
-      addToast('info', t('hintUsed') + ' (-1 point)');
+      const costMessage = timeApplied
+        ? ` (-1 point, -${timePenalty} seconds)`
+        : ' (-1 point)';
+      addToast('info', t('hintUsed') + costMessage);
       const localizedName = getCountryDisplayName(selectedCountry);
       return localizedName[0] || selectedCountry[0] || '';
     } catch (error) {
@@ -290,7 +305,7 @@ export const AgainstTheClockGame: React.FC<AgainstTheClockGameProps> = ({ onShow
       addToast('error', t('hintFailed') || 'Failed to use hint. Please try again.');
       return '';
     }
-  }, [selectedCountry, currentPlayer, session, countrySelectTime, updateGameState, addToast, t, getLocalizedHints, getCountryDisplayName]);
+  }, [selectedCountry, currentPlayer, session, applyHintTimePenalty, updateGameState, addToast, t, getLocalizedHints, getCountryDisplayName]);
 
   // Handle guided hints - async with error handling
   const handleUseGuidedHint = useCallback(async (type: GuidedHintType): Promise<{ value: string; timePenalty: number } | null> => {
@@ -307,15 +322,15 @@ export const AgainstTheClockGame: React.FC<AgainstTheClockGameProps> = ({ onShow
 
     if (type === 'capital') {
       hintValue = localizedHints.capital || getCountryCapital(selectedCountry);
-      timePenalty = 10;
+      timePenalty = getHintTimePenaltySeconds('capital');
       pointCost = 1;
     } else if (type === 'player') {
       hintValue = localizedHints.famousPlayer || getFamousPlayer(selectedCountry);
-      timePenalty = 5;
+      timePenalty = getHintTimePenaltySeconds('player');
       pointCost = 1;
     } else if (type === 'singer') {
       hintValue = localizedHints.famousSinger || getFamousSinger(selectedCountry);
-      timePenalty = 5;
+      timePenalty = getHintTimePenaltySeconds('singer');
       pointCost = 1;
     }
 
@@ -333,22 +348,20 @@ export const AgainstTheClockGame: React.FC<AgainstTheClockGameProps> = ({ onShow
 
     try {
       await updateGameState({ players: updatedPlayers });
-      if (countrySelectTime) {
-        setCountrySelectTime(countrySelectTime - (timePenalty * 1000));
-      }
+      const timeApplied = applyHintTimePenalty(timePenalty);
 
-      const costMessage = type === 'capital' 
-        ? `(-${timePenalty}s)` 
-        : `(-${pointCost}pt, -${timePenalty}s)`;
+      const costMessage = timeApplied
+        ? `(-${pointCost}pt, -${timePenalty}s)`
+        : `(-${pointCost}pt)`;
       addToast('info', `${t('hintUsed')} ${costMessage}`);
 
-      return { value: hintValue, timePenalty };
+      return { value: hintValue, timePenalty: timeApplied ? timePenalty : 0 };
     } catch (error) {
       console.error('Failed to use guided hint:', error);
       addToast('error', t('hintFailed') || 'Failed to use hint. Please try again.');
       return null;
     }
-  }, [selectedCountry, currentPlayer, session, countrySelectTime, updateGameState, addToast, t, getLocalizedHints]);
+  }, [selectedCountry, currentPlayer, session, applyHintTimePenalty, updateGameState, addToast, t, getLocalizedHints]);
 
   const handleLeave = useCallback(async () => {
     // Save partial game history on mid-game leave
@@ -446,67 +459,52 @@ export const AgainstTheClockGame: React.FC<AgainstTheClockGameProps> = ({ onShow
         <FloatingScore points={floatingScore.points} />
       )}
 
-      {/* Header */}
-      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled
-        ? 'bg-background/80 backdrop-blur-xl border-b border-warning/20 shadow-lg shadow-warning/5'
-        : 'bg-card/50 backdrop-blur-sm border-b border-border'
-        }`}>
-        <div className="flex items-center justify-between p-3 md:p-4 max-w-7xl mx-auto">
-          <div className="flex items-center gap-3">
-            <Logo size="md" />
-            <span className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-warning/20 text-warning text-sm font-medium">
-              <Zap className="h-4 w-4" />
+      {/* Header — compact in-game HUD */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-b border-border">
+        <div className="flex items-center justify-between gap-2 py-1.5 px-2 md:px-3 max-w-7xl mx-auto">
+          <div className="flex items-center gap-2 min-w-0">
+            <Logo size="xs" />
+            <span className="hidden sm:flex items-center gap-1 px-2 py-0.5 rounded-full bg-warning/20 text-warning text-[11px] font-medium whitespace-nowrap">
+              <Zap className="h-3 w-3" />
               {t('raceMode')}
             </span>
           </div>
 
-          <div className="flex items-center gap-4">
-            <LanguageSwitcher />
+          <div className="flex items-center gap-1.5 md:gap-2 min-w-0 flex-1 justify-end">
+            <LanguageSwitcher compact />
 
-            {/* Global Game Timer */}
-            <div className="hidden md:block w-48">
+            <div className="hidden md:block w-28 lg:w-32 shrink-0">
               <TimerProgress
                 totalSeconds={session.duration * 60}
                 startTime={session.startTime || undefined}
                 onComplete={handleEndGame}
                 label={t('globalTimeRemaining')}
+                compact
               />
             </div>
 
-            {/* Score */}
-            <div className="flex items-center gap-2 bg-secondary px-4 py-2 rounded-lg">
-              <Trophy className="h-4 w-4 text-primary" />
-              <span className="font-display text-xl text-foreground">
+            <div className="flex items-center gap-1 bg-secondary px-2 py-1 rounded-md shrink-0">
+              <Trophy className="h-3.5 w-3.5 text-primary" />
+              <span className="font-display text-sm text-foreground tabular-nums">
                 {players.find(p => p.id === currentPlayer?.id)?.score || 0}
               </span>
             </div>
 
-            {/* Sound Toggle */}
             <GameTooltip content={soundEnabled ? t('soundOn') : t('soundOff')} position="bottom">
-              <Button
-                variant="icon"
-                size="icon"
-                onClick={toggleSound}
-              >
-                {soundEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
+              <Button variant="icon" size="icon" onClick={toggleSound} className="h-8 w-8 shrink-0">
+                {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
               </Button>
             </GameTooltip>
 
-            {/* Leaderboard Toggle */}
             <GameTooltip content={t('tooltipLeaderboard')} position="bottom">
-              <Button
-                variant="icon"
-                size="icon"
-                onClick={() => setShowRankingModal(true)}
-              >
-                <Trophy className="h-5 w-5" />
+              <Button variant="icon" size="icon" onClick={() => setShowRankingModal(true)} className="h-8 w-8 shrink-0">
+                <Trophy className="h-4 w-4" />
               </Button>
             </GameTooltip>
 
-            {/* Leave */}
             <GameTooltip content={t('tooltipQuit')} position="bottom">
-              <Button variant="outline" size="sm" onClick={handleLeave} className="gap-2">
-                <LogOut className="h-4 w-4" />
+              <Button variant="outline" size="sm" onClick={handleLeave} className="gap-1.5 h-8 px-2 md:px-3 text-xs shrink-0">
+                <LogOut className="h-3.5 w-3.5" />
                 <span className="hidden md:inline">{t('quitGame')}</span>
               </Button>
             </GameTooltip>
@@ -514,15 +512,16 @@ export const AgainstTheClockGame: React.FC<AgainstTheClockGameProps> = ({ onShow
         </div>
       </nav>
 
-      {/* Spacer for fixed navbar */}
-      <div className="h-24 md:h-32" />
+      <div className="h-12 md:h-14" />
 
       {/* Mobile Timer */}
-      <div className="md:hidden p-3 border-b border-border">
+      <div className="md:hidden px-2 py-1.5 border-b border-border">
         <TimerProgress
           totalSeconds={session.duration * 60}
           startTime={session.startTime || undefined}
           onComplete={handleEndGame}
+          label={t('globalTimeRemaining')}
+          compact
         />
       </div>
 
@@ -569,6 +568,8 @@ export const AgainstTheClockGame: React.FC<AgainstTheClockGameProps> = ({ onShow
           setGuessModalOpen(false);
           setSelectedCountry(null);
           setCountrySelectTime(null);
+    countrySelectTimeRef.current = null;
+          countrySelectTimeRef.current = null;
         }}
         onSubmit={handleSubmitGuess}
         onSkip={handleSkip}
@@ -576,6 +577,7 @@ export const AgainstTheClockGame: React.FC<AgainstTheClockGameProps> = ({ onShow
         onUseGuidedHint={handleUseGuidedHint}
         turnTimeSeconds={TURN_TIME_SECONDS}
         turnStartTime={countrySelectTime || undefined}
+        turnResetKey={selectedCountry ?? undefined}
         playerScore={currentPlayer?.score || 0}
         hasExtendedHints={hasExtendedHints(selectedCountry || '')}
         hintAvailability={getHintAvailability(selectedCountry || '')}

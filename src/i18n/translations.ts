@@ -131,6 +131,9 @@ export const translations = {
     voteYes: 'Vote Yes',
     startGame2: 'Start Game',
     timeRemaining: 'Time Remaining',
+    waitingRoomTimerAccelerated: '2/3 of players joined — waiting time reduced to 1 minute',
+    waitingRoomTimerAcceleratedHint: '2/3 of slots filled — timer capped at 1 minute',
+    waitingRoomTimerThresholdHint: 'Timer drops to 1 min at {threshold}/{max} players (2/3 rule)',
 
     // Gameplay
     yourTurn: "It's Your Turn!",
@@ -664,6 +667,9 @@ export const translations = {
     voteYes: 'Voter Oui',
     startGame2: 'Démarrer la Partie',
     timeRemaining: 'Temps Restant',
+    waitingRoomTimerAccelerated: '2/3 des joueurs sont là — temps d\'attente réduit à 1 minute',
+    waitingRoomTimerAcceleratedHint: '2/3 des places remplies — minuterie limitée à 1 minute',
+    waitingRoomTimerThresholdHint: 'Minuterie à 1 min dès {threshold}/{max} joueurs (règle des 2/3)',
 
     // Gameplay
     yourTurn: "C'est Votre Tour !",
@@ -1197,6 +1203,9 @@ export const translations = {
     voteYes: 'صوت بنعم',
     startGame2: 'ابدأ اللعبة',
     timeRemaining: 'الوقت المتبقي',
+    waitingRoomTimerAccelerated: 'انضم 2/3 من اللاعبين — تم تقليل وقت الانتظار إلى دقيقة واحدة',
+    waitingRoomTimerAcceleratedHint: '2/3 من الأماكن ممتلئة — المؤقت محدود بدقيقة واحدة',
+    waitingRoomTimerThresholdHint: 'ينخفض المؤقت إلى 1 دقيقة عند {threshold}/{max} لاعبين (قاعدة 2/3)',
 
     // Gameplay
     yourTurn: 'دورك!',

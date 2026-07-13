@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, UserCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { GuestLoginModal } from '@/components/Guest/GuestLoginModal';
+import { useScrollLock } from '@/hooks/useScrollLock';
 
 interface GameStartSignInModalProps {
   isOpen: boolean;
@@ -17,6 +18,8 @@ export const GameStartSignInModal: React.FC<GameStartSignInModalProps> = ({
   onJoin,
 }) => {
   const [guestModalOpen, setGuestModalOpen] = useState(false);
+
+  useScrollLock(isOpen || guestModalOpen);
 
   if (!isOpen && !guestModalOpen) return null;
 

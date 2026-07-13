@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useScrollLock } from '@/hooks/useScrollLock';
 import { Lion, Fox, Bear, Penguin, Cat, Rabbit, Panda, Wolf, Owl, Deer, Frog, Dog } from './AvatarComponents';
 
 // ─────────────────────────────────────────────
@@ -100,6 +101,8 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
 
   const currentAvatar = AVATARS.find(a => a.id === selectedAvatarId) ?? AVATARS[0];
   const AvatarComp = currentAvatar.Component;
+
+  useScrollLock(isOpen);
 
   if (!isOpen) return null;
 

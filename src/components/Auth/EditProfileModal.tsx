@@ -13,6 +13,7 @@ import {
   updateProfile as firebaseUpdateProfile,
 } from '@/lib/firebase';
 import { validateUsername, MAX_USERNAME_LENGTH } from '@/utils/inputValidation';
+import { useScrollLock } from '@/hooks/useScrollLock';
 
 interface EditProfileModalProps {
   isOpen: boolean;
@@ -41,6 +42,8 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
       setUsername(user.username);
     }
   }, [isOpen, user?.username]);
+
+  useScrollLock(isOpen && !!user);
 
   if (!isOpen || !user) return null;
 

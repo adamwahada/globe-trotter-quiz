@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { AvatarDisplay } from '@/components/Avatar/AvatarDisplay';
 import { Player } from '@/types/game';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useScrollLock } from '@/hooks/useScrollLock';
 
 interface PlayerStatsModalProps {
   isOpen: boolean;
@@ -21,6 +22,8 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
   wrongCountries,
 }) => {
   const { t } = useLanguage();
+
+  useScrollLock(isOpen && !!player);
 
   if (!isOpen || !player) return null;
 

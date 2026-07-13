@@ -20,6 +20,7 @@ import {
 import { getRandomUnplayedCountry, getCountryFlag } from '@/utils/countryData';
 import { LogOut, Trophy, MapPin, CheckCircle, XCircle, Zap, X, Clock, Users } from 'lucide-react';
 import { removePlayerFromSession, clearRecoveryData } from '@/services/gameSessionService';
+import { useScrollLock } from '@/hooks/useScrollLock';
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -419,6 +420,8 @@ const SpeedRaceGame: React.FC = () => {
   const submittedRoundRef = useRef<number>(-1);
   const timerExpiredRoundRef = useRef<number>(-1);
 
+  useScrollLock(showConfirmModal || showResults || showPodium);
+
   // Reset local state when new guessing phase starts
   useEffect(() => {
     if (roundState?.phase === 'guessing') {
@@ -695,28 +698,26 @@ const SpeedRaceGame: React.FC = () => {
       <ReconnectionBanner />
 
       {/* ── Header ── */}
-      <header className="shrink-0 z-30 flex items-center justify-between px-4 py-2.5 bg-background/95 backdrop-blur border-b border-border">
-        <div className="flex items-center gap-3">
-          <Logo />
-          {/* Round indicator */}
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/30">
-            <Zap className="h-3.5 w-3.5 text-primary" />
-            <span className="text-xs font-bold text-foreground">
-              Round {roundState.roundNumber}/{totalRounds}
+      <header className="shrink-0 z-30 flex items-center justify-between gap-2 py-1.5 px-2 md:px-3 bg-background/95 backdrop-blur-md border-b border-border">
+        <div className="flex items-center gap-2 min-w-0">
+          <Logo size="xs" />
+          <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 border border-primary/30">
+            <Zap className="h-3 w-3 text-primary shrink-0" />
+            <span className="text-[11px] font-bold text-foreground tabular-nums whitespace-nowrap">
+              {roundState.roundNumber}/{totalRounds}
             </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* MY TOTAL SESSION SCORE - prominent */}
-          <div className="flex flex-col items-center px-3 py-1 rounded-xl bg-success/15 border border-success/40">
-            <span className="text-[10px] text-success/70 font-medium uppercase tracking-wide leading-none">My Score</span>
-            <span className="text-xl font-display font-bold text-success tabular-nums leading-tight">
+        <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex flex-col items-center px-2 py-0.5 rounded-lg bg-success/15 border border-success/40">
+            <span className="text-[9px] text-success/70 font-medium uppercase tracking-wide leading-none">Score</span>
+            <span className="text-sm font-display font-bold text-success tabular-nums leading-tight">
               {totalScore.toFixed(2)}
             </span>
           </div>
 
-          <Button variant="outline" size="sm" onClick={handleQuit} className="gap-1.5 h-7 text-xs px-2">
+          <Button variant="outline" size="sm" onClick={handleQuit} className="gap-1 h-8 px-2 text-xs">
             <LogOut className="h-3 w-3" />
             Quit
           </Button>

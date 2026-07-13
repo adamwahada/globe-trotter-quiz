@@ -5,7 +5,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 const worldQuizLogo = "/world-quiz-logo.webp";
 
 interface LogoProps {
-  size?: "sm" | "md" | "lg";
+  size?: "xs" | "sm" | "md" | "lg";
 }
 
 export const Logo: React.FC<LogoProps> = ({ size = "md" }) => {
@@ -13,6 +13,7 @@ export const Logo: React.FC<LogoProps> = ({ size = "md" }) => {
   const location = useLocation();
 
   const sizeClasses = {
+    xs: "h-8 md:h-9",
     sm: "h-[4.375rem]",
     md: "h-[6.25rem]",
     lg: "h-28",
@@ -29,6 +30,7 @@ export const Logo: React.FC<LogoProps> = ({ size = "md" }) => {
 
   // Intrinsic dimensions for proper aspect ratio hints
   const dimensions = {
+    xs: { height: 36, width: 108 },
     sm: { height: 70, width: 210 },
     md: { height: 100, width: 300 },
     lg: { height: 112, width: 336 },

@@ -4,6 +4,7 @@ import { MessageSquare, X, Send, Loader2, ArrowDown } from 'lucide-react';
 import { getFirebaseIdToken } from '@/utils/firebaseToken';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { useScrollLock } from '@/hooks/useScrollLock';
 
 const MESSAGES_FN = `https://dzzeaesctendsggfdxra.supabase.co/functions/v1/user-messages`;
 
@@ -173,6 +174,8 @@ export const UserMessagingModal: React.FC<UserMessagingModalProps> = ({ isOpen, 
       sendMessage();
     }
   };
+
+  useScrollLock(isOpen && !!user);
 
   if (!isOpen || !user) return null;
 

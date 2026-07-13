@@ -50,7 +50,14 @@ function containsLink(text: string): boolean {
 
 // ── Floating Chat Widget ───────────────────────────────────────────────────────
 
-export const FloatingChatWidget: React.FC = () => {
+interface FloatingChatWidgetProps {
+  /** Inline under game controls — stays in the left sidebar, never overlaps the map */
+  variant?: 'default' | 'game-sidebar';
+}
+
+export const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
+  variant = 'default',
+}) => {
   const { session, currentPlayer } = useGame();
   const { t } = useLanguage();
 
@@ -197,16 +204,21 @@ export const FloatingChatWidget: React.FC = () => {
   // Don't render if no session/player
   if (!session || !currentPlayer) return null;
 
+  const isSidebar = variant === 'game-sidebar';
+
   return (
-    <>
-      {/* ── Floating Toggle Button ──────────────────────────────────── */}
+    <div className={isSidebar ? 'relative w-full flex justify-center' : undefined}>
+      {/* ── Toggle Button ──────────────────────────────────────────────── */}
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
           className={`
             chat-toggle-btn
-            fixed bottom-24 left-4 z-[9999]
-            w-14 h-14 rounded-full
+            ${isSidebar
+              ? 'relative w-12 h-12'
+              : 'fixed bottom-24 left-4 z-[9999] w-14 h-14'
+            }
+            rounded-full
             bg-red-600 hover:bg-red-500
             text-white
             flex items-center justify-center
@@ -218,7 +230,7 @@ export const FloatingChatWidget: React.FC = () => {
           `}
           aria-label="Open chat"
         >
-          <MessageCircle className="h-6 w-6" />
+          <MessageCircle className={isSidebar ? 'h-5 w-5' : 'h-6 w-6'} />
 
           {/* Unread badge */}
           {unreadCount > 0 && (
@@ -232,30 +244,28 @@ export const FloatingChatWidget: React.FC = () => {
         </button>
       )}
 
-      {/* ── Chat Panel (slides from left) ───────────────────────────── */}
+      {/* ── Chat Panel ──────────────────────────────────────────────── */}
       {isOpen && (
         <>
-          {/* Invisible backdrop to allow closing by clicking outside */}
           <div
-            className="fixed inset-0 z-[9998]"
+            className={`fixed inset-0 ${isSidebar ? 'z-[60]' : 'z-[9998]'}`}
             onClick={() => setIsOpen(false)}
           />
 
           <div
-            className="
+            className={`
               chat-panel-slide
-              fixed left-0 top-0 z-[9999]
-              w-[88vw] sm:w-[380px] md:w-[30vw] md:min-w-[360px] md:max-w-[480px]
-              h-[75vh] max-h-[80vh] min-h-[60vh]
-              mt-[12vh]
-              ml-3 sm:ml-4
               flex flex-col
               rounded-2xl
-              bg-card/90 backdrop-blur-xl
+              bg-card/95 backdrop-blur-xl
               border border-white/10
               shadow-2xl shadow-black/30
               overflow-hidden
-            "
+              ${isSidebar
+                ? 'absolute bottom-full left-0 right-0 mb-2 z-[70] w-full max-w-[16rem] mx-auto h-[min(42vh,360px)] max-h-[360px]'
+                : 'fixed left-0 top-0 z-[9999] w-[88vw] sm:w-[380px] md:w-[30vw] md:min-w-[360px] md:max-w-[480px] h-[75vh] max-h-[80vh] min-h-[60vh] mt-[12vh] ml-3 sm:ml-4'
+              }
+            `}
           >
             {/* ── Header ────────────────────────────────────────────── */}
             <div className="flex items-center gap-3 px-4 py-3 border-b border-white/10 bg-gradient-to-r from-red-600/20 to-transparent flex-shrink-0">
@@ -423,6 +433,6 @@ export const FloatingChatWidget: React.FC = () => {
           </div>
         </>
       )}
-    </>
+    </div>
   );
 };

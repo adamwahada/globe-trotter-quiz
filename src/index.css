@@ -37,7 +37,6 @@
 
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 10%;
-
     --info: 217 91% 60%;
     --info-foreground: 0 0% 100%;
 
@@ -423,4 +422,11 @@
 .custom-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: hsl(var(--primary) / 0.35) transparent;
+}
+
+/* Prevent background scroll while modals are open */
+html[data-scroll-lock='true'],
+body[data-scroll-lock='true'] {
+  overflow: hidden !important;
+  overscroll-behavior: none;
 }

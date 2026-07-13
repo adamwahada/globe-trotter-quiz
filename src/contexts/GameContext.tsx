@@ -1,6 +1,6 @@
 import React, { createContext, useContext, ReactNode } from 'react';
 import { useFirebaseSession } from '@/hooks/useFirebaseSession';
-import type { GameSession, Player, PlayerData, PlayersMap, TurnState, GameMode } from '@/types/game';
+import type { GameSession, Player, PlayerData, PlayersMap, TurnState, GameMode, LMSPlayerState } from '@/types/game';
  import type { ActiveCardEffect } from '@/types/cards';
 
 // Re-export types for backward compatibility
@@ -20,17 +20,8 @@ interface GameContextType {
   updatePlayerMetadata: (metadata: Partial<PlayerData>) => Promise<void>;
   startCountdown: () => Promise<void>;
   startGame: () => Promise<void>;
-  updateGameState: (updates: {
-    currentTurn?: number;
-    currentTurnState?: TurnState | null;
-    players?: PlayersMap;
-    guessedCountries?: string[];
-    correctCountries?: string[];
-    wrongCountries?: string[];
-    turnStartTime?: number | null;
-    isExtraTime?: boolean;
-     activeCardEffects?: ActiveCardEffect[];
-  }) => Promise<void>;
+  updateGameState: (updates: Partial<GameSession>) => Promise<void>;
+  updateLmsPlayerState: (playerId: string, updates: Partial<LMSPlayerState>) => Promise<void>;
   updateTurnState: (turnState: TurnState | null) => Promise<void>;
   endGame: () => Promise<void>;
   resumeSession: () => Promise<string | null>;
@@ -57,6 +48,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     startCountdown,
     startGame,
     updateCurrentGameState,
+    updateLmsPlayerState,
     updateTurnState,
     endGame,
     resumeSession,
@@ -81,6 +73,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       startCountdown,
       startGame,
       updateGameState: updateCurrentGameState,
+      updateLmsPlayerState,
       updateTurnState,
       endGame,
       resumeSession,

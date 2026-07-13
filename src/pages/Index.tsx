@@ -51,6 +51,7 @@ import {
 } from "lucide-react";
 import { FloatingContactIcons } from "@/components/Contact/FloatingContactIcons";
 import { ProjectStoryModal } from "@/components/Contact/ProjectStoryModal";
+import { useScrollLock } from "@/hooks/useScrollLock";
 
 // Use public path for preloaded image - matches index.html preload
 const worldMapBg = "/world-map-bg.webp";
@@ -86,6 +87,8 @@ const Index = () => {
     color: string;
     isGuest: boolean;
   } | null>(null);
+
+  useScrollLock(inviteChoiceOpen);
 
   const { isLoading: authLoading } = useAuth();
 

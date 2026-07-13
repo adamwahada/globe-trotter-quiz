@@ -13,6 +13,7 @@ import { GameStartSignInModal } from './GameStartSignInModal';
 import { GameModeSelector } from './GameModeSelector';
 import { PendingJoinRequestModal } from './PendingJoinRequestModal';
 import { validateSessionCode, validateUsername, MAX_USERNAME_LENGTH } from '@/utils/inputValidation';
+import { useScrollLock } from '@/hooks/useScrollLock';
 
 interface GameSettingsModalProps {
   isOpen: boolean;
@@ -81,6 +82,8 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
   };
 
   const [startingHearts, setStartingHearts] = useState<3 | 5 | 10>(5);
+
+  useScrollLock(isOpen);
 
   if (!isOpen) return null;
 

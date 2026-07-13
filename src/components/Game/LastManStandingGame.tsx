@@ -17,6 +17,8 @@ import {
   LMS_COUNTDOWN_TIME,
   LMS_RESULTS_TIME,
   calculateHeartLoss,
+  getRemainingHeartLoss,
+  applyHeartDelta,
   LMSRoundState,
   LMSPlayerSubmission,
   LMSPlayerState,
@@ -26,6 +28,7 @@ import { getRandomUnplayedCountry } from '@/utils/countryData';
 import { countryContinent } from '@/utils/countryData';
 import { LogOut, Trophy, MapPin, CheckCircle, XCircle, Heart, Shield, Clock, Users, X } from 'lucide-react';
 import { removePlayerFromSession, clearRecoveryData } from '@/services/gameSessionService';
+import { useScrollLock } from '@/hooks/useScrollLock';
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -477,7 +480,7 @@ const LMSWinnerScreen: React.FC<{
 // ─── Main LastManStandingGame ────────────────────────────────────────────────
 
 const LastManStandingGame: React.FC = () => {
-  const { session, currentPlayer, updateGameState, endGame, getPlayersArray } = useGame();
+  const { session, currentPlayer, updateGameState, updateLmsPlayerState, endGame, getPlayersArray } = useGame();
   const { addToast } = useToastContext();
   const { playToastSound } = useSound();
   const navigate = useNavigate();
@@ -519,9 +522,30 @@ const LastManStandingGame: React.FC = () => {
   const submittedRoundRef = useRef<number>(-1);
   const timerExpiredRoundRef = useRef<number>(-1);
 
+  /** Deduct hearts for one player only (Firebase path update — avoids overwriting other players). */
+  const applyHeartLossToPlayer = useCallback(async (
+    playerId: string,
+    loss: number,
+    roundNumber: number,
+  ) => {
+    if (loss <= 0) return;
+    const current = sessionRef.current?.lmsPlayerStates?.[playerId];
+    if (!current || current.isEliminated) return;
+    await updateLmsPlayerState(playerId, applyHeartDelta(current, loss, roundNumber));
+  }, [updateLmsPlayerState]);
+
   // Check if current player is eliminated
   const myState = lmsStates[currentPlayer?.id || ''];
   const isEliminated = myState?.isEliminated || false;
+
+  const hasBlockingOverlay =
+    showConfirmModal ||
+    showWinner ||
+    (showResults && roundState?.phase === 'results') ||
+    Boolean(continentFeedback && !inLocationPhase) ||
+    (roundState?.phase === 'continent' && !continentSubmitted && !isEliminated && !inLocationPhase);
+
+  useScrollLock(hasBlockingOverlay);
 
   // Reset local state when new round starts
   useEffect(() => {
@@ -555,7 +579,6 @@ const LastManStandingGame: React.FC = () => {
       const pState = currentLmsStates[p.id];
       if (pState?.isEliminated) return;
       if (!allSubs[p.id]) {
-        // No submission at all — both wrong
         allSubs[p.id] = {
           selectedContinent: null,
           continentSubmittedAt: null,
@@ -564,37 +587,35 @@ const LastManStandingGame: React.FC = () => {
           countryConfirmedAt: null,
           isCountryCorrect: false,
           heartLoss: 1,
+          heartsDeductedThisRound: 0,
           phase: 'done',
         };
       } else if (allSubs[p.id].phase !== 'done') {
-        // Submitted continent but not location — recalculate heartLoss
         const sub = allSubs[p.id];
         const loss = calculateHeartLoss(sub.isContinentCorrect, false);
-        allSubs[p.id] = { ...sub, heartLoss: loss, phase: 'done' };
+        allSubs[p.id] = {
+          ...sub,
+          heartLoss: loss,
+          heartsDeductedThisRound: sub.heartsDeductedThisRound ?? 0,
+          phase: 'done',
+        };
       }
     });
 
-    // Apply REMAINING heart loss (continent penalty was already applied immediately)
-    const newLmsStates = { ...currentLmsStates };
-    const newlyEliminated: string[] = [];
-
-    Object.entries(allSubs).forEach(([pid, sub]) => {
-      if (!newLmsStates[pid] || newLmsStates[pid].isEliminated) return;
-      // Continent penalty (0.5) was already deducted immediately. Only deduct the remainder.
-      const continentAlreadyDeducted = sub.isContinentCorrect ? 0 : 0.5;
-      const remainingLoss = Math.max(0, sub.heartLoss - continentAlreadyDeducted);
-      const newHearts = Math.max(0, (newLmsStates[pid].hearts || 0) - remainingLoss);
-      newLmsStates[pid] = {
-        ...newLmsStates[pid],
-        hearts: newHearts,
-        isEliminated: newHearts <= 0,
-        ...(newHearts <= 0 ? { eliminatedInRound: rs.roundNumber } : {}),
-      };
-      if (newHearts <= 0) newlyEliminated.push(pid);
-    });
+    // Apply remaining heart loss per player (continent penalty may already be live)
+    for (const [pid, sub] of Object.entries(allSubs)) {
+      if (!currentLmsStates[pid] || currentLmsStates[pid].isEliminated) continue;
+      const remainingLoss = getRemainingHeartLoss(sub);
+      if (remainingLoss > 0) {
+        await applyHeartLossToPlayer(pid, remainingLoss, rs.roundNumber);
+        allSubs[pid] = {
+          ...sub,
+          heartsDeductedThisRound: sub.heartLoss,
+        };
+      }
+    }
 
     await updateGameState({
-      lmsPlayerStates: newLmsStates,
       lmsRoundState: {
         ...rs,
         submissions: allSubs,
@@ -602,7 +623,7 @@ const LastManStandingGame: React.FC = () => {
         phaseStartTime: Date.now(),
       },
     } as any);
-  }, [updateGameState]);
+  }, [updateGameState, applyHeartLossToPlayer]);
 
   // ── HOST: advanceRound ────────────────────────────────────────────────────
   const advanceRound = useCallback(async () => {
@@ -775,6 +796,7 @@ const LastManStandingGame: React.FC = () => {
       countryConfirmedAt: null,
       isCountryCorrect: false,
       heartLoss: isCorrect ? 0 : 0.5,
+      heartsDeductedThisRound: isCorrect ? 0 : 0.5,
       phase: 'continent',
     };
 
@@ -783,22 +805,10 @@ const LastManStandingGame: React.FC = () => {
       [currentPlayer.id]: sub,
     };
 
-    // If wrong, immediately apply 0.5 heart loss to Firebase
     if (!isCorrect) {
-      const currentHearts = myState?.hearts || 0;
-      const newHearts = Math.max(0, currentHearts - 0.5);
-      const newLmsStates = {
-        ...(sessionRef.current?.lmsPlayerStates || {}),
-        [currentPlayer.id]: {
-          ...(lmsStates[currentPlayer.id] || { hearts: 0, isEliminated: false }),
-          hearts: newHearts,
-          isEliminated: newHearts <= 0,
-          ...(newHearts <= 0 ? { eliminatedInRound: roundState.roundNumber } : {}),
-        },
-      };
+      await applyHeartLossToPlayer(currentPlayer.id, 0.5, roundState.roundNumber);
       await updateGameState({
         lmsRoundState: { ...roundState, submissions: updatedSubs },
-        lmsPlayerStates: newLmsStates,
       } as any);
       playToastSound('error');
       addToast('error', `❌ Wrong! It's ${roundState.correctContinent}. -0.5 ❤️`);
@@ -815,7 +825,7 @@ const LastManStandingGame: React.FC = () => {
       setContinentFeedback(null);
       setInLocationPhase(true);
     }, isCorrect ? 800 : 1200);
-  }, [currentPlayer, roundState, continentSubmitted, isEliminated, updateGameState, playToastSound, addToast, myState, lmsStates]);
+  }, [currentPlayer, roundState, continentSubmitted, isEliminated, updateGameState, applyHeartLossToPlayer, playToastSound, addToast]);
 
   // ── Map click: select country ────────────────────────────────────────────
   const handleCountryClick = useCallback((country: string) => {
@@ -845,6 +855,8 @@ const LastManStandingGame: React.FC = () => {
     const existingSub = roundState.submissions?.[currentPlayer.id];
     const isContinentCorrect = existingSub?.isContinentCorrect || false;
     const heartLoss = calculateHeartLoss(isContinentCorrect, isCountryCorrect);
+    const alreadyDeducted = existingSub?.heartsDeductedThisRound ?? 0;
+    const remainingLoss = getRemainingHeartLoss({ heartLoss, heartsDeductedThisRound: alreadyDeducted });
 
     const updatedSub: LMSPlayerSubmission = {
       selectedContinent: existingSub?.selectedContinent || null,
@@ -854,6 +866,7 @@ const LastManStandingGame: React.FC = () => {
       countryConfirmedAt: Date.now(),
       isCountryCorrect,
       heartLoss,
+      heartsDeductedThisRound: heartLoss,
       phase: 'done',
     };
 
@@ -861,6 +874,10 @@ const LastManStandingGame: React.FC = () => {
       ...(roundState.submissions || {}),
       [currentPlayer.id]: updatedSub,
     };
+
+    if (remainingLoss > 0) {
+      await applyHeartLossToPlayer(currentPlayer.id, remainingLoss, roundState.roundNumber);
+    }
 
     await updateGameState({
       lmsRoundState: { ...roundState, submissions: updatedSubs },
@@ -871,9 +888,9 @@ const LastManStandingGame: React.FC = () => {
       addToast('success', heartLoss === 0 ? '🎯 Perfect! No hearts lost!' : `✓ Correct country! -${heartLoss} ❤️`);
     } else {
       playToastSound('error');
-      addToast('error', `✗ Wrong! -${heartLoss} ❤️`);
+      addToast('error', `✗ Wrong! -${remainingLoss > 0 ? remainingLoss : heartLoss} ❤️`);
     }
-  }, [currentPlayer, roundState, locationSubmitted, pendingCountry, isEliminated, updateGameState, playToastSound, addToast]);
+  }, [currentPlayer, roundState, locationSubmitted, pendingCountry, isEliminated, updateGameState, applyHeartLossToPlayer, playToastSound, addToast]);
 
   // ── Timer expire handlers ─────────────────────────────────────────────────
   const handleContinentTimerExpire = useCallback(async () => {
@@ -881,20 +898,6 @@ const LastManStandingGame: React.FC = () => {
     setContinentSubmitted(true);
     setContinentFeedback({ correct: false, correctContinent: roundState?.correctContinent || 'Europe' as LMSContinent });
 
-    // Immediately apply 0.5 heart loss for not answering
-    const currentHearts = myState?.hearts || 0;
-    const newHearts = Math.max(0, currentHearts - 0.5);
-    const newLmsStates = {
-      ...(sessionRef.current?.lmsPlayerStates || {}),
-      [currentPlayer.id]: {
-        ...(lmsStates[currentPlayer.id] || { hearts: 0, isEliminated: false }),
-        hearts: newHearts,
-        isEliminated: newHearts <= 0,
-        ...(newHearts <= 0 ? { eliminatedInRound: roundState?.roundNumber || 0 } : {}),
-      },
-    };
-
-    // Submit empty continent to Firebase
     const sub: LMSPlayerSubmission = {
       selectedContinent: null,
       continentSubmittedAt: null,
@@ -902,7 +905,8 @@ const LastManStandingGame: React.FC = () => {
       selectedCountry: null,
       countryConfirmedAt: null,
       isCountryCorrect: false,
-      heartLoss: 1, // will be recalculated when location is also evaluated
+      heartLoss: 1,
+      heartsDeductedThisRound: 0.5,
       phase: 'continent',
     };
     const updatedSubs = {
@@ -910,9 +914,9 @@ const LastManStandingGame: React.FC = () => {
       [currentPlayer.id]: sub,
     };
 
+    await applyHeartLossToPlayer(currentPlayer.id, 0.5, roundState?.roundNumber || 0);
     await updateGameState({
       lmsRoundState: { ...roundState!, submissions: updatedSubs },
-      lmsPlayerStates: newLmsStates,
     } as any);
 
     playToastSound('error');
@@ -923,7 +927,7 @@ const LastManStandingGame: React.FC = () => {
       setContinentFeedback(null);
       setInLocationPhase(true);
     }, 1200);
-  }, [continentSubmitted, isEliminated, currentPlayer, roundState, myState, lmsStates, updateGameState, playToastSound, addToast]);
+  }, [continentSubmitted, isEliminated, currentPlayer, roundState, updateGameState, applyHeartLossToPlayer, playToastSound, addToast]);
 
   const handleLocationTimerExpire = useCallback(() => {
     setShowConfirmModal(false);
@@ -976,31 +980,29 @@ const LastManStandingGame: React.FC = () => {
       <ReconnectionBanner />
 
       {/* ── Header ── */}
-      <header className="shrink-0 z-30 flex items-center justify-between px-4 py-2.5 bg-background/95 backdrop-blur border-b border-border">
-        <div className="flex items-center gap-3">
-          <Logo />
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-destructive/10 border border-destructive/30">
-            <Shield className="h-3.5 w-3.5 text-destructive" />
-            <span className="text-xs font-bold text-foreground uppercase tracking-wide leading-none">
-              Round {roundState.roundNumber}
+      <header className="shrink-0 z-30 flex items-center justify-between gap-2 py-1.5 px-2 md:px-3 bg-background/95 backdrop-blur-md border-b border-border">
+        <div className="flex items-center gap-2 min-w-0">
+          <Logo size="xs" />
+          <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-destructive/10 border border-destructive/30">
+            <Shield className="h-3 w-3 text-destructive shrink-0" />
+            <span className="text-[11px] font-bold text-foreground uppercase tracking-wide leading-none whitespace-nowrap">
+              R{roundState.roundNumber}
             </span>
           </div>
-          <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-secondary border border-border">
-            <Users className="h-3 w-3 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">{aliveCount} alive</span>
+          <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-secondary border border-border">
+            <Users className="h-3 w-3 text-muted-foreground shrink-0" />
+            <span className="text-[11px] text-muted-foreground tabular-nums">{aliveCount}</span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* My hearts */}
+        <div className="flex items-center gap-1.5 shrink-0">
           {currentPlayer && (
-            <div className="flex flex-col items-center px-3 py-1 rounded-xl bg-destructive/15 border border-destructive/40">
-              <span className="text-[10px] text-destructive/70 font-medium uppercase tracking-wide leading-none">Hearts</span>
+            <div className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-destructive/15 border border-destructive/40">
               <HeartsDisplay hearts={myState?.hearts || 0} maxHearts={maxHearts} />
             </div>
           )}
 
-          <Button variant="outline" size="sm" onClick={handleQuit} className="gap-1.5 h-7 text-xs px-2">
+          <Button variant="outline" size="sm" onClick={handleQuit} className="gap-1 h-8 px-2 text-xs">
             <LogOut className="h-3 w-3" />
             Quit
           </Button>

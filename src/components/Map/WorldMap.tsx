@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo, memo } from 'react';
 import {
   ComposableMap,
   Geographies,
@@ -13,16 +13,43 @@ import { Button } from '@/components/ui/button';
 import { getContinent, getMapCountryName, getGameCountryName, getCountryCoordinates } from '@/utils/countryData';
 import { getLocalizedCountryName } from '@/i18n/countryNames';
 
-const geoUrl = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
+/** Bundled locally — avoids CDN latency on every session */
+const geoUrl = '/maps/countries-110m.json';
 
-// Continent zoom presets
 const continentZoomPresets: Record<string, { coordinates: [number, number]; zoom: number }> = {
-  'Africa': { coordinates: [20, 0], zoom: 1.8 },
-  'Asia': { coordinates: [100, 30], zoom: 1.5 },
-  'Europe': { coordinates: [15, 50], zoom: 2.5 },
+  Africa: { coordinates: [20, 0], zoom: 1.8 },
+  Asia: { coordinates: [100, 30], zoom: 1.5 },
+  Europe: { coordinates: [15, 50], zoom: 2.5 },
   'North America': { coordinates: [-100, 45], zoom: 1.5 },
   'South America': { coordinates: [-60, -15], zoom: 1.5 },
-  'Oceania': { coordinates: [140, -25], zoom: 2 },
+  Oceania: { coordinates: [140, -25], zoom: 2 },
+};
+
+const FILL_CORRECT = 'hsl(142 60% 25%)';
+const FILL_WRONG = 'hsl(0 60% 30%)';
+const FILL_CURRENT = 'hsl(60 100% 50%)';
+const FILL_DEFAULT = 'hsl(0 0% 30%)';
+const FILL_HOVER_CLICKABLE = 'hsl(38 92% 60%)';
+const FILL_HOVER_CORRECT = 'hsl(142 60% 30%)';
+const FILL_HOVER_WRONG = 'hsl(0 60% 35%)';
+const FILL_HOVER_DEFAULT = 'hsl(0 0% 40%)';
+const FILL_HOVER_CURRENT = 'hsl(60 100% 60%)';
+const FILL_PRESSED_CURRENT = 'hsl(60 100% 40%)';
+const FILL_PRESSED_CLICKABLE = 'hsl(38 92% 45%)';
+
+const STROKE_CURRENT = 'hsl(60 100% 60%)';
+const STROKE_CORRECT = 'hsl(142 60% 35%)';
+const STROKE_WRONG = 'hsl(0 60% 40%)';
+const STROKE_DEFAULT = 'hsl(0 0% 20%)';
+const STROKE_HOVER_HIGHLIGHT = 'hsl(0 0% 100%)';
+
+type TooltipType = 'correct' | 'wrong' | 'current' | 'default';
+
+const TOOLTIP_CLASS: Record<TooltipType, string> = {
+  correct: 'bg-[hsl(142,60%,25%)] border-[hsl(142,60%,35%)] text-white',
+  wrong: 'bg-[hsl(0,60%,30%)] border-[hsl(0,60%,40%)] text-white',
+  current: 'bg-warning/90 border-warning text-warning-foreground',
+  default: 'bg-popover border-border text-foreground',
 };
 
 interface WorldMapProps {
@@ -34,13 +61,139 @@ interface WorldMapProps {
   disabled?: boolean;
   isSoloMode?: boolean;
   countrySelectionMode?: boolean;
-  /** Speed Race mode: all countries clickable, minimal controls (zoom + recenter only), full-height */
   speedRaceMode?: boolean;
-  /** When this key changes, the map resets to default center/zoom instantly */
   resetKey?: number | string;
 }
 
-export const WorldMap: React.FC<WorldMapProps> = ({
+interface MapCountryProps {
+  geography: { rsmKey: string; properties: { name: string } };
+  isGuessed: boolean;
+  isCorrect: boolean;
+  isWrong: boolean;
+  isCurrent: boolean;
+  isClickable: boolean;
+  gameCountryName: string;
+  geoDisplayName: string;
+  onSelect: (gameCountryName: string) => void;
+  onHoverStart: (geoDisplayName: string, clientX: number, clientY: number) => void;
+  onHoverEnd: () => void;
+}
+
+function buildStyle(
+  fill: string,
+  stroke: string,
+  strokeWidth: number,
+  hoverFill: string,
+  hoverStroke: string,
+  hoverStrokeWidth: number,
+  pressedFill: string,
+  isCurrent: boolean,
+  isClickable: boolean,
+) {
+  return {
+    default: {
+      fill,
+      stroke,
+      strokeWidth,
+      outline: 'none' as const,
+      animation: isCurrent ? 'pulse-country 1.5s ease-in-out infinite' : 'none',
+    },
+    hover: {
+      fill: hoverFill,
+      stroke: hoverStroke,
+      strokeWidth: hoverStrokeWidth,
+      outline: 'none' as const,
+      cursor: isClickable ? ('pointer' as const) : ('default' as const),
+      animation: isCurrent ? 'pulse-country 1.5s ease-in-out infinite' : 'none',
+    },
+    pressed: {
+      fill: pressedFill,
+      outline: 'none' as const,
+      animation: isCurrent ? 'pulse-country 1.5s ease-in-out infinite' : 'none',
+    },
+  };
+}
+
+const MapCountry = memo(function MapCountry({
+  geography,
+  isCorrect,
+  isWrong,
+  isCurrent,
+  isClickable,
+  gameCountryName,
+  geoDisplayName,
+  onSelect,
+  onHoverStart,
+  onHoverEnd,
+}: MapCountryProps) {
+  const fill = isCorrect ? FILL_CORRECT : isWrong ? FILL_WRONG : isCurrent ? FILL_CURRENT : FILL_DEFAULT;
+  const stroke = isCurrent ? STROKE_CURRENT : isCorrect ? STROKE_CORRECT : isWrong ? STROKE_WRONG : STROKE_DEFAULT;
+  const strokeWidth = isCurrent ? 1.5 : 0.5;
+
+  const hoverFill = isCurrent
+    ? FILL_HOVER_CURRENT
+    : isClickable
+      ? FILL_HOVER_CLICKABLE
+      : isCorrect
+        ? FILL_HOVER_CORRECT
+        : isWrong
+          ? FILL_HOVER_WRONG
+          : FILL_HOVER_DEFAULT;
+
+  const hoverStroke = isCurrent || isClickable ? STROKE_HOVER_HIGHLIGHT : stroke;
+  const hoverStrokeWidth = isCurrent || isClickable ? 2 : strokeWidth;
+  const pressedFill = isCurrent ? FILL_PRESSED_CURRENT : FILL_PRESSED_CLICKABLE;
+
+  const style = useMemo(
+    () => buildStyle(fill, stroke, strokeWidth, hoverFill, hoverStroke, hoverStrokeWidth, pressedFill, isCurrent, isClickable),
+    [fill, stroke, strokeWidth, hoverFill, hoverStroke, hoverStrokeWidth, pressedFill, isCurrent, isClickable],
+  );
+
+  const handleClick = useCallback(() => {
+    if (isClickable) onSelect(gameCountryName);
+  }, [isClickable, gameCountryName, onSelect]);
+
+  const handleMouseEnter = useCallback(
+    (e: React.MouseEvent) => {
+      onHoverStart(geoDisplayName, e.clientX, e.clientY);
+    },
+    [geoDisplayName, onHoverStart],
+  );
+
+  return (
+    <Geography
+      geography={geography}
+      onClick={handleClick}
+      onMouseEnter={handleMouseEnter as unknown as () => void}
+      onMouseLeave={onHoverEnd}
+      style={style}
+    />
+  );
+}, (prev, next) =>
+  prev.geography.rsmKey === next.geography.rsmKey &&
+  prev.isGuessed === next.isGuessed &&
+  prev.isCorrect === next.isCorrect &&
+  prev.isWrong === next.isWrong &&
+  prev.isCurrent === next.isCurrent &&
+  prev.isClickable === next.isClickable &&
+  prev.gameCountryName === next.gameCountryName,
+);
+
+function toNormalizedSet(countries: string[]): Set<string> {
+  const set = new Set<string>();
+  for (const c of countries) set.add(getMapCountryName(c));
+  return set;
+}
+
+function arraysEqual(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
+const WorldMapInner: React.FC<WorldMapProps> = ({
   guessedCountries,
   correctCountries,
   wrongCountries,
@@ -56,53 +209,108 @@ export const WorldMap: React.FC<WorldMapProps> = ({
   const { soundEnabled, toggleSound } = useSound();
   const [position, setPosition] = useState({ coordinates: [0, 20] as [number, number], zoom: 1 });
 
-  // Reset map to center when resetKey changes (e.g. new round in Speed Race)
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
+  const tooltipLabelRef = useRef<HTMLSpanElement>(null);
+  const tooltipSubRef = useRef<HTMLSpanElement>(null);
+  const hoveredCountryRef = useRef<string | null>(null);
+  const isMovingRef = useRef(false);
+  const ignoreMoveEndUntilRef = useRef(0);
+  const positionRef = useRef(position);
+
+  const guessedSet = useMemo(() => toNormalizedSet(guessedCountries), [guessedCountries]);
+  const correctSet = useMemo(() => toNormalizedSet(correctCountries), [correctCountries]);
+  const wrongSet = useMemo(() => toNormalizedSet(wrongCountries), [wrongCountries]);
+  const normalizedCurrent = useMemo(
+    () => (currentCountry ? getMapCountryName(currentCountry) : null),
+    [currentCountry],
+  );
+
+  useEffect(() => {
+    positionRef.current = position;
+  }, [position]);
+
   useEffect(() => {
     if (resetKey !== undefined) {
       setPosition({ coordinates: [0, 20], zoom: 1 });
     }
   }, [resetKey]);
-  const [tooltip, setTooltip] = useState<{ country: string; x: number; y: number } | null>(null);
-  const [hoveredCountry, setHoveredCountry] = useState<string | null>(null);
-  const mapContainerRef = useRef<HTMLDivElement>(null);
 
-  // Prevent tooltip re-renders from interfering with pan/zoom gestures.
-  const isMovingRef = useRef(false);
-  const tooltipRafRef = useRef<number | null>(null);
+  const resolveTooltip = useCallback(
+    (geoDisplayName: string): { text: string; type: TooltipType; sub?: string } => {
+      const normalizedName = getMapCountryName(geoDisplayName);
+      const isCorrect = correctSet.has(normalizedName);
+      const isWrong = wrongSet.has(normalizedName);
+      const isCurrent = normalizedCurrent === normalizedName;
+      const gameName = getGameCountryName(geoDisplayName);
+      const localizedName = getLocalizedCountryName(gameName, language);
 
-  // Some versions of react-simple-maps/d3-zoom can emit a stray onMoveEnd shortly
-  // after programmatic zoom changes; ignore that small window.
-  const ignoreMoveEndUntilRef = useRef(0);
+      if (speedRaceMode) {
+        if (isCorrect) return { text: `✓ ${localizedName}`, type: 'correct', sub: 'Correct!' };
+        return { text: '📍 Click to select', type: 'default' };
+      }
+      if (isCorrect) return { text: `✓ ${localizedName}`, type: 'correct', sub: 'Correct!' };
+      if (isWrong) return { text: `✗ ${localizedName}`, type: 'wrong', sub: 'Wrong' };
+      if (isCurrent) {
+        return {
+          text: disabled ? `🎯 ${t('mapTooltipHighlighted')}` : `🎯 ${t('mapTooltipCountryToGuess')}`,
+          type: 'current',
+          sub: disabled ? undefined : 'Click to open guess modal',
+        };
+      }
+      if (countrySelectionMode && !guessedSet.has(normalizedName)) {
+        return { text: `📍 ${localizedName}`, type: 'default' };
+      }
+      return { text: '???', type: 'default' };
+    },
+    [correctSet, wrongSet, normalizedCurrent, language, speedRaceMode, disabled, countrySelectionMode, guessedSet, t],
+  );
 
-  const positionRef = useRef(position);
-  useEffect(() => {
-    positionRef.current = position;
-  }, [position]);
-
-  const updateTooltipPosition = useCallback((country: string, e: React.MouseEvent) => {
-    if (isMovingRef.current) return;
-
+  const positionTooltip = useCallback((clientX: number, clientY: number) => {
+    const el = tooltipRef.current;
     const rect = mapContainerRef.current?.getBoundingClientRect();
-    if (!rect) return;
-
-    if (tooltipRafRef.current) {
-      cancelAnimationFrame(tooltipRafRef.current);
-    }
-
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    tooltipRafRef.current = requestAnimationFrame(() => {
-      setTooltip({ country, x, y });
-    });
+    if (!el || !rect) return;
+    el.style.left = `${clientX - rect.left + 12}px`;
+    el.style.top = `${clientY - rect.top + 12}px`;
   }, []);
 
-  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (!hoveredCountry) return;
-    updateTooltipPosition(hoveredCountry, e);
-  }, [hoveredCountry, updateTooltipPosition]);
+  const showTooltip = useCallback(
+    (geoDisplayName: string, clientX: number, clientY: number) => {
+      hoveredCountryRef.current = geoDisplayName;
+      const { text, type, sub } = resolveTooltip(geoDisplayName);
+      const el = tooltipRef.current;
+      const label = tooltipLabelRef.current;
+      const subEl = tooltipSubRef.current;
+      if (!el || !label) return;
 
-  // IMPORTANT: Map zoom/position must NEVER be auto-overridden.
-  // Only user actions (buttons/gestures) should change it.
+      label.textContent = text;
+      el.className = `pointer-events-none absolute z-20 px-3 py-2 rounded-lg shadow-lg border ${TOOLTIP_CLASS[type]}`;
+      if (subEl) {
+        if (sub) {
+          subEl.textContent = sub;
+          subEl.style.display = 'block';
+        } else {
+          subEl.style.display = 'none';
+        }
+      }
+      el.style.display = 'block';
+      positionTooltip(clientX, clientY);
+    },
+    [resolveTooltip, positionTooltip],
+  );
+
+  const hideTooltip = useCallback(() => {
+    hoveredCountryRef.current = null;
+    if (tooltipRef.current) tooltipRef.current.style.display = 'none';
+  }, []);
+
+  const handleMapMouseMove = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      if (!hoveredCountryRef.current || isMovingRef.current) return;
+      positionTooltip(e.clientX, e.clientY);
+    },
+    [positionTooltip],
+  );
 
   const handleZoomIn = useCallback(() => {
     ignoreMoveEndUntilRef.current = Date.now() + 200;
@@ -127,7 +335,6 @@ export const WorldMap: React.FC<WorldMapProps> = ({
 
   const handleZoomToContinent = useCallback(() => {
     ignoreMoveEndUntilRef.current = Date.now() + 200;
-    // Manual action only: zoom to the active country's continent (if available)
     if (currentCountry) {
       const continent = getContinent(currentCountry);
       if (continent && continentZoomPresets[continent]) {
@@ -135,16 +342,11 @@ export const WorldMap: React.FC<WorldMapProps> = ({
         return;
       }
     }
-
-    // Otherwise: cycle through continent presets
     setPosition((pos) => {
       const continents = Object.keys(continentZoomPresets);
       const currentIdx = continents.findIndex((c) => {
         const preset = continentZoomPresets[c];
-        return (
-          preset.coordinates[0] === pos.coordinates[0] &&
-          preset.coordinates[1] === pos.coordinates[1]
-        );
+        return preset.coordinates[0] === pos.coordinates[0] && preset.coordinates[1] === pos.coordinates[1];
       });
       const nextIdx = (currentIdx + 1) % continents.length;
       return continentZoomPresets[continents[nextIdx]];
@@ -161,15 +363,10 @@ export const WorldMap: React.FC<WorldMapProps> = ({
     }
   }, [currentCountry]);
 
-  const handleMoveEnd = useCallback((raw: any) => {
+  const handleMoveEnd = useCallback((raw: { coordinates?: number[]; center?: number[]; zoom?: number }) => {
     isMovingRef.current = false;
-
-    // Ignore any stray move-end caused by our own zoom buttons.
     if (Date.now() < ignoreMoveEndUntilRef.current) return;
 
-    // react-simple-maps can provide different shapes depending on version:
-    // - { coordinates: [lng, lat], zoom }
-    // - { center: [lng, lat], zoom }
     const coordsRaw =
       raw && Array.isArray(raw.coordinates) && raw.coordinates.length >= 2
         ? raw.coordinates
@@ -184,7 +381,6 @@ export const WorldMap: React.FC<WorldMapProps> = ({
       zoom: zoomRaw,
     };
 
-    // Avoid pointless state churn.
     const prev = positionRef.current;
     if (
       prev.zoom === next.zoom &&
@@ -193,106 +389,81 @@ export const WorldMap: React.FC<WorldMapProps> = ({
     ) {
       return;
     }
-
     setPosition(next);
   }, []);
 
-  const normalizedCurrent = currentCountry ? getMapCountryName(currentCountry) : null;
-  const normalizedGuessed = guessedCountries.map(getMapCountryName);
-  const normalizedCorrect = correctCountries.map(getMapCountryName);
-  const normalizedWrong = wrongCountries.map(getMapCountryName);
+  const handleCountrySelect = useCallback(
+    (gameCountryName: string) => {
+      onCountryClick(gameCountryName);
+    },
+    [onCountryClick],
+  );
 
-  const getCountryFill = (countryName: string) => {
-    const normalizedName = getMapCountryName(countryName);
-    // Correctly guessed countries - dark green
-    if (normalizedCorrect.includes(normalizedName)) {
-      return 'hsl(142 60% 25%)'; // Dark green
-    }
-    // Wrongly guessed countries - dark red
-    if (normalizedWrong.includes(normalizedName)) {
-      return 'hsl(0 60% 30%)'; // Dark red
-    }
-    // Current active country - flashing bright yellow until guessed
-    if (normalizedCurrent === normalizedName) {
-      return 'hsl(60 100% 50%)'; // Vibrant Yellow
-    }
-    // Default country color
-    return 'hsl(0 0% 30%)';
-  };
+  const renderCountries = useCallback(
+    (geographies: Array<{ rsmKey: string; properties: { name: string } }>) =>
+      geographies.map((geo) => {
+        const geoDisplayName = geo.properties.name;
+        const normalizedGeoName = getMapCountryName(geoDisplayName);
+        const isGuessed = guessedSet.has(normalizedGeoName);
+        const isCorrect = correctSet.has(normalizedGeoName);
+        const isWrong = wrongSet.has(normalizedGeoName);
+        const isCurrent = normalizedCurrent === normalizedGeoName;
+        const isCountrySelectionClickable = countrySelectionMode && !isGuessed;
+        const isSoloClickable = isSoloMode && !disabled && !isGuessed && !currentCountry;
+        const isSpeedRaceClickable = speedRaceMode && !disabled;
+        const isClickable =
+          isSpeedRaceClickable ||
+          (!disabled && isCurrent && !isGuessed) ||
+          isSoloClickable ||
+          isCountrySelectionClickable;
 
-  const getCountryStroke = (countryName: string) => {
-    const normalizedName = getMapCountryName(countryName);
-    if (normalizedCurrent === normalizedName) {
-      return 'hsl(60 100% 60%)';
-    }
-    if (normalizedCorrect.includes(normalizedName)) {
-      return 'hsl(142 60% 35%)'; // Darker green stroke
-    }
-    if (normalizedWrong.includes(normalizedName)) {
-      return 'hsl(0 60% 40%)'; // Darker red stroke
-    }
-    return 'hsl(0 0% 20%)';
-  };
-
-  // Tooltip should NEVER reveal unplayed country names (except in country selection mode)
-  // For guessed countries, show the localized name
-  const getTooltipContent = (countryName: string) => {
-    const normalizedName = getMapCountryName(countryName);
-    const isCorrect = normalizedCorrect.includes(normalizedName);
-    const isWrong = normalizedWrong.includes(normalizedName);
-    const isCurrent = normalizedCurrent === normalizedName;
-
-    // Get the game name (canonical English name) for localization lookup
-    const gameName = getGameCountryName(countryName);
-    // Get the localized name based on current language
-    const localizedName = getLocalizedCountryName(gameName, language);
-
-    // In speed race mode, never reveal country names (it would be a hint)
-    // Only show names for already-completed countries (colored green)
-    if (speedRaceMode) {
-      if (isCorrect) return `✓ ${localizedName}`;
-      return '📍 Click to select';
-    }
-
-    if (isCorrect) return `✓ ${localizedName}`;
-    if (isWrong) return `✗ ${localizedName}`;
-    if (isCurrent) return disabled ? `🎯 ${t('mapTooltipHighlighted')}` : `🎯 ${t('mapTooltipCountryToGuess')}`;
-    // In country selection mode, show country names for unguessed countries
-    if (countrySelectionMode && !normalizedGuessed.includes(normalizedName)) {
-      return `📍 ${localizedName}`;
-    }
-    return '???';
-  };
-
-  const getTooltipType = (countryName: string): 'correct' | 'wrong' | 'current' | 'default' => {
-    const normalizedName = getMapCountryName(countryName);
-    if (normalizedCorrect.includes(normalizedName)) return 'correct';
-    if (normalizedWrong.includes(normalizedName)) return 'wrong';
-    if (normalizedCurrent === normalizedName) return 'current';
-    return 'default';
-  };
+        return (
+          <MapCountry
+            key={geo.rsmKey}
+            geography={geo}
+            isGuessed={isGuessed}
+            isCorrect={isCorrect}
+            isWrong={isWrong}
+            isCurrent={isCurrent}
+            isClickable={isClickable}
+            gameCountryName={getGameCountryName(geoDisplayName)}
+            geoDisplayName={geoDisplayName}
+            onSelect={handleCountrySelect}
+            onHoverStart={showTooltip}
+            onHoverEnd={hideTooltip}
+          />
+        );
+      }),
+    [
+      guessedSet,
+      correctSet,
+      wrongSet,
+      normalizedCurrent,
+      countrySelectionMode,
+      isSoloMode,
+      disabled,
+      currentCountry,
+      speedRaceMode,
+      handleCountrySelect,
+      showTooltip,
+      hideTooltip,
+    ],
+  );
 
   return (
     <div className={`flex h-full ${speedRaceMode ? 'flex-row gap-2' : 'gap-4'}`}>
-      {/* Map Container - Fixed box with scroll isolation */}
       <div
         ref={mapContainerRef}
         className={`relative flex-1 bg-card overflow-hidden border-2 border-border shadow-lg ${
           speedRaceMode ? 'h-full rounded-xl' : 'h-[450px] md:h-[550px] lg:h-[600px] rounded-xl'
         }`}
         style={{ touchAction: 'pan-x pan-y pinch-zoom' }}
-        onMouseMove={handleMouseMove}
-        onWheelCapture={(e) => {
-          // Allow the page to scroll normally while preventing d3-zoom from treating
-          // wheel/touchpad scroll as map zoom (which feels like "auto de-zooming").
-          e.stopPropagation();
-        }}
+        onMouseMove={handleMapMouseMove}
+        onWheelCapture={(e) => e.stopPropagation()}
         onPointerDownCapture={(e) => {
-          // Only treat pointer interactions inside the map box as panning/zooming.
-          // (Controls are outside this container.)
           if ((e.target as HTMLElement)?.closest?.('svg')) {
             isMovingRef.current = true;
-            setTooltip(null);
+            hideTooltip();
           }
         }}
         onPointerUpCapture={() => {
@@ -301,49 +472,20 @@ export const WorldMap: React.FC<WorldMapProps> = ({
         onPointerCancelCapture={() => {
           isMovingRef.current = false;
         }}
-        onPointerLeave={() => {
-          setHoveredCountry(null);
-          setTooltip(null);
-        }}
+        onPointerLeave={hideTooltip}
       >
-        {/* Country Tooltip - follows cursor inside map box */}
-        {tooltip && (() => {
-          const tooltipType = getTooltipType(tooltip.country);
-          const tooltipClasses = {
-            correct: 'bg-[hsl(142,60%,25%)]/80 border-[hsl(142,60%,35%)] text-white',
-            wrong: 'bg-[hsl(0,60%,30%)]/80 border-[hsl(0,60%,40%)] text-white',
-            current: 'bg-warning/20 border-warning text-warning-foreground',
-            default: 'bg-popover/90 border-border text-foreground',
-          };
-          return (
-            <div
-              className={`pointer-events-none absolute z-20 px-3 py-2 rounded-lg shadow-lg border backdrop-blur-sm ${tooltipClasses[tooltipType]}`}
-              style={{ left: tooltip.x + 12, top: tooltip.y + 12 }}
-            >
-              <span className="text-sm font-semibold">{getTooltipContent(tooltip.country)}</span>
-              {tooltipType === 'correct' && (
-                <span className="text-xs block text-white/70">Correct!</span>
-              )}
-              {tooltipType === 'wrong' && (
-                <span className="text-xs block text-white/70">Wrong</span>
-              )}
-              {tooltipType === 'current' && !disabled && (
-                <span className="text-xs block">Click to open guess modal</span>
-              )}
-            </div>
-          );
-        })()}
+        {/* Tooltip — position/content updated via refs (no React re-render on mousemove) */}
+        <div ref={tooltipRef} style={{ display: 'none' }} className="pointer-events-none absolute z-20 px-3 py-2 rounded-lg shadow-lg border">
+          <span ref={tooltipLabelRef} className="text-sm font-semibold" />
+          <span ref={tooltipSubRef} className="text-xs block opacity-70" style={{ display: 'none' }} />
+        </div>
 
-        {/* Current Country Indicator - DELETED - NEVER show the country name or selection */}
-
-        {/* Country Selection Mode indicator */}
         {countrySelectionMode && (
           <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 px-4 py-2 bg-primary/90 border border-primary rounded-lg">
             <span className="text-sm text-primary-foreground font-bold">📍 Click a country to select it</span>
           </div>
         )}
 
-        {/* Spectator indicator */}
         {disabled && currentCountry && !countrySelectionMode && (
           <div className="absolute top-4 right-4 z-20 px-3 py-1 bg-muted/80 border border-border rounded-lg">
             <span className="text-xs text-muted-foreground">👁️ Spectating</span>
@@ -352,9 +494,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
 
         <ComposableMap
           projection="geoMercator"
-          projectionConfig={{
-            scale: 140,
-          }}
+          projectionConfig={{ scale: 140 }}
           style={{ width: '100%', height: '100%' }}
         >
           <ZoomableGroup
@@ -364,101 +504,20 @@ export const WorldMap: React.FC<WorldMapProps> = ({
             minZoom={0.8}
             maxZoom={6}
           >
-            <Geographies geography={geoUrl}>
-              {({ geographies }) =>
-                geographies.map((geo) => {
-                  const countryName = geo.properties.name;
-                  const normalizedGeoName = getMapCountryName(countryName);
-                  const isGuessed = normalizedGuessed.includes(normalizedGeoName);
-                  const isCorrect = normalizedCorrect.includes(normalizedGeoName);
-                  const isWrong = normalizedWrong.includes(normalizedGeoName);
-                  const isCurrent = normalizedCurrent === normalizedGeoName;
-                  // In country selection mode, any unguessed country is clickable
-                  const isCountrySelectionClickable = countrySelectionMode && !isGuessed;
-                  // In solo mode without dice roll, any unguessed country is clickable
-                  const isSoloClickable = isSoloMode && !disabled && !isGuessed && !currentCountry;
-                  // In Speed Race, every country is clickable when not disabled
-                  const isSpeedRaceClickable = speedRaceMode && !disabled;
-                  const isClickable = isSpeedRaceClickable || (!disabled && isCurrent && !isGuessed) || isSoloClickable || isCountrySelectionClickable;
-
-                  const getHoverFill = () => {
-                    if (isCurrent) return 'hsl(60 100% 60%)';
-                    if (isClickable) return 'hsl(38 92% 60%)';
-                    if (isCorrect) return 'hsl(142 60% 30%)'; // Slightly lighter dark green
-                    if (isWrong) return 'hsl(0 60% 35%)'; // Slightly lighter dark red
-                    return 'hsl(0 0% 40%)';
-                  };
-
-                  return (
-                    <Geography
-                      key={geo.rsmKey}
-                      geography={geo}
-                      onClick={() => {
-                        if (speedRaceMode && !disabled) {
-                          onCountryClick(getGameCountryName(countryName));
-                        } else if (isClickable) {
-                          onCountryClick(getGameCountryName(countryName));
-                        }
-                      }}
-                      onMouseEnter={() => {
-                        setHoveredCountry(countryName);
-                      }}
-                      onMouseLeave={() => {
-                        setHoveredCountry(null);
-                        setTooltip(null);
-                      }}
-                      style={{
-                        default: {
-                          fill: getCountryFill(countryName),
-                          stroke: getCountryStroke(countryName),
-                          strokeWidth: isCurrent ? 1.5 : 0.5,
-                          outline: 'none',
-                          transition: 'all 0.3s ease',
-                          animation: isCurrent ? 'pulse-country 1.5s ease-in-out infinite' : 'none',
-                        },
-                        hover: {
-                          fill: getHoverFill(),
-                          stroke: isCurrent || isClickable ? 'hsl(0 0% 100%)' : getCountryStroke(countryName),
-                          strokeWidth: isCurrent || isClickable ? 2 : 0.5,
-                          outline: 'none',
-                          cursor: isClickable ? 'pointer' : 'default',
-                          animation: isCurrent ? 'pulse-country 1.5s ease-in-out infinite' : 'none',
-                        },
-                        pressed: {
-                          fill: isCurrent ? 'hsl(60 100% 40%)' : 'hsl(38 92% 45%)',
-                          outline: 'none',
-                          animation: isCurrent ? 'pulse-country 1.5s ease-in-out infinite' : 'none',
-                        },
-                      }}
-                    />
-                  );
-                })
-              }
-            </Geographies>
+            <Geographies geography={geoUrl}>{({ geographies }) => renderCountries(geographies)}</Geographies>
           </ZoomableGroup>
         </ComposableMap>
       </div>
 
-      {/* Map Controls - Right side outside the map */}
       <div className="flex flex-col gap-2 justify-center pr-1">
         <GameTooltip content={t('zoomIn')} position="left">
-          <Button
-            variant="secondary"
-            size="icon"
-            onClick={handleZoomIn}
-            className="h-10 w-10 rounded-xl border-2 border-border hover:border-primary transition-all"
-          >
+          <Button variant="secondary" size="icon" onClick={handleZoomIn} className="h-10 w-10 rounded-xl border-2 border-border hover:border-primary transition-all">
             <ZoomIn className="h-4 w-4" />
           </Button>
         </GameTooltip>
 
         <GameTooltip content={t('zoomOut')} position="left">
-          <Button
-            variant="secondary"
-            size="icon"
-            onClick={handleZoomOut}
-            className="h-10 w-10 rounded-xl border-2 border-border hover:border-primary transition-all"
-          >
+          <Button variant="secondary" size="icon" onClick={handleZoomOut} className="h-10 w-10 rounded-xl border-2 border-border hover:border-primary transition-all">
             <ZoomOut className="h-4 w-4" />
           </Button>
         </GameTooltip>
@@ -466,59 +525,32 @@ export const WorldMap: React.FC<WorldMapProps> = ({
         <div className="h-px bg-border my-1" />
 
         <GameTooltip content={t('tooltipRecenter')} position="left">
-          <Button
-            variant="secondary"
-            size="icon"
-            onClick={handleRecenter}
-            className="h-10 w-10 rounded-xl border-2 border-border hover:border-primary transition-all"
-          >
+          <Button variant="secondary" size="icon" onClick={handleRecenter} className="h-10 w-10 rounded-xl border-2 border-border hover:border-primary transition-all">
             <Maximize className="h-4 w-4" />
           </Button>
         </GameTooltip>
 
-        {/* Sound toggle in speed race mode */}
         {speedRaceMode && (
           <>
             <div className="h-px bg-border my-1" />
             <GameTooltip content={soundEnabled ? t('soundOn') : t('soundOff')} position="left">
-              <Button
-                variant="secondary"
-                size="icon"
-                onClick={toggleSound}
-                className="h-10 w-10 rounded-xl border-2 border-border hover:border-primary transition-all"
-              >
-                {soundEnabled ? (
-                  <Volume2 className="h-4 w-4 text-primary" />
-                ) : (
-                  <VolumeX className="h-4 w-4 text-muted-foreground" />
-                )}
+              <Button variant="secondary" size="icon" onClick={toggleSound} className="h-10 w-10 rounded-xl border-2 border-border hover:border-primary transition-all">
+                {soundEnabled ? <Volume2 className="h-4 w-4 text-primary" /> : <VolumeX className="h-4 w-4 text-muted-foreground" />}
               </Button>
             </GameTooltip>
           </>
         )}
 
-        {/* Only show these extra controls when NOT in speed race mode */}
         {!speedRaceMode && (
           <>
             <GameTooltip content={t('tooltipLocate')} position="left">
-              <Button
-                variant="secondary"
-                size="icon"
-                onClick={handleLocateCountry}
-                disabled={!currentCountry}
-                className="h-10 w-10 rounded-xl border-2 border-border hover:border-primary transition-all disabled:opacity-50"
-              >
+              <Button variant="secondary" size="icon" onClick={handleLocateCountry} disabled={!currentCountry} className="h-10 w-10 rounded-xl border-2 border-border hover:border-primary transition-all disabled:opacity-50">
                 <MapPin className="h-4 w-4" />
               </Button>
             </GameTooltip>
 
             <GameTooltip content="Zoom to Continent" position="left">
-              <Button
-                variant="secondary"
-                size="icon"
-                onClick={handleZoomToContinent}
-                className="h-10 w-10 rounded-xl border-2 border-border hover:border-primary transition-all"
-              >
+              <Button variant="secondary" size="icon" onClick={handleZoomToContinent} className="h-10 w-10 rounded-xl border-2 border-border hover:border-primary transition-all">
                 <Globe className="h-4 w-4" />
               </Button>
             </GameTooltip>
@@ -528,3 +560,27 @@ export const WorldMap: React.FC<WorldMapProps> = ({
     </div>
   );
 };
+
+function worldMapPropsEqual(prev: WorldMapProps, next: WorldMapProps): boolean {
+  return (
+    prev.currentCountry === next.currentCountry &&
+    prev.disabled === next.disabled &&
+    prev.isSoloMode === next.isSoloMode &&
+    prev.countrySelectionMode === next.countrySelectionMode &&
+    prev.speedRaceMode === next.speedRaceMode &&
+    prev.resetKey === next.resetKey &&
+    prev.onCountryClick === next.onCountryClick &&
+    arraysEqual(prev.guessedCountries, next.guessedCountries) &&
+    arraysEqual(prev.correctCountries, next.correctCountries) &&
+    arraysEqual(prev.wrongCountries, next.wrongCountries)
+  );
+}
+
+export const WorldMap = memo(WorldMapInner, worldMapPropsEqual);
+
+// Preload geo JSON as soon as this module is imported
+if (typeof window !== 'undefined') {
+  fetch(geoUrl).catch(() => {
+    /* ignore — Geographies will retry */
+  });
+}

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, User, Loader2, UserCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { validateUsername, MAX_USERNAME_LENGTH } from '@/utils/inputValidation';
+import { useScrollLock } from '@/hooks/useScrollLock';
 
 interface GuestJoinModalProps {
   isOpen: boolean;
@@ -24,6 +25,8 @@ export const GuestJoinModal: React.FC<GuestJoinModalProps> = ({
   const [username, setUsername] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useScrollLock(isOpen);
 
   if (!isOpen) return null;
 

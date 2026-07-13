@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { fetchGameHistoryServer } from '@/services/scoringService';
+import { useScrollLock } from '@/hooks/useScrollLock';
 
 interface GameHistoryEntry {
   id: string;
@@ -70,6 +71,8 @@ export const AchievementsModal: React.FC<AchievementsModalProps> = ({ isOpen, on
 
     return { totalGames, soloGames, multiGames, avgMultiAccuracy, winRate, firstPlaceCount, top5Scores };
   }, [history]);
+
+  useScrollLock(isOpen);
 
   if (!isOpen) return null;
 

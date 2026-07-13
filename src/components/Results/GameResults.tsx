@@ -5,6 +5,7 @@ import { AvatarDisplay } from '@/components/Avatar/AvatarDisplay';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Player } from '@/contexts/GameContext';
 import { useNavigate } from 'react-router-dom';
+import { useScrollLock } from '@/hooks/useScrollLock';
 
 interface GameResultsProps {
   isOpen: boolean;
@@ -54,6 +55,8 @@ export const GameResults: React.FC<GameResultsProps> = ({ isOpen, players, onPla
     }, 1000);
     return () => clearInterval(interval);
   }, [isOpen, isGuest, navigate]);
+
+  useScrollLock(isOpen);
 
   if (!isOpen) return null;
 

@@ -15,7 +15,7 @@ import { GameTooltip } from '@/components/Tooltip/GameTooltip';
 import { LonePlayerOverlay } from '@/components/Modal/LonePlayerOverlay';
 import { ReconnectionBanner } from '@/components/Banner/ReconnectionBanner';
 import { useSound } from '@/contexts/SoundContext';
-import { WAITING_ROOM_TIMEOUT, playersMapToArray } from '@/types/game';
+import { WAITING_ROOM_TIMEOUT, playersMapToArray, WAITING_ROOM_ACCELERATED_TIMEOUT, isWaitingRoomJoinThresholdMet, getWaitingRoomRemainingSeconds, getAcceleratedWaitingRoomStartTime, getWaitingRoomJoinThresholdCount } from '@/types/game';
 import { Player } from '@/types/game';
  import { Copy, Check, Users, Clock, Play, LogOut, Link, Zap, Sparkles } from 'lucide-react';
 import { kickUnreadyPlayers, clearRecoveryData } from '@/services/gameSessionService';
@@ -24,13 +24,15 @@ import { JoinRequestsModal } from '@/components/Modal/JoinRequestsModal';
 
 const WaitingRoom = () => {
   const { t } = useLanguage();
-  const { session, currentPlayer, isLoading, setReady, updatePlayerMetadata, startCountdown, startGame, leaveSession, getPlayersArray } = useGame();
+  const { session, currentPlayer, isLoading, setReady, updatePlayerMetadata, startCountdown, startGame, leaveSession, getPlayersArray, updateGameState } = useGame();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { addToast } = useToastContext();
   const { playToastSound } = useSound();
   const navigate = useNavigate();
 
   const prevPlayersRef = useRef<Player[]>([]);
+  const autoStartTriggeredRef = useRef(false);
+  const timerAcceleratedRef = useRef(false);
 
   const [copied, setCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
@@ -69,16 +71,60 @@ const WaitingRoom = () => {
     }
   }, [session?.status, navigate]);
 
-  // Auto-start countdown when all players join
+  // Auto-start countdown when every joined player is ready (min. 2 players)
   useEffect(() => {
-    if (session?.status === 'waiting' &&
-      players.length === session.maxPlayers &&
-      players.every(p => p.isReady) &&
-      session.host === currentPlayer?.id) {
-      // All players joined and ready - start countdown
+    if (session?.status !== 'waiting') {
+      autoStartTriggeredRef.current = false;
+      return;
+    }
+
+    const minPlayersReady =
+      players.length >= 2 &&
+      players.every(p => p.isReady);
+
+    if (minPlayersReady && !autoStartTriggeredRef.current) {
+      autoStartTriggeredRef.current = true;
       startCountdown();
     }
-  }, [session, currentPlayer, startCountdown, players]);
+  }, [session?.status, players, startCountdown]);
+
+  // When ≥66% of slots are filled, cap remaining wait time at 1 minute
+  useEffect(() => {
+    if (session?.status !== 'waiting' || !session.waitingRoomStartTime) {
+      timerAcceleratedRef.current = false;
+      return;
+    }
+
+    const joinedCount = players.length;
+    const maxPlayers = session.maxPlayers;
+    if (!isWaitingRoomJoinThresholdMet(joinedCount, maxPlayers)) return;
+
+    const remaining = getWaitingRoomRemainingSeconds(session.waitingRoomStartTime);
+    if (remaining <= WAITING_ROOM_ACCELERATED_TIMEOUT) return;
+    if (timerAcceleratedRef.current) return;
+
+    timerAcceleratedRef.current = true;
+    const acceleratedStart = getAcceleratedWaitingRoomStartTime();
+
+    updateGameState({ waitingRoomStartTime: acceleratedStart })
+      .then(() => {
+        addToast('info', t('waitingRoomTimerAccelerated'));
+        playToastSound('info');
+      })
+      .catch(err => {
+        console.error('[WaitingRoom] Failed to accelerate timer:', err);
+        timerAcceleratedRef.current = false;
+      });
+  }, [
+    session?.status,
+    session?.waitingRoomStartTime,
+    session?.maxPlayers,
+    players.length,
+    updateGameState,
+    addToast,
+    t,
+    playToastSound,
+  ]);
 
   // Handle player departures notifications
   useEffect(() => {
@@ -216,7 +262,10 @@ const WaitingRoom = () => {
   const readyPlayers = players.filter(p => p.isReady);
   const allReady = players.every(p => p.isReady);
   const isHost = session?.host === currentPlayer?.id;
-  const isFull = players.length === session?.maxPlayers;
+  const joinThresholdCount = session ? getWaitingRoomJoinThresholdCount(session.maxPlayers) : 0;
+  const joinThresholdMet = session
+    ? isWaitingRoomJoinThresholdMet(players.length, session.maxPlayers)
+    : false;
 
   if (!session) return null;
 
@@ -290,6 +339,19 @@ const WaitingRoom = () => {
 
         {/* Timer - shared across all players based on session start time */}
         <div className="mb-8">
+          {session && joinThresholdMet && (
+            <p className="text-center text-sm text-warning mb-3">
+              {t('waitingRoomTimerAcceleratedHint')}
+            </p>
+          )}
+          {session && !joinThresholdMet && joinThresholdCount > 0 && (
+            <p className="text-center text-xs text-muted-foreground mb-3">
+              {t('waitingRoomTimerThresholdHint', {
+                threshold: joinThresholdCount,
+                max: session.maxPlayers,
+              })}
+            </p>
+          )}
           <TimerProgress
             totalSeconds={WAITING_ROOM_TIMEOUT}
             startTime={session.waitingRoomStartTime}
@@ -299,7 +361,7 @@ const WaitingRoom = () => {
         </div>
 
         {/* Auto-start indicator */}
-        {isFull && allReady && (
+        {players.length >= 2 && allReady && (
           <div className="mb-6 p-4 bg-primary/20 border border-primary/30 rounded-xl text-center animate-pulse">
             <p className="text-primary font-display text-lg">
               🎮 All players ready! Starting countdown...

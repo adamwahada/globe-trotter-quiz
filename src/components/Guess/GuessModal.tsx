@@ -6,16 +6,21 @@ import { GameTooltip } from '@/components/Tooltip/GameTooltip';
 import { TimerProgress } from '@/components/Timer/TimerProgress';
 import type { HintAvailability } from '@/utils/countryHints';
 import { validateGuess, MAX_GUESS_LENGTH } from '@/utils/inputValidation';
+import { useScrollLock } from '@/hooks/useScrollLock';
+import { HINT_TIME_PENALTY_SECONDS } from '@/utils/hintPenalties';
 
 // Hint costs
 const HINT_COST_LETTER = 1;
 const HINT_COST_FAMOUS = 0.5;
 const HINT_COST_FLAG = 1;
-const HINT_COST_GUIDED = 1; // Player or Singer hint
-const HINT_COST_CAPITAL = 1; // Capital costs 1 point + time
-const GUIDED_TIME_PENALTY = 5; // seconds
-const CAPITAL_TIME_PENALTY = 10; // seconds
-const MAX_TOTAL_HINTS = 2; // Maximum total hints per round (across ALL hint types)
+const HINT_COST_GUIDED = 1;
+const HINT_COST_CAPITAL = 1;
+const LETTER_TIME_PENALTY = HINT_TIME_PENALTY_SECONDS.letter;
+const FAMOUS_TIME_PENALTY = HINT_TIME_PENALTY_SECONDS.famous;
+const FLAG_TIME_PENALTY = HINT_TIME_PENALTY_SECONDS.flag;
+const GUIDED_TIME_PENALTY = HINT_TIME_PENALTY_SECONDS.player;
+const CAPITAL_TIME_PENALTY = HINT_TIME_PENALTY_SECONDS.capital;
+const MAX_TOTAL_HINTS = 2;
 
 export type GuidedHintType = 'player' | 'singer' | 'capital';
 
@@ -28,6 +33,8 @@ interface GuessModalProps {
   onUseGuidedHint?: (type: GuidedHintType) => { value: string; timePenalty: number } | null | Promise<{ value: string; timePenalty: number } | null>;
   turnTimeSeconds?: number;
   turnStartTime?: number;
+  /** Changes when a new guess round starts — not when hint penalties adjust the timer */
+  turnResetKey?: string | number;
   playerScore?: number;
   hasExtendedHints?: boolean;
   hintAvailability?: HintAvailability;
@@ -55,6 +62,7 @@ export const GuessModal: React.FC<GuessModalProps> = ({
   onUseGuidedHint,
   turnTimeSeconds = 35,
   turnStartTime,
+  turnResetKey,
   playerScore = 0,
   hasExtendedHints = false,
   hintAvailability = defaultHintAvailability,
@@ -79,14 +87,15 @@ export const GuessModal: React.FC<GuessModalProps> = ({
   const [playerHint, setPlayerHint] = useState('');
   const [singerHint, setSingerHint] = useState('');
   const [capitalHint, setCapitalHint] = useState('');
-  const [timePenaltyApplied, setTimePenaltyApplied] = useState(0);
+  /** Tracks turn start including hint penalties — synced from session, optimistically updated locally */
+  const [effectiveTurnStart, setEffectiveTurnStart] = useState<number | undefined>();
   const [showGuidedMenu, setShowGuidedMenu] = useState(false);
   
   // Track total hints used across ALL types (max 2 per round)
   const [totalHintsUsed, setTotalHintsUsed] = useState(0);
   
   // Track if we've initialized for this turn (to prevent re-init on modal reopen)
-  const [lastTurnStartTime, setLastTurnStartTime] = useState<number | undefined>(undefined);
+  const [lastTurnResetKey, setLastTurnResetKey] = useState<string | number | undefined>(undefined);
   
   // Track remaining time to disable time-costly hints when time is too low
   const [remainingSeconds, setRemainingSeconds] = useState(turnTimeSeconds);
@@ -94,10 +103,18 @@ export const GuessModal: React.FC<GuessModalProps> = ({
   // Buffer seconds - hints are disabled when remaining time < penalty + buffer
   const TIME_BUFFER = 5;
 
-  // Reset state only when a NEW turn starts (turnStartTime changes), not when modal reopens
+  const applyLocalTimePenalty = (penaltySeconds: number) => {
+    if (penaltySeconds <= 0) return;
+    setEffectiveTurnStart(prev => {
+      const base = prev ?? turnStartTime ?? Date.now();
+      return base - penaltySeconds * 1000;
+    });
+  };
+
+  // Reset state only when a NEW turn starts, not when hint penalties shift turnStartTime
   useEffect(() => {
-    if (isOpen && turnStartTime !== lastTurnStartTime) {
-      // New turn - reset everything
+    const resetKey = turnResetKey ?? turnStartTime;
+    if (isOpen && resetKey !== undefined && resetKey !== lastTurnResetKey) {
       setGuess('');
       setHintUsed(false);
       setFamousPersonUsed(false);
@@ -109,37 +126,46 @@ export const GuessModal: React.FC<GuessModalProps> = ({
       setPlayerHint('');
       setSingerHint('');
       setCapitalHint('');
-      setTimePenaltyApplied(0);
+      setEffectiveTurnStart(turnStartTime);
       setShowGuidedMenu(false);
-      setLastTurnStartTime(turnStartTime);
+      setLastTurnResetKey(resetKey);
       setRemainingSeconds(turnTimeSeconds);
     } else if (isOpen) {
-      // Just reopening same turn - only reset the guess input
       setGuess('');
       setShowGuidedMenu(false);
     }
-  }, [isOpen, turnStartTime, lastTurnStartTime, turnTimeSeconds]);
+  }, [isOpen, turnResetKey, turnStartTime, lastTurnResetKey, turnTimeSeconds]);
+
+  // Sync timer from parent when hint penalties arrive (earlier start = more time elapsed)
+  useEffect(() => {
+    if (!turnStartTime) return;
+    setEffectiveTurnStart(prev => {
+      if (prev === undefined) return turnStartTime;
+      return Math.min(prev, turnStartTime);
+    });
+  }, [turnStartTime]);
 
   // Track remaining time to disable time-costly hints
   useEffect(() => {
-    if (!isOpen || !turnStartTime) return;
+    if (!isOpen) return;
+    const start = effectiveTurnStart ?? turnStartTime;
+    if (!start) return;
     
     const calculateRemaining = () => {
-      const adjustedStart = turnStartTime - (timePenaltyApplied * 1000);
-      const elapsed = Math.floor((Date.now() - adjustedStart) / 1000);
+      const elapsed = Math.floor((Date.now() - start) / 1000);
       return Math.max(0, turnTimeSeconds - elapsed);
     };
     
-    // Initial calculation
     setRemainingSeconds(calculateRemaining());
     
-    // Update every second
     const interval = setInterval(() => {
       setRemainingSeconds(calculateRemaining());
     }, 1000);
     
     return () => clearInterval(interval);
-  }, [isOpen, turnStartTime, turnTimeSeconds, timePenaltyApplied]);
+  }, [isOpen, turnStartTime, effectiveTurnStart, turnTimeSeconds]);
+
+  useScrollLock(isOpen);
 
   if (!isOpen) return null;
 
@@ -174,7 +200,15 @@ export const GuessModal: React.FC<GuessModalProps> = ({
     if (playerScore < cost) return false;
     
     // Check time constraints for time-costly hints
-    // Disable hint if remaining time < time_penalty + buffer
+    if (type === 'letter' && remainingSeconds <= LETTER_TIME_PENALTY + TIME_BUFFER) {
+      return false;
+    }
+    if (type === 'famous' && remainingSeconds <= FAMOUS_TIME_PENALTY + TIME_BUFFER) {
+      return false;
+    }
+    if (type === 'flag' && remainingSeconds <= FLAG_TIME_PENALTY + TIME_BUFFER) {
+      return false;
+    }
     if (type === 'capital' && remainingSeconds <= CAPITAL_TIME_PENALTY + TIME_BUFFER) {
       return false;
     }
@@ -186,7 +220,16 @@ export const GuessModal: React.FC<GuessModalProps> = ({
   };
   
   // Check if hint is disabled due to time constraint (for tooltip messages)
-  const isTimeConstrained = (type: GuidedHintType): boolean => {
+  const isTimeConstrained = (type: 'letter' | 'famous' | 'flag' | GuidedHintType): boolean => {
+    if (type === 'letter') {
+      return remainingSeconds <= LETTER_TIME_PENALTY + TIME_BUFFER;
+    }
+    if (type === 'famous') {
+      return remainingSeconds <= FAMOUS_TIME_PENALTY + TIME_BUFFER;
+    }
+    if (type === 'flag') {
+      return remainingSeconds <= FLAG_TIME_PENALTY + TIME_BUFFER;
+    }
     if (type === 'capital') {
       return remainingSeconds <= CAPITAL_TIME_PENALTY + TIME_BUFFER;
     }
@@ -210,7 +253,7 @@ export const GuessModal: React.FC<GuessModalProps> = ({
     if (maxHintsReached) return t('maxHintsReached');
     
     // Check time constraint for time-costly hints
-    if ((type === 'capital' || type === 'player' || type === 'singer') && isTimeConstrained(type as GuidedHintType)) {
+    if (isTimeConstrained(type)) {
       return t('notEnoughTime');
     }
     
@@ -228,6 +271,7 @@ export const GuessModal: React.FC<GuessModalProps> = ({
       setFirstLetter(letter);
       setHintUsed(true);
       setTotalHintsUsed(prev => prev + 1);
+      applyLocalTimePenalty(LETTER_TIME_PENALTY);
     }
   };
 
@@ -239,6 +283,7 @@ export const GuessModal: React.FC<GuessModalProps> = ({
       setFamousPersonUsed(true);
       setFamousPerson(name);
       setTotalHintsUsed(prev => prev + 1);
+      applyLocalTimePenalty(FAMOUS_TIME_PENALTY);
     }
   };
 
@@ -250,6 +295,7 @@ export const GuessModal: React.FC<GuessModalProps> = ({
       setFlagUsed(true);
       setCountryFlag(flag);
       setTotalHintsUsed(prev => prev + 1);
+      applyLocalTimePenalty(FLAG_TIME_PENALTY);
     }
   };
 
@@ -260,7 +306,9 @@ export const GuessModal: React.FC<GuessModalProps> = ({
     const result = resultOrPromise instanceof Promise ? await resultOrPromise : resultOrPromise;
     if (result) {
       setTotalHintsUsed(prev => prev + 1);
-      setTimePenaltyApplied(prev => prev + result.timePenalty);
+      if (result.timePenalty > 0) {
+        applyLocalTimePenalty(result.timePenalty);
+      }
       
       if (type === 'player') {
         setPlayerHint(result.value);
@@ -285,13 +333,7 @@ export const GuessModal: React.FC<GuessModalProps> = ({
     onSkip();
   };
 
-  // Calculate adjusted time for timer - turnStartTime is now always provided by GamePage
-  const adjustedTurnTime = turnTimeSeconds - timePenaltyApplied;
-  
-  // Adjust start time when time penalty is applied
-  const adjustedStartTime = turnStartTime 
-    ? turnStartTime - (timePenaltyApplied * 1000) 
-    : undefined;
+  const timerStartTime = effectiveTurnStart ?? turnStartTime;
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-8 sm:pt-16">
@@ -306,11 +348,12 @@ export const GuessModal: React.FC<GuessModalProps> = ({
           <div className="mb-6 pr-12">
             <TimerProgress
               totalSeconds={turnTimeSeconds}
-              startTime={adjustedStartTime}
+              startTime={timerStartTime}
               onComplete={handleSkip}
               label={t('timeLeft')}
               enableWarningSound={enableWarningSound}
               isActive={isOpen}
+              compact
             />
           </div>
 
@@ -428,7 +471,7 @@ export const GuessModal: React.FC<GuessModalProps> = ({
             {/* Hint buttons - compact icons with tooltips */}
             <div className="flex justify-center gap-3 flex-wrap">
               {/* First letter hint - always available */}
-              <GameTooltip content={hintUsed ? t('alreadyUsed') : (maxHintsReached ? t('maxHintsReached') : (!canUseHint('letter') ? t('notEnoughPoints') : t('tooltipHint')))} position="top">
+              <GameTooltip content={getHintTooltip('letter', `${t('tooltipHint')} (-1pt -${LETTER_TIME_PENALTY}s)`)} position="top">
                 <Button
                   variant="outline"
                   size="icon"
@@ -446,7 +489,7 @@ export const GuessModal: React.FC<GuessModalProps> = ({
 
               {/* Flag hint - only show if flag data available */}
               {hintAvailability.hasFlag && (
-                <GameTooltip content={flagUsed ? t('alreadyUsed') : (maxHintsReached ? t('maxHintsReached') : (!canUseHint('flag') ? t('notEnoughPoints') : t('tooltipFlag')))} position="top">
+                <GameTooltip content={getHintTooltip('flag', `${t('tooltipFlag')} (-1pt -${FLAG_TIME_PENALTY}s)`)} position="top">
                   <Button
                     variant="outline"
                     size="icon"
@@ -517,7 +560,7 @@ export const GuessModal: React.FC<GuessModalProps> = ({
                         >
                           <User className="h-4 w-4 text-info" />
                           <span>{t('famousPerson')}</span>
-                          <span className="ml-auto text-xs text-muted-foreground">-0.5pt</span>
+                          <span className="ml-auto text-xs text-muted-foreground">-0.5pt -{FAMOUS_TIME_PENALTY}s</span>
                         </button>
                       )}
 

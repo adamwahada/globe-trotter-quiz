@@ -11,6 +11,7 @@ import {
   removePlayerFromSession,
   updatePlayerInSession,
   updateGameState,
+  updateLmsPlayerState,
   updateTurnState as updateTurnStateService,
   startGameSession,
   startCountdown as startCountdownService,
@@ -713,20 +714,18 @@ export const useFirebaseSession = () => {
   }, [session?.code]);
 
   const updateCurrentGameState = useCallback(async (
-    updates: {
-      currentTurn?: number;
-      currentTurnState?: TurnState | null;
-      players?: PlayersMap;
-      guessedCountries?: string[];
-      correctCountries?: string[];
-      wrongCountries?: string[];
-      turnStartTime?: number | null;
-      isExtraTime?: boolean;
-       activeCardEffects?: ActiveCardEffect[];
-    }
+    updates: Partial<GameSession>
   ) => {
     if (!session?.code) return;
     await updateGameState(session.code, updates);
+  }, [session?.code]);
+
+  const updateLmsPlayerStateForSession = useCallback(async (
+    playerId: string,
+    updates: Partial<import('@/types/game').LMSPlayerState>
+  ) => {
+    if (!session?.code) return;
+    await updateLmsPlayerState(session.code, playerId, updates);
   }, [session?.code]);
 
   const updateTurnState = useCallback(async (turnState: TurnState | null) => {
@@ -882,6 +881,7 @@ export const useFirebaseSession = () => {
     startCountdown,
     startGame,
     updateCurrentGameState,
+    updateLmsPlayerState: updateLmsPlayerStateForSession,
     updateTurnState,
     endGame,
     resumeSession,

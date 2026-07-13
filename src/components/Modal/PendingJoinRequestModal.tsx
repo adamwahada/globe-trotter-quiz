@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { subscribeToJoinRequestStatus, cancelJoinRequest, submitJoinRequest } from '@/services/gameSessionService';
 import type { JoinRequest } from '@/types/game';
+import { useScrollLock } from '@/hooks/useScrollLock';
 
 interface PendingJoinRequestModalProps {
   sessionCode: string;
@@ -29,6 +30,8 @@ export const PendingJoinRequestModal: React.FC<PendingJoinRequestModalProps> = (
   const { t } = useLanguage();
   const [status, setStatus] = useState<'pending' | 'approved' | 'rejected' | null>('pending');
   const [canReRequest, setCanReRequest] = useState(false);
+
+  useScrollLock(true);
 
   // Subscribe to request status changes
   useEffect(() => {

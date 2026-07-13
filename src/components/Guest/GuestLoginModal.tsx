@@ -3,6 +3,7 @@ import { X, User, Loader2, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { validateUsername, MAX_USERNAME_LENGTH } from '@/utils/inputValidation';
 import { useAuth } from '@/contexts/AuthContext';
+import { useScrollLock } from '@/hooks/useScrollLock';
 
 interface GuestLoginModalProps {
   isOpen: boolean;
@@ -21,6 +22,8 @@ export const GuestLoginModal: React.FC<GuestLoginModalProps> = ({
   const [username, setUsername] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useScrollLock(isOpen);
 
   if (!isOpen) return null;
 

@@ -2,6 +2,7 @@ import React from 'react';
 import { Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useScrollLock } from '@/hooks/useScrollLock';
 
 interface LonePlayerOverlayProps {
     onQuit: () => void;
@@ -9,6 +10,8 @@ interface LonePlayerOverlayProps {
 
 export const LonePlayerOverlay: React.FC<LonePlayerOverlayProps> = ({ onQuit }) => {
     const { t } = useLanguage();
+
+    useScrollLock(true);
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">

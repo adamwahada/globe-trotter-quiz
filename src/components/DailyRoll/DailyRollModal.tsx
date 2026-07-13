@@ -3,6 +3,7 @@ import { X, Clock, Gift } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSound } from '@/contexts/SoundContext';
+import { useScrollLock } from '@/hooks/useScrollLock';
 
 interface DailyRollModalProps {
   isOpen: boolean;
@@ -196,6 +197,8 @@ export const DailyRollModal: React.FC<DailyRollModalProps> = ({
       onRollComplete(targetIndex);
     }, 4000);
   }, [spinning, alreadyRolled, playDiceSound, onRollComplete]);
+
+  useScrollLock(isOpen);
 
   if (!isOpen) return null;
 

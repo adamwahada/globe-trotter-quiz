@@ -9,7 +9,11 @@ const languages: { code: Language; label: string; flag: string }[] = [
   { code: 'ar', label: 'العربية', flag: '🇸🇦' },
 ];
 
-export const LanguageSwitcher: React.FC = () => {
+interface LanguageSwitcherProps {
+  compact?: boolean;
+}
+
+export const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({ compact = false }) => {
   const { language, setLanguage } = useLanguage();
   const [isOpen, setIsOpen] = React.useState(false);
 
@@ -19,11 +23,15 @@ export const LanguageSwitcher: React.FC = () => {
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary/50 hover:bg-secondary border border-border transition-all duration-300"
+        className={`flex items-center rounded-lg bg-secondary/50 hover:bg-secondary border border-border transition-all duration-300 ${
+          compact ? 'gap-1 px-1.5 py-1' : 'gap-2 px-3 py-2'
+        }`}
       >
-        <Globe className="h-4 w-4 text-muted-foreground" />
-        <span className="text-lg">{currentLang?.flag}</span>
-        <span className="text-sm text-foreground hidden sm:inline">{currentLang?.label}</span>
+        <Globe className={`text-muted-foreground ${compact ? 'h-3.5 w-3.5' : 'h-4 w-4'}`} />
+        <span className={compact ? 'text-base leading-none' : 'text-lg'}>{currentLang?.flag}</span>
+        {!compact && (
+          <span className="text-sm text-foreground hidden sm:inline">{currentLang?.label}</span>
+        )}
       </button>
 
       {isOpen && (

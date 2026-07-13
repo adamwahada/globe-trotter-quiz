@@ -19,6 +19,7 @@ import {
 } from '@/lib/firebase';
 import type { AuthCredential } from '@/lib/firebase';
 import { validateUsername, MAX_USERNAME_LENGTH } from '@/utils/inputValidation';
+import { useScrollLock } from '@/hooks/useScrollLock';
 import { supabase } from '@/integrations/supabase/client';
 
 interface AuthModalProps {
@@ -75,6 +76,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
       pendingGoogleCredential.current = null;
     }
   }, [isOpen, initialMode]);
+
+  useScrollLock(isOpen);
 
   if (!isOpen) return null;
 

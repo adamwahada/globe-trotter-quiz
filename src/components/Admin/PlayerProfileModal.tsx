@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, MessageSquare, Star, Ban, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useScrollLock } from '@/hooks/useScrollLock';
 
 interface PlayerProfileModalProps {
   userId: string;
@@ -14,6 +15,8 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({
   userId, userName, userEmail, onClose, onBan,
 }) => {
   const navigate = useNavigate();
+
+  useScrollLock(true);
 
   const handleMessages = () => {
     onClose();

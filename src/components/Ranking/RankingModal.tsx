@@ -5,6 +5,7 @@ import { AvatarDisplay } from '@/components/Avatar/AvatarDisplay';
 import { Player } from '@/types/game';
 import { PlayerStatsModal } from './PlayerStatsModal';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useScrollLock } from '@/hooks/useScrollLock';
 
 interface RankingModalProps {
   isOpen: boolean;
@@ -25,6 +26,8 @@ export const RankingModal: React.FC<RankingModalProps> = ({
 }) => {
   const { t } = useLanguage();
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
+
+  useScrollLock(isOpen);
 
   if (!isOpen) return null;
 

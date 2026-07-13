@@ -41,6 +41,7 @@ import { FloatingChatWidget } from '@/components/Messaging/FloatingChatWidget';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { validateGuess } from '@/utils/inputValidation';
+import { getHintTimePenaltySeconds } from '@/utils/hintPenalties';
 
 const GamePage = () => {
   const { session, isLoading } = useGame();
@@ -85,7 +86,6 @@ const GamePageInner = () => {
   const [showRankingModal, setShowRankingModal] = useState(false);
   const [guessModalOpen, setGuessModalOpen] = useState(false);
   const [showResults, setShowResults] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
   const [autoRollCountdown, setAutoRollCountdown] = useState<number | null>(null);
   const [floatingScore, setFloatingScore] = useState<{ points: number; show: boolean }>({ points: 0, show: false });
   const [isRolling, setIsRolling] = useState(false);
@@ -164,6 +164,8 @@ const GamePageInner = () => {
   const [soloClickedCountry, setSoloClickedCountry] = useState<string | null>(null);
   // Track solo click turn start time (independent of modal)
   const [soloClickStartTime, setSoloClickStartTime] = useState<number | null>(null);
+  /** Authoritative timer start for the active turn (includes hint penalties) */
+  const turnTimerStartRef = useRef<number | null>(null);
 
   // Check if it's current player's turn (always true in solo mode)
   const isMyTurn = isSoloMode ? true : (session ? players[currentTurnIndex]?.id === currentPlayer?.id : false);
@@ -174,15 +176,6 @@ const GamePageInner = () => {
 
   // A turn is finished once an answer/skip/timeout has been recorded
   const isTurnFinished = !!currentTurnState?.submittedAnswer;
-
-  // Handle scroll for navbar blur effect
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
 
   // Redirect if no session or session ended
   useEffect(() => {
@@ -417,6 +410,7 @@ const GamePageInner = () => {
       setGuessModalOpen(false);
       setSoloClickedCountry(null);
       setSoloClickStartTime(null);
+      turnTimerStartRef.current = null;
     }
   }, [soloClickedCountry, currentPlayer, session, guessedCountries, wrongCountries, updateGameState, addToast, t, playToastSound]);
 
@@ -476,7 +470,9 @@ const GamePageInner = () => {
 
         await updateTurnState(turnState);
         // Set turnStartTime NOW (country determined) — timer starts here
-        await updateGameState({ turnStartTime: Date.now() });
+        const turnStart = Date.now();
+        turnTimerStartRef.current = turnStart;
+        await updateGameState({ turnStartTime: turnStart });
       } catch (error) {
         console.error('[GamePage] handleRollDice error:', error);
         addToast('error', 'Failed to roll dice. Turn will advance automatically.');
@@ -584,6 +580,7 @@ const GamePageInner = () => {
       setSoloClickedCountry(countryName);
       // Start timer immediately when country is selected
       const startTime = Date.now();
+      turnTimerStartRef.current = startTime;
       setSoloClickStartTime(startTime);
       setGuessModalOpen(true);
       return;
@@ -657,6 +654,7 @@ const GamePageInner = () => {
         currentTurnState: null,
         turnStartTime: null,
       });
+      turnTimerStartRef.current = null;
     } catch (error) {
       console.error('[GamePage] moveToNextTurn error:', error);
       // The host stale-player failsafe will handle stuck turns
@@ -743,7 +741,7 @@ const GamePageInner = () => {
     if (isSoloMode && !soloClickStartTime && !currentCountry) return;
     
     // Get the effective start time - either from session (turn start) or solo click
-    const effectiveStartTime = session?.turnStartTime || soloClickStartTime;
+    const effectiveStartTime = turnTimerStartRef.current ?? session?.turnStartTime ?? soloClickStartTime;
     
     if (!effectiveStartTime) return;
 
@@ -935,6 +933,7 @@ const GamePageInner = () => {
       if (isSoloMode && soloClickedCountry) {
         setSoloClickedCountry(null);
         setSoloClickStartTime(null);
+        turnTimerStartRef.current = null;
       }
 
       // In solo mode, clear turn state immediately so player can play again
@@ -951,6 +950,7 @@ const GamePageInner = () => {
       if (isSoloMode && soloClickedCountry) {
         setSoloClickedCountry(null);
         setSoloClickStartTime(null);
+        turnTimerStartRef.current = null;
       }
     }
    }, [currentPlayer, isMyTurn, currentTurnState, updateTurnState, guessedCountries, correctCountries, wrongCountries, session, updateGameState, addToast, t, moveToNextTurn, playToastSound, isSoloMode, soloClickedCountry, currentCountry, isCardModeEnabled, updateStreak, currentCardEffects]);
@@ -1017,6 +1017,7 @@ const GamePageInner = () => {
 
         setSoloClickedCountry(null);
         setSoloClickStartTime(null);
+        turnTimerStartRef.current = null;
         await updateTurnState(null);
         return; // Don't move to next turn in solo mode
       }
@@ -1049,6 +1050,7 @@ const GamePageInner = () => {
       if (isSoloMode && soloClickedCountry) {
         setSoloClickedCountry(null);
         setSoloClickStartTime(null);
+        turnTimerStartRef.current = null;
       }
     }
    }, [isMyTurn, currentTurnState, currentCountry, guessedCountries, wrongCountries, updateGameState, addToast, t, moveToNextTurn, updateTurnState, session, currentPlayer, navigate, playToastSound, isSoloMode, soloClickedCountry, isCardModeEnabled, updateStreak]);
@@ -1125,6 +1127,30 @@ const GamePageInner = () => {
   // Get localized country data
   const { getCountryDisplayName, getLocalizedHints } = useLocalizedCountry();
 
+  const isSoloClickTimerActive =
+    isSoloMode && soloClickStartTime != null && !currentTurnState?.diceRolled;
+
+  const applyHintTimePenalty = useCallback(async (penaltySeconds: number): Promise<boolean> => {
+    const penaltyMs = penaltySeconds * 1000;
+    const current =
+      turnTimerStartRef.current ??
+      (isSoloClickTimerActive ? soloClickStartTime : session?.turnStartTime) ??
+      soloClickStartTime ??
+      session?.turnStartTime;
+    if (!current) return false;
+
+    const newStart = current - penaltyMs;
+    turnTimerStartRef.current = newStart;
+
+    if (isSoloClickTimerActive) {
+      setSoloClickStartTime(newStart);
+    } else if (session?.turnStartTime != null) {
+      await updateGameState({ turnStartTime: newStart });
+    }
+
+    return true;
+  }, [isSoloClickTimerActive, soloClickStartTime, session?.turnStartTime, updateGameState]);
+
   const handleUseHint = useCallback(async (type: 'letter' | 'famous' | 'flag'): Promise<string> => {
     // Use activeCountry which works for both dice mode and solo click mode
     const countryForHint = isSoloMode && soloClickedCountry ? soloClickedCountry : currentCountry;
@@ -1143,26 +1169,31 @@ const GamePageInner = () => {
       // Update ONLY the current player's score (avoids writing the whole players map)
       await updatePlayerMetadata({ score: newScore });
 
-      // Apply flag time penalty when we have a shared turnStartTime
+      const timePenalty = getHintTimePenaltySeconds(type);
+      const timeApplied = await applyHintTimePenalty(timePenalty);
+
       if (type === 'flag') {
-        if (session.turnStartTime) {
-          const newTurnStartTime = session.turnStartTime - 10000;
-          await updateGameState({ turnStartTime: newTurnStartTime });
-          addToast('info', t('hintUsed') + ' (-1 point, -10 seconds)');
-        } else {
-          addToast('info', t('hintUsed') + ' (-1 point)');
-        }
+        const costMessage = timeApplied
+          ? ` (-1 point, -${timePenalty} seconds)`
+          : ' (-1 point)';
+        addToast('info', t('hintUsed') + costMessage);
         return getCountryFlag(countryForHint);
       }
 
       if (type === 'famous') {
-        addToast('info', t('hintUsed') + ' (-0.5 point)');
+        const costMessage = timeApplied
+          ? ` (-0.5 point, -${timePenalty} seconds)`
+          : ' (-0.5 point)';
+        addToast('info', t('hintUsed') + costMessage);
         const localizedHints = getLocalizedHints(countryForHint);
         return localizedHints.famousPerson || getFamousPerson(countryForHint) || 'No famous person data found';
       }
 
       // Letter hint - use first letter of localized country name
-      addToast('info', t('hintUsed') + ' (-1 point)');
+      const costMessage = timeApplied
+        ? ` (-1 point, -${timePenalty} seconds)`
+        : ' (-1 point)';
+      addToast('info', t('hintUsed') + costMessage);
       const localizedName = getCountryDisplayName(countryForHint);
       return localizedName[0] || countryForHint[0] || '';
     } catch (error) {
@@ -1170,7 +1201,7 @@ const GamePageInner = () => {
       addToast('error', t('hintFailed') || 'Failed to use hint. Please try again.');
       return '';
     }
-  }, [isSoloMode, soloClickedCountry, currentCountry, currentPlayer, session, updatePlayerMetadata, updateGameState, addToast, t, getLocalizedHints, getCountryDisplayName]);
+  }, [isSoloMode, soloClickedCountry, currentCountry, currentPlayer, session, updatePlayerMetadata, applyHintTimePenalty, addToast, t, getLocalizedHints, getCountryDisplayName]);
 
   // Handle guided hints (player, singer, capital) - with localization
   const handleUseGuidedHint = useCallback(async (type: GuidedHintType): Promise<{ value: string; timePenalty: number } | null> => {
@@ -1192,18 +1223,18 @@ const GamePageInner = () => {
     if (type === 'capital') {
       // Prefer localized capital, fallback to English
       hintValue = localizedHints.capital || getCountryCapital(countryForHint);
-      timePenalty = 10; // 10 seconds penalty
-      pointCost = 1; // 1 point cost
+      timePenalty = getHintTimePenaltySeconds('capital');
+      pointCost = 1;
     } else if (type === 'player') {
       // Prefer localized player, fallback to English
       hintValue = localizedHints.famousPlayer || getFamousPlayer(countryForHint);
-      timePenalty = 5; // 5 seconds penalty
-      pointCost = 1; // 1 point cost
+      timePenalty = getHintTimePenaltySeconds('player');
+      pointCost = 1;
     } else if (type === 'singer') {
       // Prefer localized singer, fallback to English
       hintValue = localizedHints.famousSinger || getFamousSinger(countryForHint);
-      timePenalty = 5; // 5 seconds penalty
-      pointCost = 1; // 1 point cost
+      timePenalty = getHintTimePenaltySeconds('singer');
+      pointCost = 1;
     }
 
     if (!hintValue) return null;
@@ -1215,24 +1246,20 @@ const GamePageInner = () => {
       // Update ONLY the current player's score (avoids writing the whole players map)
       await updatePlayerMetadata({ score: newScore });
 
-      // Apply time penalty (if we have a shared timer)
-      if (session.turnStartTime) {
-        const newTurnStartTime = session.turnStartTime - (timePenalty * 1000);
-        await updateGameState({ turnStartTime: newTurnStartTime });
-      }
+      const timeApplied = await applyHintTimePenalty(timePenalty);
 
-      const costMessage = type === 'capital'
-        ? `(-${timePenalty}s)`
-        : `(-${pointCost}pt, -${timePenalty}s)`;
+      const costMessage = timeApplied
+        ? `(-${pointCost}pt, -${timePenalty}s)`
+        : `(-${pointCost}pt)`;
       addToast('info', `${t('hintUsed')} ${costMessage}`);
 
-      return { value: hintValue, timePenalty };
+      return { value: hintValue, timePenalty: timeApplied ? timePenalty : 0 };
     } catch (error) {
       console.error('[Hints] Failed to apply guided hint cost:', error);
       addToast('error', t('hintFailed') || 'Failed to use hint. Please try again.');
       return null;
     }
-  }, [isSoloMode, soloClickedCountry, currentCountry, currentPlayer, session, updatePlayerMetadata, updateGameState, addToast, t, getLocalizedHints]);
+  }, [isSoloMode, soloClickedCountry, currentCountry, currentPlayer, session, updatePlayerMetadata, applyHintTimePenalty, addToast, t, getLocalizedHints]);
 
   const handleLeave = useCallback(async () => {
     // Save partial game history on mid-game leave
@@ -1372,22 +1399,19 @@ const GamePageInner = () => {
       {/* Inactivity Warning - shown only to the affected player */}
       {!isSoloMode && <InactivityWarning inactiveTurns={myInactiveTurns} />}
 
-      {/* Header - Fixed navbar with blur */}
-      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled
-        ? 'bg-background/80 backdrop-blur-xl border-b border-primary/20 shadow-lg shadow-primary/5'
-        : 'bg-card/50 backdrop-blur-sm border-b border-border'
-        }`}>
-        <div className="flex items-center justify-between p-3 md:p-4 max-w-7xl mx-auto">
-          <Logo size="md" />
+      {/* Header - compact in-game HUD */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-b border-border">
+        <div className="flex items-center justify-between gap-2 py-1.5 px-2 md:px-3 max-w-7xl mx-auto">
+          <Logo size="xs" />
 
-          <div className="flex items-center gap-4">
-            <LanguageSwitcher />
+          <div className="flex items-center gap-1.5 md:gap-2 min-w-0 flex-1 justify-end">
+            <LanguageSwitcher compact />
 
             {/* Game Timer or Fairness Message */}
-            <div className="hidden md:block w-48">
+            <div className="hidden md:block w-28 lg:w-32 shrink-0">
               {session.isExtraTime ? (
-                <div className="bg-primary/20 border border-primary/30 rounded-lg py-1 px-3 text-center animate-pulse">
-                  <p className="text-primary font-display text-xs">⚖️ {t('fairnessTitle')}</p>
+                <div className="bg-primary/20 border border-primary/30 rounded-md py-0.5 px-2 text-center animate-pulse">
+                  <p className="text-primary font-display text-[10px] leading-tight">⚖️ {t('fairnessTitle')}</p>
                 </div>
               ) : (
                 <TimerProgress
@@ -1395,14 +1419,15 @@ const GamePageInner = () => {
                   startTime={session.startTime || undefined}
                   onComplete={handleEndGame}
                   label={t('timeLeft')}
+                  compact
                 />
               )}
             </div>
 
             {/* Score */}
-            <div className="flex items-center gap-2 bg-secondary px-4 py-2 rounded-lg">
-              <Trophy className="h-4 w-4 text-primary" />
-              <span className="font-display text-xl text-foreground">
+            <div className="flex items-center gap-1 bg-secondary px-2 py-1 rounded-md shrink-0">
+              <Trophy className="h-3.5 w-3.5 text-primary" />
+              <span className="font-display text-sm text-foreground tabular-nums">
                 {players.find(p => p.id === currentPlayer?.id)?.score || 0}
               </span>
             </div>
@@ -1413,8 +1438,9 @@ const GamePageInner = () => {
                 variant="icon"
                 size="icon"
                 onClick={toggleSound}
+                className="h-8 w-8 shrink-0"
               >
-                {soundEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
+                {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
               </Button>
             </GameTooltip>
 
@@ -1424,8 +1450,9 @@ const GamePageInner = () => {
                 variant="icon"
                 size="icon"
                 onClick={() => setShowRankingModal(true)}
+                className="h-8 w-8 shrink-0"
               >
-                <Trophy className="h-5 w-5" />
+                <Trophy className="h-4 w-4" />
               </Button>
             </GameTooltip>
 
@@ -1440,8 +1467,8 @@ const GamePageInner = () => {
 
             {/* Leave */}
             <GameTooltip content={t('tooltipQuit')} position="bottom">
-              <Button variant="outline" size="sm" onClick={handleLeave} className="gap-2">
-                <LogOut className="h-4 w-4" />
+              <Button variant="outline" size="sm" onClick={handleLeave} className="gap-1.5 h-8 px-2 md:px-3 text-xs shrink-0">
+                <LogOut className="h-3.5 w-3.5" />
                 <span className="hidden md:inline">{t('quitGame')}</span>
               </Button>
             </GameTooltip>
@@ -1450,19 +1477,21 @@ const GamePageInner = () => {
       </nav>
 
       {/* Spacer for fixed navbar */}
-      <div className="h-24 md:h-28" />
+      <div className="h-12 md:h-14" />
 
       {/* Mobile Timer or Extra Time Message */}
-      <div className="md:hidden p-3 border-b border-border">
+      <div className="md:hidden px-2 py-1.5 border-b border-border">
         {session.isExtraTime ? (
-          <div className="bg-primary/20 border border-primary/30 rounded-lg p-2 text-center animate-pulse">
-            <p className="text-primary font-display text-sm">⚖️ {t('fairnessTitle')}</p>
+          <div className="bg-primary/20 border border-primary/30 rounded-md p-1.5 text-center animate-pulse">
+            <p className="text-primary font-display text-xs">⚖️ {t('fairnessTitle')}</p>
           </div>
         ) : (
           <TimerProgress
             totalSeconds={session.duration * 60}
             startTime={session.startTime || undefined}
             onComplete={handleEndGame}
+            label={t('timeLeft')}
+            compact
           />
         )}
       </div>
@@ -1628,21 +1657,19 @@ const GamePageInner = () => {
                     !isMyTurn || isRolling || isTurnFinished ? '' : 'group-hover:translate-x-0.5'
                   }`}
                 />
-                {/* Glow effect */}
                 <div className={`
                   absolute inset-0 rounded-xl bg-warning/30 blur-lg
                   transition-opacity duration-300
                   ${!isMyTurn || isRolling || isTurnFinished ? 'opacity-0' : 'opacity-0 group-hover:opacity-50'}
                 `} />
-                {/* Label */}
-                {!(!isMyTurn || isRolling || isTurnFinished) && (
-                  <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs text-muted-foreground whitespace-nowrap">
-                    {t('turnSkipped')}
-                  </span>
-                )}
               </button>
             </GameTooltip>
           </div>
+
+          {/* Session chat — multiplayer only, stacked directly under dice/skip */}
+          {!isSoloMode && (
+            <FloatingChatWidget variant="game-sidebar" />
+          )}
 
           {/* Mini Leaderboard for mobile */}
           <div className="lg:hidden">
@@ -1694,7 +1721,8 @@ const GamePageInner = () => {
         onUseHint={handleUseHint}
         onUseGuidedHint={handleUseGuidedHint}
         turnTimeSeconds={TURN_TIME_SECONDS}
-        turnStartTime={session.turnStartTime || soloClickStartTime || undefined}
+        turnStartTime={session.turnStartTime ?? soloClickStartTime ?? undefined}
+        turnResetKey={isSoloMode && soloClickedCountry ? soloClickedCountry : currentTurnIndex}
         playerScore={currentPlayer?.score || 0}
         hasExtendedHints={hasExtendedHints(activeCountry || '')}
         hintAvailability={getHintAvailability(activeCountry || '')}
@@ -1750,8 +1778,6 @@ const GamePageInner = () => {
          onCancel={handleCountrySelectionCancel}
        />
 
-       {/* Floating Chat Widget */}
-       <FloatingChatWidget />
     </div>
   );
 };

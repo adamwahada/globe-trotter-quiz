@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { COUNTDOWN_SECONDS } from '@/types/game';
 import { useSound } from '@/contexts/SoundContext';
+import { useScrollLock } from '@/hooks/useScrollLock';
 
 interface CountdownOverlayProps {
   startTime: number;
@@ -9,6 +10,7 @@ interface CountdownOverlayProps {
 
 export const CountdownOverlay: React.FC<CountdownOverlayProps> = ({ startTime, onComplete }) => {
   const { playToastSound } = useSound();
+  useScrollLock(true);
   const completedRef = useRef(false);
   const [count, setCount] = useState(() => {
     const elapsed = Math.floor((Date.now() - startTime) / 1000);

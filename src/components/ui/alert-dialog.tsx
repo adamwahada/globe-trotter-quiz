@@ -3,8 +3,12 @@ import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog";
 
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
+import { useScrollLock } from "@/hooks/useScrollLock";
 
-const AlertDialog = AlertDialogPrimitive.Root;
+const AlertDialog = ({ open, ...props }: React.ComponentProps<typeof AlertDialogPrimitive.Root>) => {
+  useScrollLock(open === true);
+  return <AlertDialogPrimitive.Root open={open} {...props} />;
+};
 
 const AlertDialogTrigger = AlertDialogPrimitive.Trigger;
 

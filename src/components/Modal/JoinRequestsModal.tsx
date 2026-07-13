@@ -6,6 +6,7 @@ import { useSound } from '@/contexts/SoundContext';
 import { useToastContext } from '@/contexts/ToastContext';
 import { subscribeToJoinRequests, approveJoinRequest, rejectJoinRequest } from '@/services/gameSessionService';
 import type { JoinRequest } from '@/types/game';
+import { useScrollLock } from '@/hooks/useScrollLock';
 
 interface JoinRequestsModalProps {
   sessionCode: string;
@@ -57,6 +58,8 @@ export const JoinRequestsModal: React.FC<JoinRequestsModalProps> = ({
     }
     prevPendingCountRef.current = pendingCount;
   }, [pendingCount, playToastSound, addToast, t, isOpen, pendingRequests]);
+
+  useScrollLock(isOpen);
 
   const handleApprove = async (playerId: string) => {
     setProcessing(playerId);

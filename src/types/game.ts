@@ -28,6 +28,28 @@ export const calculateHeartLoss = (continentCorrect: boolean, countryCorrect: bo
   return 1;
 };
 
+/** Hearts already deducted live for this player during the current round. */
+export const getRemainingHeartLoss = (sub: Pick<LMSPlayerSubmission, 'heartLoss' | 'heartsDeductedThisRound'>): number => {
+  const alreadyDeducted = sub.heartsDeductedThisRound ?? 0;
+  return Math.max(0, sub.heartLoss - alreadyDeducted);
+};
+
+/** Apply a heart delta to one player's LMS state (pure, for tests). */
+export const applyHeartDelta = (
+  state: LMSPlayerState,
+  loss: number,
+  roundNumber: number,
+): LMSPlayerState => {
+  if (loss <= 0 || state.isEliminated) return state;
+  const newHearts = Math.max(0, state.hearts - loss);
+  return {
+    ...state,
+    hearts: newHearts,
+    isEliminated: newHearts <= 0,
+    ...(newHearts <= 0 ? { eliminatedInRound: roundNumber } : {}),
+  };
+};
+
 export interface LMSPlayerSubmission {
   selectedContinent: LMSContinent | null;
   continentSubmittedAt: number | null;
@@ -36,6 +58,8 @@ export interface LMSPlayerSubmission {
   countryConfirmedAt: number | null;
   isCountryCorrect: boolean;
   heartLoss: number;
+  /** Running total of hearts already deducted for this round (continent + location). */
+  heartsDeductedThisRound?: number;
   phase: 'continent' | 'location' | 'done'; // What phase the player is currently in
 }
 
@@ -185,6 +209,31 @@ export interface SessionRecoveryData {
 export const TURN_TIME_SECONDS = 30;
 export const COUNTDOWN_SECONDS = 5;
 export const WAITING_ROOM_TIMEOUT = 300; // 5 minutes
+/** When ≥66% of slots are filled, remaining wait time caps at this (seconds) */
+export const WAITING_ROOM_ACCELERATED_TIMEOUT = 60;
+/** Join ratio (joined / maxPlayers) at or above which the timer accelerates */
+export const WAITING_ROOM_JOIN_THRESHOLD = 2 / 3;
+
+/** Minimum joined count before the 1-minute timer cap applies (ceil of 2/3 × max) */
+export function getWaitingRoomJoinThresholdCount(maxPlayers: number): number {
+  if (maxPlayers <= 0) return 0;
+  return Math.ceil(maxPlayers * WAITING_ROOM_JOIN_THRESHOLD);
+}
+
+export function isWaitingRoomJoinThresholdMet(joinedCount: number, maxPlayers: number): boolean {
+  if (maxPlayers <= 0 || joinedCount <= 0) return false;
+  return joinedCount >= getWaitingRoomJoinThresholdCount(maxPlayers);
+}
+
+export function getWaitingRoomRemainingSeconds(startTime: number, now = Date.now()): number {
+  const elapsed = Math.floor((now - startTime) / 1000);
+  return Math.max(0, WAITING_ROOM_TIMEOUT - elapsed);
+}
+
+/** Shift start time so exactly WAITING_ROOM_ACCELERATED_TIMEOUT seconds remain */
+export function getAcceleratedWaitingRoomStartTime(now = Date.now()): number {
+  return now - (WAITING_ROOM_TIMEOUT - WAITING_ROOM_ACCELERATED_TIMEOUT) * 1000;
+}
 
 // Scoring constants (Turn-Based / Against-The-Clock)
 export const POINTS_CORRECT = 3;

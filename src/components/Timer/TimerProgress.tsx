@@ -9,6 +9,8 @@ interface TimerProgressProps {
   label?: string;
   startTime?: number; // Unix timestamp when timer started (for shared timers)
   enableWarningSound?: boolean;
+  /** Denser layout for in-game HUD bars */
+  compact?: boolean;
 }
 
 export const TimerProgress: React.FC<TimerProgressProps> = ({
@@ -18,6 +20,7 @@ export const TimerProgress: React.FC<TimerProgressProps> = ({
   label,
   startTime,
   enableWarningSound = false,
+  compact = false,
 }) => {
   const { playTimerWarning } = useSound();
   const onCompleteRef = useRef(onComplete);
@@ -86,6 +89,30 @@ export const TimerProgress: React.FC<TimerProgressProps> = ({
     return 'bg-destructive';
   };
 
+  const timeLabel = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+  if (compact) {
+    return (
+      <div className="w-full space-y-1">
+        <div className="flex items-center justify-between gap-2 text-[11px] leading-none">
+          <span className="text-muted-foreground flex items-center gap-1 min-w-0 truncate">
+            <Clock className={`h-3 w-3 shrink-0 ${isWarning ? 'animate-pulse text-destructive' : ''}`} />
+            {label && <span className="truncate">{label}</span>}
+          </span>
+          <span className={`font-display text-sm tabular-nums shrink-0 ${isWarning ? 'text-destructive animate-pulse' : 'text-foreground'}`}>
+            {timeLabel}
+          </span>
+        </div>
+        <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+          <div
+            className={`h-full transition-all duration-1000 ease-linear ${getProgressColor()} ${isWarning ? 'animate-pulse' : ''}`}
+            style={{ width: `${percentage}%` }}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full space-y-2">
       {label && (
@@ -95,7 +122,7 @@ export const TimerProgress: React.FC<TimerProgressProps> = ({
             {label}
           </span>
           <span className={`font-display text-lg ${isWarning ? 'text-destructive animate-pulse' : 'text-foreground'}`}>
-            {minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}
+            {timeLabel}
           </span>
         </div>
       )}
