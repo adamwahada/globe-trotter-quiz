@@ -12,7 +12,7 @@ interface GameContextType {
   isLoading: boolean;
   error: string | null;
   hasActiveSession: boolean;
-   createSession: (maxPlayers: number, duration: number, isSoloMode?: boolean, gameMode?: GameMode, cardModeEnabled?: boolean, totalRounds?: number, isOpenRoom?: boolean) => Promise<string>;
+   createSession: (maxPlayers: number, duration: number, isSoloMode?: boolean, gameMode?: GameMode, cardModeEnabled?: boolean, totalRounds?: number, isOpenRoom?: boolean, startingHearts?: number) => Promise<string>;
   joinSession: (code: string, username?: string) => Promise<boolean>;
   joinSessionAsGuest: (code: string, guestUsername: string) => Promise<boolean>;
   leaveSession: () => Promise<void>;

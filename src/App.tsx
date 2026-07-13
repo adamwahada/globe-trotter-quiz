@@ -12,6 +12,7 @@ import { ActivityTracker } from "@/components/Auth/ActivityTracker";
 import { GameProvider } from "@/contexts/GameContext";
 import { SoundProvider } from "@/contexts/SoundContext";
 import { ToastContainer } from "@/components/Toast/ToastContainer";
+import { GuestTimerBanner } from "@/components/Guest/GuestTimerBanner";
 
 // Lazy-loaded routes for code splitting
 const Index = lazy(() => import("./pages/Index"));
@@ -29,11 +30,10 @@ const AdminBans = lazy(() => import("./pages/AdminBans").then(m => ({ default: m
 const queryClient = new QueryClient();
 
 const App = () => {
-  // Global safety net: prevent unhandled promise rejections from crashing to blank page
   useEffect(() => {
     const handleRejection = (event: PromiseRejectionEvent) => {
       console.error("[App] Unhandled rejection:", event.reason);
-      event.preventDefault(); // Prevent the default browser error handling
+      event.preventDefault();
     };
     window.addEventListener("unhandledrejection", handleRejection);
     return () => window.removeEventListener("unhandledrejection", handleRejection);
@@ -52,6 +52,7 @@ const App = () => {
                   <Toaster />
                   <Sonner />
                   <ToastContainer />
+                  <GuestTimerBanner />
                   <BrowserRouter>
                     <Suspense fallback={null}>
                       <Routes>

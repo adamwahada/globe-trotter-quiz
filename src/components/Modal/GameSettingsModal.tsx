@@ -80,6 +80,8 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
     onClose();
   };
 
+  const [startingHearts, setStartingHearts] = useState<3 | 5 | 10>(5);
+
   if (!isOpen) return null;
 
   // Compute effective rounds / players for Speed Race
@@ -107,7 +109,6 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
     }
 
     if (selectedGameMode === 'speedRace') {
-      // Validate rounds
       const r = effectiveRounds;
       if (r < 10 || r > 100) {
         addToast('error', 'Rounds must be between 10 and 100');
@@ -119,8 +120,22 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
         return;
       }
       try {
-        // For speed race, we pass rounds as duration (repurposed field) and totalRounds will be set inside
         const code = await createSession(p, 30, false, selectedGameMode, false, r, isOpenRoom);
+        setGeneratedCode(code);
+        addToast('success', t('sessionCreated', { code }));
+      } catch (err) {
+        addToast('error', 'Failed to create session');
+      }
+      return;
+    }
+    if (selectedGameMode === 'lastManStanding') {
+      const p = effectivePlayers;
+      if (p < 2 || p > 20) {
+        addToast('error', 'Players must be between 2 and 20');
+        return;
+      }
+      try {
+        const code = await createSession(p, 30, false, selectedGameMode, false, undefined, isOpenRoom, startingHearts);
         setGeneratedCode(code);
         addToast('success', t('sessionCreated', { code }));
       } catch (err) {
@@ -242,14 +257,17 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
         onClick={handleClose}
       />
 
-      <div className="relative w-full max-w-md mx-4 bg-card border border-border rounded-2xl shadow-2xl animate-scale-in overflow-hidden">
-        <div className="p-6">
+      <div className="relative w-full max-w-md mx-4 bg-card border border-border rounded-2xl shadow-2xl animate-scale-in overflow-hidden max-h-[90vh] flex flex-col">
+        {/* Sticky close button */}
+        <div className="sticky top-0 z-10 flex justify-end p-3 pb-0">
           <button
             onClick={handleClose}
-            className="absolute top-4 right-4 p-2 rounded-full hover:bg-secondary transition-colors"
+            className="p-2 rounded-full hover:bg-secondary transition-colors bg-card/80 backdrop-blur-sm"
           >
             <X className="h-5 w-5 text-muted-foreground" />
           </button>
+        </div>
+        <div className="px-6 pb-6 overflow-y-auto flex-1 -mt-2">
 
           {mode === 'choose' && (
             <div className="space-y-6">
@@ -390,18 +408,23 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
               {/* Selected Game Mode Badge */}
               <div className="flex justify-center">
                 <span className={`px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 ${
-                  selectedGameMode === 'speedRace'
-                    ? 'bg-[hsl(var(--success))]/20 text-[hsl(var(--success))] border border-[hsl(var(--success))]/30'
-                    : selectedGameMode === 'againstTheClock'
-                      ? 'bg-warning/20 text-warning border border-warning/30'
-                      : 'bg-primary/20 text-primary border border-primary/30'
+                  selectedGameMode === 'lastManStanding'
+                    ? 'bg-destructive/20 text-destructive border border-destructive/30'
+                    : selectedGameMode === 'speedRace'
+                      ? 'bg-[hsl(var(--success))]/20 text-[hsl(var(--success))] border border-[hsl(var(--success))]/30'
+                      : selectedGameMode === 'againstTheClock'
+                        ? 'bg-warning/20 text-warning border border-warning/30'
+                        : 'bg-primary/20 text-primary border border-primary/30'
                 }`}>
                   {selectedGameMode === 'speedRace' && <Zap className="h-4 w-4" />}
-                  {selectedGameMode === 'speedRace'
-                    ? (t('speedRaceMode' as any))
-                    : selectedGameMode === 'againstTheClock'
-                      ? t('againstTheClockMode')
-                      : t('turnBasedMode')}
+                  {selectedGameMode === 'lastManStanding' && <span>💀</span>}
+                  {selectedGameMode === 'lastManStanding'
+                    ? (t('lastManStandingMode' as any))
+                    : selectedGameMode === 'speedRace'
+                      ? (t('speedRaceMode' as any))
+                      : selectedGameMode === 'againstTheClock'
+                        ? t('againstTheClockMode')
+                        : t('turnBasedMode')}
                 </span>
               </div>
 
@@ -541,6 +564,27 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ isOpen, on
                       className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm"
                     />
                   )}
+                </div>
+              ) : selectedGameMode === 'lastManStanding' ? (
+                /* LMS: Starting Hearts */
+                <div className="space-y-2">
+                  <label className="flex items-center justify-between text-sm font-medium text-foreground">
+                    <span className="flex items-center gap-2">
+                      <span className="text-destructive">❤️</span>
+                      {t('lmsStartingHearts' as any) || 'Starting Hearts'}
+                    </span>
+                  </label>
+                  <div className="flex gap-2">
+                    {([3, 5, 10] as const).map((h) => (
+                      <button
+                        key={h}
+                        onClick={() => setStartingHearts(h)}
+                        className={`flex-1 py-3 rounded-lg font-semibold transition-all text-sm ${startingHearts === h ? 'bg-destructive text-destructive-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}`}
+                      >
+                        {h} ❤️
+                      </button>
+                    ))}
+                  </div>
                 </div>
               ) : (
                 /* Duration Selection - Different options based on game mode */

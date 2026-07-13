@@ -120,7 +120,8 @@ const ConfirmModal: React.FC<{
   country: string;
   onConfirm: () => void;
   onCancel: () => void;
-}> = ({ country, onConfirm, onCancel }) => (
+  hideCountryName?: boolean;
+}> = ({ country, onConfirm, onCancel, hideCountryName = false }) => (
   <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-background/60 backdrop-blur-sm p-4">
     <div className="w-full max-w-sm bg-card border border-border rounded-2xl shadow-2xl animate-scale-in overflow-hidden">
       <div className="px-6 pt-6 pb-4 text-center">
@@ -129,7 +130,10 @@ const ConfirmModal: React.FC<{
         </div>
         <h3 className="text-xl font-display text-foreground mb-1">Confirm Location?</h3>
         <p className="text-sm text-muted-foreground mb-1">
-          You selected <span className="font-bold text-foreground">{country}</span>.
+          {hideCountryName
+            ? 'Are you sure about this location?'
+            : <>You selected <span className="font-bold text-foreground">{country}</span>.</>
+          }
         </p>
         <p className="text-xs text-destructive font-medium">
           ⚠️ Once confirmed, you cannot change your answer.
@@ -175,12 +179,6 @@ const RoundResultsModal: React.FC<{
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-display text-foreground">Round {roundState.roundNumber} Results</h2>
-              <p className="text-sm text-muted-foreground">
-                Correct:{' '}
-                <span className="font-bold text-foreground">
-                  {getCountryFlag(roundState.country)} {roundState.country}
-                </span>
-              </p>
             </div>
             <div className="text-right">
               <p className="text-xs text-muted-foreground">Round</p>
@@ -494,18 +492,21 @@ const SpeedRaceGame: React.FC = () => {
 
     if (nextRound > totalRoundsRef.current) {
       const allGuessed = [...(sess.guessedCountries || []), ...(rs?.country ? [rs.country] : [])];
-      await updateGameState({ guessedCountries: allGuessed, speedRaceRoundState: null, currentRound: nextRound } as any);
+      const allCorrect = [...(sess.correctCountries || []), ...(rs?.country ? [rs.country] : [])];
+      await updateGameState({ guessedCountries: allGuessed, correctCountries: allCorrect, speedRaceRoundState: null, currentRound: nextRound } as any);
       await endGame();
       return;
     }
 
     const allGuessed = [...(sess.guessedCountries || []), ...(rs?.country ? [rs.country] : [])];
+    const allCorrect = [...(sess.correctCountries || []), ...(rs?.country ? [rs.country] : [])];
     const nextCountry = getRandomUnplayedCountry(allGuessed);
     if (!nextCountry) { await endGame(); return; }
 
     await updateGameState({
       currentRound: nextRound,
       guessedCountries: allGuessed,
+      correctCountries: allCorrect,
       speedRaceRoundState: {
         roundNumber: nextRound,
         country: nextCountry,
@@ -815,6 +816,7 @@ const SpeedRaceGame: React.FC = () => {
               onCountryClick={isGuessing && !hasSubmitted ? handleCountryClick : () => {}}
               disabled={!isGuessing || hasSubmitted}
               speedRaceMode={true}
+              resetKey={currentRound}
             />
           </div>
         </div>
@@ -883,6 +885,7 @@ const SpeedRaceGame: React.FC = () => {
           country={pendingCountry}
           onConfirm={handleConfirm}
           onCancel={handleCancelConfirm}
+          hideCountryName={true}
         />
       )}
 

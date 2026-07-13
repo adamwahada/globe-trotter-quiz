@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SpeedRaceGame from '@/components/Game/SpeedRaceGame';
+import LastManStandingGame from '@/components/Game/LastManStandingGame';
 import { Logo } from '@/components/Logo/Logo';
 import { Button } from '@/components/ui/button';
 import { WorldMap } from '@/components/Map/WorldMap';
@@ -50,6 +51,11 @@ const GamePage = () => {
   // Dispatch to Speed Race component when in that mode
   if (session?.gameMode === 'speedRace') {
     return <SpeedRaceGame />;
+  }
+
+  // Dispatch to Last Man Standing component when in that mode
+  if (session?.gameMode === 'lastManStanding') {
+    return <LastManStandingGame />;
   }
 
   return <GamePageInner />;
@@ -1444,7 +1450,7 @@ const GamePageInner = () => {
       </nav>
 
       {/* Spacer for fixed navbar */}
-      <div className="h-20 md:h-24" />
+      <div className="h-24 md:h-28" />
 
       {/* Mobile Timer or Extra Time Message */}
       <div className="md:hidden p-3 border-b border-border">

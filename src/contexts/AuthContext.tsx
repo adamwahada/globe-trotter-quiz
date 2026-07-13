@@ -1,10 +1,11 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import {
   auth,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   firebaseSignOut,
+  signInAnonymously,
   onAuthStateChanged,
   updateProfile as firebaseUpdateProfile,
   FirebaseUser
@@ -26,44 +27,41 @@ export interface User {
     wins: number;
     avgScore: number;
   };
+  isGuest?: boolean;
+  guestExpiresAt?: number;
 }
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
+  isGuest: boolean;
   isLoading: boolean;
+  guestTimeRemaining: number | null;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, username: string) => Promise<void>;
   signOut: () => Promise<void>;
+  signInAsGuest: (username: string) => Promise<void>;
   updateProfile: (updates: Partial<User>) => void;
   tabSessionId: string;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Placeholder avatars and colors
 const avatars = ['🦁', '🐯', '🐘', '🦒', '🦊', '🐨', '🐼', '🦓', '🦄', '🐲', '🐙', '🐢', '🐧', '🦉'];
 const colors = ['#E50914', '#1DB954', '#4169E1', '#FF6B35', '#9B59B6', '#00CED1', '#F1C40F', '#E67E22'];
 
-// 6 hours inactivity timeout for session expiry
 const INACTIVITY_TIMEOUT_MS = 6 * 60 * 60 * 1000;
 const ACTIVITY_STORAGE_KEY = 'worldquiz_last_activity';
 const PENDING_SIGNUP_USERNAME_KEY = 'worldquiz_pending_signup_username';
+const GUEST_SESSION_KEY = 'worldquiz_guest_session';
+const GUEST_DURATION_MS = 4 * 60 * 60 * 1000;
 
-// Convert Firebase user to our User type
 const mapFirebaseUser = (firebaseUser: FirebaseUser): User => {
-  // Try to get stored user data from localStorage
   const storedData = localStorage.getItem(`user_${firebaseUser.uid}`);
   let parsedData: any = {};
-
   if (storedData) {
-    try {
-      parsedData = JSON.parse(storedData);
-    } catch {
-      parsedData = {};
-    }
+    try { parsedData = JSON.parse(storedData); } catch { parsedData = {}; }
   }
-
   const pendingSignupUsername = localStorage.getItem(PENDING_SIGNUP_USERNAME_KEY)?.trim();
 
   return {
@@ -77,26 +75,82 @@ const mapFirebaseUser = (firebaseUser: FirebaseUser): User => {
       'Player',
     avatar: parsedData.avatar || avatars[Math.floor(Math.random() * avatars.length)],
     color: parsedData.color || colors[Math.floor(Math.random() * colors.length)],
-    stats: parsedData.stats || {
-      totalGames: 0,
-      wins: 0,
-      avgScore: 0,
-    },
+    stats: parsedData.stats || { totalGames: 0, wins: 0, avgScore: 0 },
   };
 };
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [guestTimeRemaining, setGuestTimeRemaining] = useState<number | null>(null);
   const { addToast } = useToastContext();
 
-  // Unique ID for this specific tab/session instance
   const tabSessionIdRef = useRef<string>(Math.random().toString(36).substring(2, 15) + Date.now().toString(36));
   const presenceUnsubscribeRef = useRef<(() => void) | null>(null);
-  // Track if we've registered our presence - only log out on conflicts AFTER we've registered
   const presenceRegisteredRef = useRef<boolean>(false);
 
-  // Listen for auth state changes
+  // Restore guest session on mount — ensure Firebase anonymous auth is active
+  useEffect(() => {
+    const storedGuest = localStorage.getItem(GUEST_SESSION_KEY);
+    if (storedGuest && auth) {
+      try {
+        const guest = JSON.parse(storedGuest) as User;
+        if (guest.guestExpiresAt && guest.guestExpiresAt > Date.now()) {
+          setUser(guest);
+          // Ensure Firebase anonymous auth is active for this guest
+          if (!auth.currentUser) {
+            signInAnonymously(auth).then((cred) => {
+              // Update guest ID to match Firebase uid if it was a legacy random ID
+              if (guest.id !== cred.user.uid) {
+                const updatedGuest = { ...guest, id: cred.user.uid };
+                setUser(updatedGuest);
+                localStorage.setItem(GUEST_SESSION_KEY, JSON.stringify(updatedGuest));
+                localStorage.setItem(`user_${cred.user.uid}`, JSON.stringify({
+                  username: guest.username,
+                  avatar: guest.avatar,
+                  color: guest.color,
+                  stats: guest.stats,
+                }));
+              }
+            }).catch(() => {
+              // Anonymous auth failed — clear guest session
+              localStorage.removeItem(GUEST_SESSION_KEY);
+              setUser(null);
+            });
+          }
+        } else {
+          localStorage.removeItem(GUEST_SESSION_KEY);
+        }
+      } catch {
+        localStorage.removeItem(GUEST_SESSION_KEY);
+      }
+    }
+  }, []);
+
+  // Guest countdown timer
+  useEffect(() => {
+    if (!user?.isGuest || !user.guestExpiresAt) {
+      setGuestTimeRemaining(null);
+      return;
+    }
+    const tick = () => {
+      const remaining = (user.guestExpiresAt || 0) - Date.now();
+      if (remaining <= 0) {
+        setGuestTimeRemaining(0);
+        setUser(null);
+        localStorage.removeItem(GUEST_SESSION_KEY);
+        if (auth) firebaseSignOut(auth).catch(() => {});
+        addToast('info', 'Your guest session has expired. Create an account to keep playing!', 10000);
+      } else {
+        setGuestTimeRemaining(remaining);
+      }
+    };
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [user?.isGuest, user?.guestExpiresAt, addToast]);
+
+  // Firebase auth state
   useEffect(() => {
     if (!auth) {
       console.error('Firebase auth not initialized');
@@ -106,12 +160,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        // Check if session expired due to inactivity (6 hours since last use)
+        // Check if this is a guest (anonymous) user with an active guest session
+        const storedGuest = localStorage.getItem(GUEST_SESSION_KEY);
+        if (firebaseUser.isAnonymous && storedGuest) {
+          try {
+            const guest = JSON.parse(storedGuest) as User;
+            if (guest.guestExpiresAt && guest.guestExpiresAt > Date.now()) {
+              // Keep the guest user — don't override with mapFirebaseUser
+              setUser(guest);
+              setIsLoading(false);
+              return;
+            }
+          } catch { /* invalid stored guest, continue normally */ }
+        }
+
+        // Not a guest — clear any stale guest session
+        localStorage.removeItem(GUEST_SESSION_KEY);
+
         const lastActivity = localStorage.getItem(ACTIVITY_STORAGE_KEY);
         if (lastActivity) {
           const elapsed = Date.now() - parseInt(lastActivity, 10);
           if (elapsed >= INACTIVITY_TIMEOUT_MS) {
-            console.warn('[Security] Session expired due to 6h inactivity');
             await firebaseSignOut(auth!);
             setUser(null);
             setIsLoading(false);
@@ -122,41 +191,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         const mappedUser = mapFirebaseUser(firebaseUser);
         setUser(mappedUser);
-
-        // Update activity timestamp on session restore/login
         localStorage.setItem(ACTIVITY_STORAGE_KEY, Date.now().toString());
 
-        // Reset presence flag before registering
         presenceRegisteredRef.current = false;
-
-        // Register this tab's presence - this will kick out other sessions
         await trackUserPresence(firebaseUser.uid, tabSessionIdRef.current);
-        
-        // Mark that we've successfully registered our presence
         presenceRegisteredRef.current = true;
 
-        // Start watching for session conflicts (from OTHER devices logging in later)
         if (presenceUnsubscribeRef.current) presenceUnsubscribeRef.current();
         presenceUnsubscribeRef.current = subscribeToUserPresence(firebaseUser.uid, (presence) => {
-          // Only act on conflicts AFTER we've registered our presence
-          // This prevents the new session from being kicked by its own registration
-          if (!presenceRegisteredRef.current) {
-            return; // Ignore updates until we're registered
-          }
-
+          if (!presenceRegisteredRef.current) return;
           if (presence && presence.sessionId !== tabSessionIdRef.current) {
-            console.warn('[Security] Another device logged in. Logging out this session...');
-
-            // Get current language for toast
             const lang = (localStorage.getItem('worldquiz_language') || 'en') as 'en' | 'fr' | 'ar';
             addToast('error', translations[lang].sessionConflictDesc, 10000);
-
-            // Force logout this (old) session
             signOut();
           }
         });
 
-        // Store user data
         localStorage.setItem(`user_${firebaseUser.uid}`, JSON.stringify({
           username: mappedUser.username,
           avatar: mappedUser.avatar,
@@ -164,7 +214,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           stats: mappedUser.stats,
         }));
       } else {
-        setUser(null);
+        setUser(prev => prev?.isGuest ? prev : null);
         localStorage.removeItem(ACTIVITY_STORAGE_KEY);
         presenceRegisteredRef.current = false;
         if (presenceUnsubscribeRef.current) {
@@ -177,18 +227,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     return () => {
       unsubscribe();
-      if (presenceUnsubscribeRef.current) {
-        presenceUnsubscribeRef.current();
-      }
+      if (presenceUnsubscribeRef.current) presenceUnsubscribeRef.current();
     };
   }, []);
 
   const signIn = async (email: string, password: string) => {
     if (!auth) throw new Error('Firebase not initialized');
+    localStorage.removeItem(GUEST_SESSION_KEY);
     setIsLoading(true);
     try {
       const credential = await signInWithEmailAndPassword(auth, email, password);
-      // Check for permanent ban after login
       const ban = await checkUserBan(credential.user.uid);
       if (ban && ban.ban_type === 'permanent') {
         await firebaseSignOut(auth);
@@ -199,50 +247,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-
   const signUp = async (email: string, password: string, username: string) => {
     if (!auth) throw new Error('Firebase not initialized');
+    localStorage.removeItem(GUEST_SESSION_KEY);
     setIsLoading(true);
-
     const normalizedUsername = username.trim();
     localStorage.setItem(PENDING_SIGNUP_USERNAME_KEY, normalizedUsername);
-
     try {
       const avatar = avatars[Math.floor(Math.random() * avatars.length)];
       const color = colors[Math.floor(Math.random() * colors.length)];
-
       const { user: firebaseUser } = await createUserWithEmailAndPassword(auth, email, password);
 
-      // Persist chosen username immediately for this uid
       localStorage.setItem(`user_${firebaseUser.uid}`, JSON.stringify({
-        username: normalizedUsername,
-        avatar,
-        color,
+        username: normalizedUsername, avatar, color,
         stats: { totalGames: 0, wins: 0, avgScore: 0 },
       }));
-
-      // Keep Firebase profile aligned with the chosen username
       await firebaseUpdateProfile(firebaseUser, { displayName: normalizedUsername });
-
-      // Force immediate in-app state sync
       setUser(mapFirebaseUser(firebaseUser));
-
-      // Store username for uniqueness checks
-      // Store username via secure edge function (validates Firebase token)
-      try {
-        const idToken = await firebaseUser.getIdToken();
-        await fetch('https://dzzeaesctendsggfdxra.supabase.co/functions/v1/manage-username', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${idToken}`,
-          },
-          body: JSON.stringify({ username: normalizedUsername }),
-        });
-      } catch (e) {
-        console.error('Failed to persist username:', e);
-      }
-
+      await supabase
+        .from('usernames')
+        .upsert({ user_id: firebaseUser.uid, username: normalizedUsername }, { onConflict: 'user_id' });
       localStorage.removeItem(PENDING_SIGNUP_USERNAME_KEY);
     } catch (error) {
       localStorage.removeItem(PENDING_SIGNUP_USERNAME_KEY);
@@ -252,12 +276,58 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const signInAsGuest = useCallback(async (username: string) => {
+    if (!auth) throw new Error('Firebase not initialized');
+    const trimmed = username.trim();
+
+    // Check uniqueness against registered usernames
+    const { data: existingUsername } = await supabase
+      .from('usernames')
+      .select('id')
+      .ilike('username', trimmed)
+      .maybeSingle();
+
+    if (existingUsername) {
+      throw new Error('This username is already taken by a registered player. Please choose another.');
+    }
+
+    // Sign in anonymously to get a real Firebase auth uid
+    const credential = await signInAnonymously(auth);
+    const firebaseUid = credential.user.uid;
+
+    const guestUser: User = {
+      id: firebaseUid,
+      email: '',
+      username: trimmed,
+      avatar: avatars[Math.floor(Math.random() * avatars.length)],
+      color: colors[Math.floor(Math.random() * colors.length)],
+      stats: { totalGames: 0, wins: 0, avgScore: 0 },
+      isGuest: true,
+      guestExpiresAt: Date.now() + GUEST_DURATION_MS,
+    };
+
+    localStorage.setItem(GUEST_SESSION_KEY, JSON.stringify(guestUser));
+    localStorage.setItem(`user_${firebaseUid}`, JSON.stringify({
+      username: trimmed,
+      avatar: guestUser.avatar,
+      color: guestUser.color,
+      stats: guestUser.stats,
+    }));
+    setUser(guestUser);
+    addToast('info', `Welcome ${trimmed}! You have 4 hours to play as a guest. Create an account to save your progress.`, 8000);
+  }, [addToast]);
+
   const signOut = async () => {
+    if (user?.isGuest) {
+      localStorage.removeItem(GUEST_SESSION_KEY);
+      setUser(null);
+      // Also sign out of Firebase anonymous auth
+      if (auth) await firebaseSignOut(auth).catch(() => {});
+      return;
+    }
     if (!auth) return;
     try {
-      if (user?.id) {
-        await clearUserPresence(user.id);
-      }
+      if (user?.id) await clearUserPresence(user.id);
       localStorage.removeItem(ACTIVITY_STORAGE_KEY);
       await firebaseSignOut(auth);
       setUser(null);
@@ -270,13 +340,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (user) {
       const updatedUser = { ...user, ...updates };
       setUser(updatedUser);
-      // Persist to localStorage
-      localStorage.setItem(`user_${user.id}`, JSON.stringify({
-        username: updatedUser.username,
-        avatar: updatedUser.avatar,
-        color: updatedUser.color,
-        stats: updatedUser.stats,
-      }));
+      if (user.isGuest) {
+        localStorage.setItem(GUEST_SESSION_KEY, JSON.stringify(updatedUser));
+      } else {
+        localStorage.setItem(`user_${user.id}`, JSON.stringify({
+          username: updatedUser.username,
+          avatar: updatedUser.avatar,
+          color: updatedUser.color,
+          stats: updatedUser.stats,
+        }));
+      }
     }
   };
 
@@ -284,10 +357,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     <AuthContext.Provider value={{
       user,
       isAuthenticated: !!user,
+      isGuest: !!user?.isGuest,
       isLoading,
+      guestTimeRemaining,
       signIn,
       signUp,
       signOut,
+      signInAsGuest,
       updateProfile,
       tabSessionId: tabSessionIdRef.current,
     }}>

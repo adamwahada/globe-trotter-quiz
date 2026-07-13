@@ -18,7 +18,7 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({ variant = 'default', rightContent }) => {
   const { t } = useLanguage();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isGuest } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
@@ -46,8 +46,9 @@ export const Navbar: React.FC<NavbarProps> = ({ variant = 'default', rightConten
           
           <div className="flex items-center gap-2">
             <SoundToggle />
-            <DailyRollButton />
-            <MessageIcon />
+            {/* Only show daily roll and messages for registered users */}
+            {!isGuest && <DailyRollButton />}
+            {!isGuest && <MessageIcon />}
             <LanguageSwitcher />
             
             {rightContent ? (

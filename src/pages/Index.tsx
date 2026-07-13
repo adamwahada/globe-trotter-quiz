@@ -57,7 +57,7 @@ const worldMapBg = "/world-map-bg.webp";
 
 const Index = () => {
   const { t } = useLanguage();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, isGuest } = useAuth();
   const { isAdmin } = useAdmin();
   const { hasActiveSession, session, resumeSession, checkActiveSession, error: gameError, joinSessionAsGuest, restoreApprovedSession } = useGame();
   const { addToast } = useToastContext();

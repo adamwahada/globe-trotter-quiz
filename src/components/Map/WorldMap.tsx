@@ -7,7 +7,8 @@ import {
 } from 'react-simple-maps';
 import { GameTooltip } from '@/components/Tooltip/GameTooltip';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { ZoomIn, ZoomOut, Maximize, Globe, MapPin } from 'lucide-react';
+import { useSound } from '@/contexts/SoundContext';
+import { ZoomIn, ZoomOut, Maximize, Globe, MapPin, Volume2, VolumeX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getContinent, getMapCountryName, getGameCountryName, getCountryCoordinates } from '@/utils/countryData';
 import { getLocalizedCountryName } from '@/i18n/countryNames';
@@ -35,6 +36,8 @@ interface WorldMapProps {
   countrySelectionMode?: boolean;
   /** Speed Race mode: all countries clickable, minimal controls (zoom + recenter only), full-height */
   speedRaceMode?: boolean;
+  /** When this key changes, the map resets to default center/zoom instantly */
+  resetKey?: number | string;
 }
 
 export const WorldMap: React.FC<WorldMapProps> = ({
@@ -47,9 +50,18 @@ export const WorldMap: React.FC<WorldMapProps> = ({
   isSoloMode = false,
   countrySelectionMode = false,
   speedRaceMode = false,
+  resetKey,
 }) => {
   const { t, language } = useLanguage();
+  const { soundEnabled, toggleSound } = useSound();
   const [position, setPosition] = useState({ coordinates: [0, 20] as [number, number], zoom: 1 });
+
+  // Reset map to center when resetKey changes (e.g. new round in Speed Race)
+  useEffect(() => {
+    if (resetKey !== undefined) {
+      setPosition({ coordinates: [0, 20], zoom: 1 });
+    }
+  }, [resetKey]);
   const [tooltip, setTooltip] = useState<{ country: string; x: number; y: number } | null>(null);
   const [hoveredCountry, setHoveredCountry] = useState<string | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -234,6 +246,13 @@ export const WorldMap: React.FC<WorldMapProps> = ({
     const gameName = getGameCountryName(countryName);
     // Get the localized name based on current language
     const localizedName = getLocalizedCountryName(gameName, language);
+
+    // In speed race mode, never reveal country names (it would be a hint)
+    // Only show names for already-completed countries (colored green)
+    if (speedRaceMode) {
+      if (isCorrect) return `✓ ${localizedName}`;
+      return '📍 Click to select';
+    }
 
     if (isCorrect) return `✓ ${localizedName}`;
     if (isWrong) return `✗ ${localizedName}`;
@@ -456,6 +475,27 @@ export const WorldMap: React.FC<WorldMapProps> = ({
             <Maximize className="h-4 w-4" />
           </Button>
         </GameTooltip>
+
+        {/* Sound toggle in speed race mode */}
+        {speedRaceMode && (
+          <>
+            <div className="h-px bg-border my-1" />
+            <GameTooltip content={soundEnabled ? t('soundOn') : t('soundOff')} position="left">
+              <Button
+                variant="secondary"
+                size="icon"
+                onClick={toggleSound}
+                className="h-10 w-10 rounded-xl border-2 border-border hover:border-primary transition-all"
+              >
+                {soundEnabled ? (
+                  <Volume2 className="h-4 w-4 text-primary" />
+                ) : (
+                  <VolumeX className="h-4 w-4 text-muted-foreground" />
+                )}
+              </Button>
+            </GameTooltip>
+          </>
+        )}
 
         {/* Only show these extra controls when NOT in speed race mode */}
         {!speedRaceMode && (

@@ -320,7 +320,7 @@ export const useFirebaseSession = () => {
       .finally(() => setIsLoading(false));
   }, [user?.id]);
 
-   const createSession = useCallback(async (maxPlayers: number, duration: number, isSoloMode?: boolean, gameMode?: GameMode, cardModeEnabled?: boolean, totalRounds?: number, isOpenRoom?: boolean): Promise<string> => {
+   const createSession = useCallback(async (maxPlayers: number, duration: number, isSoloMode?: boolean, gameMode?: GameMode, cardModeEnabled?: boolean, totalRounds?: number, isOpenRoom?: boolean, startingHearts?: number): Promise<string> => {
     // Get current user's auth.uid
     const uid = getCurrentUid();
     if (!uid || !user) {
@@ -408,6 +408,12 @@ export const useFirebaseSession = () => {
           totalRounds: totalRounds || 20,
           currentRound: 0,
           speedRaceRoundState: null,
+        } : {}),
+        ...(gameMode === 'lastManStanding' ? {
+          startingHearts: (startingHearts === 3 || startingHearts === 5 || startingHearts === 10 ? startingHearts : 5) as 3 | 5 | 10,
+          currentRound: 0,
+          lmsRoundState: null,
+          lmsPlayerStates: {},
         } : {}),
       };
 
