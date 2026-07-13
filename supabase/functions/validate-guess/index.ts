@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { jwtVerify, importX509, decodeProtectedHeader } from 'https://esm.sh/jose@5.9.6';
+import { fetchSession, assertPlayerInSession, resolveTurnBasedCountry } from '../_shared/firebaseSession.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -489,7 +490,7 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { guess, correctCountry, language } = body;
+    const { guess, correctCountry, language, sessionCode, playerId } = body;
 
     if (!guess || !correctCountry || !language) {
       return new Response(
@@ -498,7 +499,29 @@ serve(async (req) => {
       );
     }
 
-    const result = validateAndScore(guess, correctCountry, language);
+    let resolvedCountry = correctCountry;
+
+    // When session context is provided, derive the answer server-side (anti-cheat)
+    if (sessionCode && playerId) {
+      const token = req.headers.get('Authorization')?.replace('Bearer ', '') || '';
+      const session = await fetchSession(sessionCode, token);
+      if (!session || !assertPlayerInSession(session, playerId, authUser.uid)) {
+        return new Response(
+          JSON.stringify({ error: 'Not a member of this session' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      const serverCountry = resolveTurnBasedCountry(session, playerId);
+      if (!serverCountry) {
+        return new Response(
+          JSON.stringify({ error: 'Not your turn or turn already submitted' }),
+          { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      resolvedCountry = serverCountry;
+    }
+
+    const result = validateAndScore(guess, resolvedCountry, language);
 
     return new Response(JSON.stringify(result), {
       status: 200,

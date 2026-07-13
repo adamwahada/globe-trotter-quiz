@@ -1,6 +1,6 @@
 import { database, auth, ref, set, onValue, update, remove, get, isFirebaseReady, onDisconnect } from '@/lib/firebase';
-import type { GameSession, Player, PlayerData, PlayersMap, TurnState, SessionRecoveryData, JoinRequest, LMSPlayerState } from '@/types/game';
-import { playersMapToArray, getPlayerUids } from '@/types/game';
+import type { GameSession, Player, PlayerData, PlayersMap, TurnState, SessionRecoveryData, JoinRequest, LMSPlayerState, GameMode } from '@/types/game';
+import { playersMapToArray, getPlayerUids, HOST_MIGRATION_GRACE_MS } from '@/types/game';
 
 const SESSIONS_PATH = 'sessions';
 
@@ -559,10 +559,8 @@ export const updatePlayerConnection = async (
   isConnected: boolean
 ): Promise<void> => {
   const uid = getCurrentUid();
-  const isGuestPlayer = playerId.startsWith('guest_');
-  // Guests use their guestId, authenticated users must match uid
-  if (!isGuestPlayer && (!uid || playerId !== uid)) {
-    return; // Can only update own connection status
+  if (!uid || playerId !== uid) {
+    return;
   }
 
   try {
@@ -571,8 +569,81 @@ export const updatePlayerConnection = async (
       lastSeen: Date.now(),
     });
   } catch (err: any) {
-    // Silently ignore permission errors for guests — they cannot write after status changes
     console.warn('[updatePlayerConnection] Write skipped:', err?.code);
+  }
+};
+
+/** Mark player offline when Firebase client disconnects (tab close / network loss). */
+export const registerPlayerDisconnectHandler = async (
+  code: string,
+  playerId: string,
+): Promise<void> => {
+  if (!isFirebaseReady() || !database) return;
+  const uid = getCurrentUid();
+  if (!uid || playerId !== uid) return;
+
+  const playerRef = ref(database, `${SESSIONS_PATH}/${code}/players/${playerId}`);
+  try {
+    await onDisconnect(playerRef).update({
+      isConnected: false,
+      lastSeen: Date.now(),
+    });
+    await updatePlayerConnection(code, playerId, true);
+  } catch (err: any) {
+    console.warn('[registerPlayerDisconnectHandler] Failed:', err?.code);
+  }
+};
+
+/** Promote a connected player when the host has been offline too long. */
+export const tryMigrateHost = async (
+  code: string,
+  session: GameSession,
+): Promise<boolean> => {
+  if (!session.host || !session.players) return false;
+
+  const hostData = session.players[session.host];
+  const hostLastSeen = hostData?.lastSeen ?? 0;
+  const hostStale =
+    !hostData?.isConnected ||
+    Date.now() - hostLastSeen > HOST_MIGRATION_GRACE_MS;
+
+  if (!hostStale) return false;
+
+  const candidates = playersMapToArray(session.players)
+    .filter((p) => {
+      if (p.id === session.host) return false;
+      if (!p.isConnected) return false;
+      const seen = p.lastSeen ?? 0;
+      return Date.now() - seen < HOST_MIGRATION_GRACE_MS;
+    })
+    .sort((a, b) => (a.lastSeen ?? 0) - (b.lastSeen ?? 0));
+
+  if (candidates.length === 0) return false;
+
+  await updateSession(code, { host: candidates[0].id });
+  return true;
+};
+
+/** Remove players who have been disconnected longer than the grace period. Host only. */
+export const kickStaleDisconnectedPlayers = async (
+  code: string,
+  session: GameSession,
+  graceMs: number,
+): Promise<void> => {
+  if (!session.players) return;
+  const now = Date.now();
+  const players = playersMapToArray(session.players);
+
+  for (const player of players) {
+    if (player.id === session.host) continue;
+    const lastSeen = player.lastSeen ?? 0;
+    if (!player.isConnected && now - lastSeen > graceMs) {
+      try {
+        await removePlayerFromSession(code, player.id);
+      } catch (err) {
+        console.warn('[kickStaleDisconnectedPlayers] Failed to remove', player.id, err);
+      }
+    }
   }
 };
 

@@ -13,6 +13,37 @@ interface ScoreResult {
   matchType: 'exact' | 'close' | 'wrong';
 }
 
+export interface RefereeSessionContext {
+  sessionCode: string;
+  playerId: string;
+}
+
+export type RefereeAction =
+  | 'speed_race_confirm'
+  | 'lms_continent'
+  | 'lms_country'
+  | 'map_click_validate';
+
+export interface SpeedRaceRefereeResult {
+  isCorrect: boolean;
+  pointsEarned: number;
+  answerKey: string;
+  elapsedMs: number;
+}
+
+export interface LmsContinentRefereeResult {
+  isCorrect: boolean;
+  correctContinent: string;
+  heartLoss: number;
+}
+
+export interface LmsCountryRefereeResult {
+  isCorrect: boolean;
+  isContinentCorrect: boolean;
+  answerKey: string;
+  heartLoss: number;
+}
+
 interface GameHistoryEntry {
   user_id: string;
   session_code: string;
@@ -29,13 +60,13 @@ interface GameHistoryEntry {
 
 /**
  * Validate a guess server-side.
- * The server contains the full scoring logic and cannot be tampered with.
- * Falls back to a default wrong answer if the server is unreachable.
+ * Pass sessionContext to bind validation to the active Firebase session (anti-cheat).
  */
 export const validateGuessServer = async (
   guess: string,
   correctCountry: string,
-  language: Language
+  language: Language,
+  sessionContext?: RefereeSessionContext,
 ): Promise<ScoreResult> => {
   try {
     const token = await getFirebaseIdToken();
@@ -44,8 +75,14 @@ export const validateGuessServer = async (
       return { correct: false, points: 0, matchType: 'wrong' as const };
     }
 
+    const body: Record<string, unknown> = { guess, correctCountry, language };
+    if (sessionContext) {
+      body.sessionCode = sessionContext.sessionCode;
+      body.playerId = sessionContext.playerId;
+    }
+
     const { data, error } = await supabase.functions.invoke('validate-guess', {
-      body: { guess, correctCountry, language },
+      body,
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -73,6 +110,49 @@ export const validateGuessServer = async (
   } catch (err) {
     console.error('Failed to validate guess server-side:', err);
     return { correct: false, points: 0, matchType: 'wrong' };
+  }
+};
+
+/**
+ * Call the game-referee edge function for Speed Race / LMS actions.
+ * Returns null when the server rejects or is unreachable.
+ */
+export const refereeAction = async <T>(
+  action: RefereeAction,
+  sessionContext: RefereeSessionContext,
+  payload: Record<string, unknown> = {},
+): Promise<T | null> => {
+  try {
+    const token = await getFirebaseIdToken();
+    if (!token) {
+      console.error('No Firebase token available for referee action');
+      return null;
+    }
+
+    const { data, error } = await supabase.functions.invoke('game-referee', {
+      body: {
+        action,
+        sessionCode: sessionContext.sessionCode,
+        playerId: sessionContext.playerId,
+        ...payload,
+      },
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (error) {
+      console.error(`Referee action "${action}" failed:`, error);
+      return null;
+    }
+
+    if (data?.error) {
+      console.error(`Referee action "${action}" rejected:`, data.error);
+      return null;
+    }
+
+    return data as T;
+  } catch (err) {
+    console.error(`Referee action "${action}" error:`, err);
+    return null;
   }
 };
 

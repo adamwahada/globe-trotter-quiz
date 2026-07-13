@@ -372,7 +372,10 @@ export const translations = {
     fairnessDesc: 'Time is up! To keep the game fair, remaining players have one last suggestion so everyone plays the same number of turns.',
     sessionConflictTitle: 'Session Conflict',
     sessionConflictDesc: 'You have been disconnected because your account is active in another tab or device.',
-    
+    reconnected: 'Reconnected to your game!',
+    connectionLost: 'Connection lost. Attempting to reconnect...',
+    connectionRestored: 'Connection restored!',
+
     // Player Stats
     correct: 'Correct',
     wrong: 'Wrong',

@@ -14,6 +14,20 @@ export const LMS_REVEAL_TIME = 2000;          // ms to show country name
 export const LMS_COUNTDOWN_TIME = 3000;       // ms for 3-second countdown
 export const LMS_RESULTS_TIME = 6000;         // ms to show round results
 
+/** Grace period before a disconnected player is removed (ms), per game mode */
+export const DISCONNECT_GRACE_MS: Record<GameMode, number> = {
+  turnBased: 60_000,
+  againstTheClock: 60_000,
+  speedRace: 60_000,
+  lastManStanding: 120_000,
+};
+
+/** How long the host can be offline before another player takes over (ms) */
+export const HOST_MIGRATION_GRACE_MS = 45_000;
+
+export const getDisconnectGraceMs = (mode?: GameMode): number =>
+  DISCONNECT_GRACE_MS[mode ?? 'turnBased'];
+
 export type LMSHeartOption = 3 | 5 | 10;
 
 /**
